@@ -18,7 +18,7 @@ The following arguments are available
 ## Experiments Types
 There are currently 5 types of experiment available
 ### **1**:
-find the parameters for https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/blob/master/sensors/vesc/vesc_ackermann/src/ackermann_to_vesc.cpp
+find the parameters for [ackermann_to_vesc.cpp](../../sensors/vesc/vesc_ackermann/src/ackermann_to_vesc.cpp), that are set with a configuration file that depends on the car. For example, for NUC2, the configuration file is [here](../../stack_master/config/NUC2/vesc.yaml).
 Namely the steering_to_servo_gain_, steering_to_servo_offset_
 
 ### **1** Steering Angle to Servo Mapping

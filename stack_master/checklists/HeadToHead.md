@@ -4,7 +4,7 @@
 ## Roles
 - [Control_MissionControl] @ltognoni
 - [Localization_MissionControl] @tialim
-- [MissionControl] @eghinone
+- [MissionControl] @eghignone
 - [Pilot] @bastuckn
 - [Orbiters] as many as possible
 

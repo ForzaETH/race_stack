@@ -22,7 +22,7 @@ roslaunch f1tenth_simulator pbl_sim.launch mapping_bool:=True map_name:=berlin
 ```
 Then the sector slicer will open a GUI for defining the sectors and generate `sector_scaling.yaml` within the maps folder. 
 
-Additionally it will copy said `yaml` into the `sector_tuner` package and rebuild the package for the dynamic reconf build [here](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/blob/master/f110_utils/nodes/sector_tuner/cfg/dyn_sect_tuner.cfg).
+Additionally it will copy said `yaml` into the `sector_tuner` package and rebuild the package for the dynamic reconf build [here](./cfg/dyn_sect_tuner.cfg).
 **You will need to use a freshly sourced roscore from here on.**
 
 Now you can launch the sim without the mapping bool and launch `rqt > Plugins > Configuration > Dynamic Reconfigure`. Enjoy dynamic reconfigure from here on.

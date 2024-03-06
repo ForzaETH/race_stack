@@ -21,7 +21,7 @@ source <path to your catkin_ws>/devel/setup.bash
 First you'll have to clone the repository with all the submodules in it
 ```
 cd ~/catkin_ws/src
-git clone --recurse-submodules git@git.ee.ethz.ch:pbl/research/f1tenth/race_stack.git 
+git clone --recurse-submodules git@github.com:ForzaETH/race_stack.git 
 cd race_stack
 ```
 
@@ -70,7 +70,7 @@ catkin build
 First you'll have to clone the repository
 ```
 cd ~/catkin_ws/src
-git clone git@gitlab.ethz.ch:pbl/research/f1tenth_2/race_stack.git 
+git clone git@github.com:ForzaETH/race_stack.git
 ```
 #### [Step 2 of 3]
 Install all the dependencies

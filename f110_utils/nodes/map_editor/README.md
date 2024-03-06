@@ -22,13 +22,13 @@
     pitX    # source ros_master_ip for the relevant remote car
     bash stack_master/scripts/download_map.sh $MAP_NAME # fill in map_name accordingly
     ```
-    Note that `pitX` is an alias for convenience, defined [here](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/wikis/Pit-Starter-Usage).
+    Note that `pitX` is an alias for convenience, defined TODO:(change to github wiki when public) [here](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/wikis/Pit-Starter-Usage).
 
     If you've somehow forgotten what maps there are, calling `download_map.sh` without arguments lists the maps in the map_editor folder **on the car**.
 
     This downloads the previously-created map folder **from the car to your PC** in the directory `race_stack/f110_utils/nodes/map_editor/maps`.
 
-    You may be prompted to login on the car. To save time, ensure that the [networking setup](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/blob/17e72aff548f39f0ca26c46148e3607fc2be411b/stack_master/checklists/Mapping.md) here is done.
+    You may be prompted to login on the car. To save time, ensure that the TODO:(change to github wiki when public) [networking setup](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/blob/17e72aff548f39f0ca26c46148e3607fc2be411b/stack_master/checklists/Mapping.md) here is done.
 
 3. Open up the map **on your PC** and manually edit the `.png` file in GIMP or similar. It **should be overwritten** and not be renamed.
 

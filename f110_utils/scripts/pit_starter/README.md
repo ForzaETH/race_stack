@@ -2,7 +2,7 @@
 The content of this folder can be used to automatically setup your laptop to see a roscore running on a car. 
 
 ## Prerequisites
-Your computer should be in the ZeroTier network. to do that consult the [appropriate wiki page](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/wikis/Networking-structure). 
+Your computer should be in the ZeroTier network. to do that consult the TODO:(change to github wiki when public) [appropriate wiki page](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/wikis/Networking-structure). 
 ## How to connect the pit
 On your pit laptop.
 - `cd <race_stack folder>/f110_utils/scripts/pit_starter`

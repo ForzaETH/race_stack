@@ -168,7 +168,7 @@ To roughly check the quality of the obtained measurement, you can test driving a
 roslaunch stack_master sysid_verify.launch mode:=safe LU_table:=<INSERT CORRECT LUT NAME> 
 ```
 3. Drive around for a couple of laps
-4. check in the terminal used for running the test what is the average lap time and what is the average error. In the hangar, [correct parameters](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/blob/master/stack_master/launch/sysid_verify.launch) yield ca. 5.95 s for laptime and 0.135 for lateral error. 
+4. check in the terminal used for running the test what is the average lap time and what is the average error. In the hangar, [](../launch/sysid_verify.launch) yields ca. 5.95 s for laptime and 0.135 for lateral error. 
 
 ## Quick Version (if there is not enough space or time):
 
