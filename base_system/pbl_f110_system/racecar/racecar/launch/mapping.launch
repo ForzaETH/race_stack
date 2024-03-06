@@ -1,0 +1,75 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+    <arg name="racecar_version" default="NUC3" /> <!--  NUC1 / NUC2 / NUC3 ... -->
+    <arg name="map_name" default="hangar" />
+    <arg name="gb_conf_path" default="$(find stack_master)/config/global_planner_params.yaml" />
+    <arg name="from_bag" default="False" />
+    <arg name="bag_name" default="$(arg map_name)" />
+    <arg name="odom_topic" default="ekf/odometry/filtered" />
+    <arg name="pf_covariance" default="true" />
+
+    <!-- Hack to create the directory -->
+    <param name="mkdir" command="mkdir -p $(find stack_master)/maps/$(arg map_name)" />
+
+    <!--  launch global planner -->
+    <node pkg="gb_optimizer" type="global_planner_node.py" name="global_planner" output="screen">
+        <rosparam file="$(arg gb_conf_path)" />
+        <param name="map_editor" value="False" />
+        <param name="create_map" value="True" />
+        <param name="map_name" value="$(arg map_name)" />
+        <param name="map_dir" value="$(find stack_master)/maps/$(arg map_name)/" />
+    </node>
+
+    <!-- Launch republisher -->
+    <node name="global_republisher" pkg="gb_optimizer" type="global_trajectory_publisher.py" />
+
+    <!-- IF CONDITION ON FROM_BAG -->
+    <group if="$(arg from_bag)">
+        <param name="/use_sim_time" value="true" />
+        <!-- static transforms, e.g. base_link to imu as it is not latched properly by rosbag -->
+        <include
+            file="$(find stack_master)/launch/includes/$(arg racecar_version)/static_transforms.launch.xml">
+            <arg name="pub_map_to_odom" value="True" />
+        </include>
+
+        <!-- start cartographer in mapping mode -->
+        <node name="cartographer_node" pkg="cartographer_ros"
+            type="cartographer_node"
+            args="
+                -configuration_directory $(find stack_master)/config/$(arg racecar_version)/slam
+                -configuration_basename f110_2d.lua">
+            <remap from="odom" to="$(arg odom_topic)" />
+        </node>
+        <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+            type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
+
+        <!-- Launch Sector Slicer/Tuner from Utils -->
+        <node pkg="sector_tuner" type="sector_slicing.py" name="sector_node" output="screen">
+            <param name="save_dir" value="$(find stack_master)/maps/$(arg map_name)" />
+        </node>
+
+        <!-- Launch Overtaking Sector Slicer/Tuner from Utils -->
+        <node pkg="overtaking_sector_tuner" type="ot_sector_slicing.py" name="ot_sector_node"
+            output="screen">
+            <param name="save_dir" value="$(find stack_master)/maps/$(arg map_name)" />
+        </node>
+
+        <!-- // Start ROSBAG // -->
+        <node pkg="rosbag" type="play" name="player" output="screen"
+            args="--clock -q $(arg bag_name).bag
+        --topics /$(arg odom_topic) /scan /vesc/odom /vesc/sensors/imu/raw" />
+
+    </group>
+
+    <!-- ELSE CONDITION FROM_BAG -->
+    <group unless="$(arg from_bag)">
+        <!--  launch vesc driver, cartographer, mux, tf_transformer... - complete base -->
+        <include file="$(find racecar)/launch/pbl_teleop.launch">
+            <arg name="racecar_version" value="$(arg racecar_version)" />
+            <arg name="loc_only" value="False" />
+            <arg name="map_name" value="$(arg map_name)" />
+            <arg name="algo" value="slam" />
+            <arg name="pf_covariance" value="$(arg pf_covariance)" />
+        </include>
+    </group>
+</launch>

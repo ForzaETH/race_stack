@@ -1,0 +1,29 @@
+# 
+# Container Creation for the F110 race-stack at Center for Project Based Learning, ETH
+#
+
+FROM base_arm:latest
+
+
+# initial user setup
+ARG USER 
+ARG UID
+ARG GID
+
+RUN /bin/bash /.install_utils/setup_user.sh
+
+USER $USER
+WORKDIR /home/${USER}/catkin_ws
+RUN mkdir -p /home/${USER}/catkin_ws/src
+
+# initialize workspace and make sure no sim packages are built
+RUN catkin init && . /opt/ros/noetic/setup.bash && . /.install_utils/catkin_skiplist_sim.sh
+
+# complete cartographer installation and rosdeps
+RUN . /.install_utils/cartographer_dep.sh
+
+USER root
+RUN chown -R ${USER}:${USER} /home/${USER}
+USER $USER
+
+ENTRYPOINT [ "bash", "/.install_utils/ros_entrypoint.sh" ]

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="from_bag" default="False"/>
+    <arg name="yaml_dir" default="$(find sector_tuner)/cfg" />
+
+    <!--  run bag for debug if from_bag arg is True -->
+    <group if="$(arg from_bag)">
+        <arg name="bag" default="hangar_icra_better_map_aggressive_v3.bag" />
+        <arg name="bag_path" value="$(find sector_tuner)/data/$(arg bag)" />
+        <node pkg="rosbag" type="play" name="player" output="screen" args="-r 1.0 --clock $(arg bag_path)"/>
+    </group>
+
+    <!--  launch slicer -->
+    <node pkg="sector_tuner" type="sector_slicing.py" name="sector_node" output="screen">
+        <param name="save_dir" value="$(arg yaml_dir)"/>
+    </node>
+    
+</launch>
+

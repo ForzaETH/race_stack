@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="opt_l1params" default="False"/> 
+    <arg name="opt_sector_scalers" default="False"/> 
+    <arg name="iterations" default="10"/> 
+    <arg name="laps_per_experiment" default="1"/> 
+    <arg name="cost_lap_time_scaler" default="1"/> 
+    <arg name="cost_crash_avoidance_scaler" default="1"/> 
+    <arg name="cost_lat_err_scaler" default="1"/> 
+    <arg name="bayesopt_config" default="$(find stack_master)/config/BayesOpt_MAP/MAP_EI.yaml"/> 
+    <arg name="node_start_delay" default="4.0"/>  
+    <param name="bayesopt_config" value="$(arg bayesopt_config)"/>
+
+    <!-- launch interpolator -->
+    <node pkg="param_optimizer" type="param_optimizer.py" name="param_optimizer" output="screen">
+        <param name="opt_l1params" value="$(arg opt_l1params)"/>
+        <param name="opt_sector_scalers" value="$(arg opt_sector_scalers)"/>
+        <param name="iterations" value="$(arg iterations)"/>
+        <param name="laps_per_experiment" value="$(arg laps_per_experiment)"/>
+        <param name="cost_lap_time_scaler" value="$(arg cost_lap_time_scaler)"/>
+        <param name="cost_crash_avoidance_scaler" value="$(arg cost_crash_avoidance_scaler)"/>
+        <param name="cost_lat_err_scaler" value="$(arg cost_lat_err_scaler)"/>
+    </node>
+    
+    <!-- introduce a delay because param_optimizer.py edits a yaml file which is read by BayesOpt server after its launch-->
+    <node name="BayesOptNode" pkg="bayesopt4ros" type="bayesopt_node.py" output="screen" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@'"/>
+</launch>

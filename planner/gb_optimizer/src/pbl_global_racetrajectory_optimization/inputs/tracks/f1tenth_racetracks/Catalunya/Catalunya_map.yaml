@@ -1,0 +1,6 @@
+image: Catalunya_map.png
+resolution: 0.06016
+origin: [-91.90749878749725,-75.75284314488522, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

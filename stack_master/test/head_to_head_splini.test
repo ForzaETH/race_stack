@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+    <param name="/test" value="true" type="bool"/>
+
+    <include file="$(find stack_master)/launch/base_system.launch">
+        <arg name="map_name" value="test_map" />
+        <arg name="racecar_version" value="SIM" />
+        <arg name="sim" value="true" />
+    </include>
+
+    <include file="$(find stack_master)/launch/headtohead.launch">
+        <arg name="LU_table" value="SIM_linear"/>
+    </include>
+
+    <include file="$(find obstacle_publisher)/launch/obstacle_publisher.launch"/>    
+
+    <test test-name="head_to_head_test" pkg="stack_master" type="head_to_head_test.py" time-limit="200.0"/>
+
+</launch>

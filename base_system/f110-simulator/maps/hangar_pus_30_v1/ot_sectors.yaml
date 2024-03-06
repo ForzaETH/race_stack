@@ -1,0 +1,20 @@
+n_sectors: 4
+yeet_factor: 1.25
+spline_len: 30
+ot_sector_begin: 0.5
+Overtaking_sector0:
+  start: 0
+  end: 38
+  ot_flag: false
+Overtaking_sector1:
+  start: 39
+  end: 60
+  ot_flag: false
+Overtaking_sector2:
+  start: 61
+  end: 156
+  ot_flag: false
+Overtaking_sector3:
+  start: 157
+  end: 253
+  ot_flag: false

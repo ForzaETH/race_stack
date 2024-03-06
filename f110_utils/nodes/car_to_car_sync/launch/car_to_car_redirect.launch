@@ -1,0 +1,13 @@
+<launch>
+  <!-- Declare the IP address as a parameter -->
+  <arg name="professor_car_ip" default="192.168.192.16" />
+
+  <!-- Load the topics configuration from the YAML file -->
+  <rosparam file="$(find car_to_car_sync)/config/topics_to_redirect.yaml" />
+
+  <!-- Launch the car_to_car_sync node -->
+  <node name="car_to_car_sync" pkg="car_to_car_sync" type="car2car_redirect_topic.py" output="screen">
+    <!-- Pass the IP address parameter to the node -->
+    <param name="professor_car_ip" value="$(arg professor_car_ip)" />
+  </node>
+</launch>

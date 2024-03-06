@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>steering_lookup</name>
+  <version>1.0.0</version>
+  <description>The steering_lookup library</description>
+
+  <maintainer email="jonbecke@ethz.ch">Jonathan Becker</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <export>
+  </export>
+
+</package>

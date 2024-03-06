@@ -1,0 +1,12 @@
+car_init_theta: 0.11549317798508851
+car_init_x: -0.9616228010412067
+car_init_y: -7.933118974209518
+free_thresh: 0.196
+image: mtl.png
+negate: 0
+occupied_thresh: 0.65
+origin:
+- -12.381815
+- -10.843172
+- 0
+resolution: 0.05000000074505806

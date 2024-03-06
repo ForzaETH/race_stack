@@ -1,0 +1,22 @@
+<launch>
+       <arg name="trajectory" default="min_curv"/> <!-- centerline/min_curv/shortest_path/min_time -->
+       <arg name="start_s" default="0"/>
+       <arg name="speed_scaler" default="0.5"/>
+       <arg name="constant_speed" default="false"/>
+
+       <!-- Launch Collision detector as well -->
+     <node name="collision_detector" pkg="obstacle_publisher" type="collision_detector.py" output="screen"/>
+
+              
+       <node name="obstacle_publisher" pkg="obstacle_publisher" type="obstacle_publisher.py" 
+              output="screen">
+              <param name="start_s" value="$(arg start_s)"/>
+              <param name="trajectory" value="$(arg trajectory)"/>
+              <param name="speed_scaler" value="$(arg speed_scaler)"/>
+              <param name="constant_speed" value="$(arg constant_speed)"/>
+       </node>
+
+
+    <!-- Launch Dynamic Obstacle Publisher -->
+    <!--node name="dynamic_obstacle_server" pkg="obstacle_publisher" type="dynamic_obs_pub_server.py" output="screen"/-->
+</launch>

@@ -1,0 +1,67 @@
+<launch>
+    <arg name="map_name" default="hangar_test" doc="Name of the map to be used" />
+    <arg name="reverse" default="False" doc="Set True if you want reverse direction of raceline" />
+    <arg name="map_editor_mapping" default="False" doc="Set True if you want to map live on the car" />
+    <arg name="racecar_version" default="NUC3"
+        doc="Physical Racecar. Only relevant when map_editor_mapping is True" />
+
+    <!-- Mapping but only want to get .png, .yaml and .pbstream without global waypoints calc -->
+    <group if="$(eval map_editor_mapping == True)">
+        <!--  launch vesc driver, cartographer, mux, tf_transformer... - complete base -->
+        <include file="$(find racecar)/launch/pbl_teleop.launch">
+            <arg name="racecar_version" value="$(arg racecar_version)" />
+            <arg name="loc_only" value="False" />
+            <arg name="map_name" value="$(arg map_name)" />
+            <arg name="algo" value="slam" />
+        </include>
+
+        <!--  launch global planner -->
+        <node pkg="gb_optimizer" type="global_planner_node.py" name="global_planner" output="screen">
+            <rosparam file="$(find stack_master)/config/global_planner_params.yaml" />
+            <param name="map_editor" value="True" />
+            <param name="map_editor_mapping" value="True" />
+            <param name="create_map" value="True" />
+            <param name="test_on_car" value="True" />
+            <param name="map_name" value="$(arg map_name)" />
+            <param name="map_dir" value="$(find map_editor)/maps/$(arg map_name)/" />
+        </node>
+    </group>
+
+    <!-- Computing the global traj from edited map only -->
+    <group if="$(eval map_editor_mapping == False)">
+        <!-- Launch a map from the maps folder-->
+        <node pkg="map_server" name="map_server" type="map_server"
+            args="$(find map_editor)/maps/$(arg map_name)/$(arg map_name).yaml" />
+
+        <!-- Launch map editor -->
+        <node pkg="gb_optimizer" type="global_planner_node.py" name="global_planner" output="screen">
+            <rosparam file="$(find stack_master)/config/global_planner_params.yaml" />
+            <param name="test_on_car" value="False" />
+            <param name="map_editor" value="True" />
+            <param name="map_editor_mapping" value="False" />
+            <param name="reverse_mapping" value="$(arg reverse)" />
+            <param name="create_map" value="False" />
+            <param name="map_name" value="$(arg map_name)" />
+            <param name="map_dir" value="$(find map_editor)/maps/$(arg map_name)/" />
+        </node>
+
+        <!-- Launch Sector Slicer from Utils -->
+        <node pkg="sector_tuner" type="sector_slicing.py" name="sector_node" output="screen">
+            <param name="save_dir" value="$(find map_editor)/maps/$(arg map_name)" />
+        </node>
+
+        <!-- Launch Overtaking Sector Slicer from Utils -->
+        <node pkg="overtaking_sector_tuner" type="ot_sector_slicing.py" name="ot_sector_node"
+            output="screen">
+            <param name="save_dir" value="$(find map_editor)/maps/$(arg map_name)" />
+        </node>
+
+        <!--  launch gb repub without arguments when mapping-->
+        <node name="global_republisher" pkg="gb_optimizer" type="global_trajectory_publisher.py"
+            output="screen" />
+
+        <!-- Launch Rviz-->
+        <node type="rviz" name="rviz" pkg="rviz" args="-d $(find map_editor)/rviz/editor.rviz" />
+    </group>
+
+</launch>

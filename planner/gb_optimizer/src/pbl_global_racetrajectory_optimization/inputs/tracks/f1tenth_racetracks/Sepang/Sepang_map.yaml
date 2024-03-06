@@ -1,0 +1,6 @@
+image: Sepang_map.png
+resolution: 0.05944
+origin: [-66.15462837870969,-58.7392475352799, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

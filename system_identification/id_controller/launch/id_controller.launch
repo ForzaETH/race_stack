@@ -1,0 +1,15 @@
+<launch>
+  <arg name="experiment" default="5"/>
+  <arg name="id_param_file" 
+      default="$(find id_controller)/parameters/experiments.yaml"/>
+  <arg name="drive_topic" default="/vesc/high_level/ackermann_cmd_mux/input/nav_1"/> 
+  <!-- /vesc/high_level/ackermann_cmd_mux/input/ctrl, /drive -->
+
+<node name="id_controller" pkg="id_controller" type="controller_node.py" 
+       output="screen">
+    <remap from="drive_topic" to="$(arg drive_topic)"/> 
+    <rosparam command="load" file="$(arg id_param_file)"/>
+    <param name="experiment" value="$(arg experiment)"/>
+</node>
+
+</launch>

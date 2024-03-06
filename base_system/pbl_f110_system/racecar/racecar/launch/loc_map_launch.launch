@@ -1,0 +1,87 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- Launches the localization/mapping stack as needed based on these parameters. -->
+  <arg name="loc_only" default="False" />
+  <arg name="algo" default="slam" />
+  <arg name="map_name" default="hangar" />
+  <arg name="odom_topic" default="state_estimation/odom" />
+  <arg name="racecar_version" default="NUC4" />
+  <arg name="lidar_input_topic" default="/scan" />
+  <arg name="pf_covariance" />
+
+  <!-- Config file so we can reuse this launchfile also in slam_tuner -->
+  <arg name="slam_config_path" default="$(find stack_master)/config/$(arg racecar_version)/slam" />
+  <remap from="/scan" to="$(arg lidar_input_topic)" />
+
+  <!-- IF CONDITION ON LOC ONLY -->
+  <group if="$(arg loc_only)">
+    <arg name="map_path" value="$(find stack_master)/maps/$(arg map_name)" />
+
+    <!-- Localization (PF1)-->
+    <!-- Localization (PF2)-->
+    <group if="$(eval arg('algo') == 'pf2' or arg('algo') == 'synpf')">
+      <include
+        file="$(find particle_filter)/launch/synPF.launch">
+        <arg name="debug" value="True" />
+        <arg name="viz" value="False" />
+        <arg name="pub_covariance" value="$(arg pf_covariance)" />
+        <arg name="odometry_topic" value="$(arg odom_topic)" />
+      </include>
+
+      <!-- Read from pf_map if using this loc_method -->
+      <node pkg="map_server" name="map_server" type="map_server"
+        args="$(arg map_path)/pf_map.yaml">
+      </node>
+    </group>
+
+    <!-- start cartographer SLAM LOC ONLY -->
+    <group if="$(eval arg('algo') == 'slam')">
+      <node name="cartographer_node" pkg="cartographer_ros"
+        type="cartographer_node"
+        args="
+        -configuration_directory $(arg slam_config_path)
+        -configuration_basename f110_2d_loc.lua
+        -load_state_filename $(arg map_path)/$(arg map_name).pbstream">
+        <remap from="odom" to="$(arg odom_topic)" />
+      </node>
+
+      <!-- Keep this here to evaluate map shift -->
+      <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+        type="cartographer_occupancy_grid_node" args="-resolution 0.05">
+        <remap from="/map" to="/map_new" />
+      </node>
+
+      <!--  Launch Slam pose setter -->
+      <node pkg="set_pose" type="set_pose_node.py" name="set_slam_pose_node" output="screen">
+        <!-- Set the config dir of SLAM -->
+        <param name="config_dir" value="$(find stack_master)/config/$(arg racecar_version)/slam" />
+        <param name="config_base" value="f110_2d_loc.lua" />
+      </node>
+
+      <!-- Launch map server with regular map name -->
+      <!-- Read from pf_map if using this loc_method -->
+      <node pkg="map_server" name="map_server" type="map_server"
+        args="$(arg map_path)/$(arg map_name).yaml">
+      </node>
+    </group>
+  </group>
+
+  <!-- ELSE CONDITION ON LOC ONLY -->
+  <group unless="$(arg loc_only)">
+
+    <!-- start cartographer SLAM NORMAL -->
+    <group if="$(eval arg('algo') == 'slam')">
+      <node name="cartographer_node" pkg="cartographer_ros"
+        type="cartographer_node"
+        args="
+        -configuration_directory $(find stack_master)/config/$(arg racecar_version)/slam
+        -configuration_basename f110_2d.lua">
+        <remap from="odom" to="$(arg odom_topic)" />
+      </node>
+
+      <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+        type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
+    </group>
+  </group>
+
+</launch>

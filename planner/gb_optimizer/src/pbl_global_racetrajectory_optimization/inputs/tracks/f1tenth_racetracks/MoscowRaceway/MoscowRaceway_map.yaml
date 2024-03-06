@@ -1,0 +1,6 @@
+image: MoscowRaceway_map.png
+resolution: 0.0554
+origin: [-100.98046127566786,-36.346689411228084, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

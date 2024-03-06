@@ -1,0 +1,14 @@
+<?xml version="1.0" ?><sdf version="1.5">
+  <model name="Marker4">
+    <static>true</static>
+    <link name="link">
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://racecar_description/models/ar_tags/marker4/meshes/Marker4.dae</uri>
+          <scale>0.1 0.1 0.1</scale></mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

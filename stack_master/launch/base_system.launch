@@ -1,0 +1,60 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <arg name="racecar_version" default="NUC2"
+    doc="Physical racecar used. Possible values: NUC2/NUC3/NUC4/NUC5" />
+  <arg name="map_name"
+    doc="Map path to load. Will search stack_master/maps for a map of the same name." />
+  <arg name="sim" default="False"
+    doc="Whether launching on a physical car (or recording of physical car) or from F110 Simulator." />
+  <arg name="algo" default="slam"
+    doc="Localization algorithm to use. Possible values: slam/pf2 " />
+  <arg name="pf_covariance" default="True"
+    doc="If using the pf2 localization algorithm, whether or not to propagate the computed covariance." />
+  <arg name="tire_model" default="pacejka"
+    doc="If using the F110 Simulator, what tire model to use." />
+  <arg name="scanalign" default="False"
+    doc="Whether to launch the scan-align node that calculates localization accuracy." />
+
+  <param name="racecar_version" value="$(arg racecar_version)" />
+  <param name="/sim" value="$(arg sim)" />
+
+  <group unless="$(arg sim)">
+    <!-- launch vesc driver, cartographer, mux, tf_transformer... - complete base -->
+    <include file="$(find racecar)/launch/pbl_teleop.launch">
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+      <arg name="loc_only" value="True" />
+      <arg name="map_name" value="$(arg map_name)" />
+      <arg name="algo" value="$(arg algo)" />
+      <arg name="pf_covariance" value="$(arg pf_covariance)" />
+    </include>
+  </group>
+
+  <group if="$(arg sim)">
+    <!-- launch pbl sim -->
+    <include file="$(find f1tenth_simulator)/launch/pbl_sim.launch">
+      <arg name="mapping_bool" value="False" />
+      <arg name="map_name" value="$(arg map_name)" />
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+      <arg name="tire_model" value="$(arg tire_model)" />
+    </include>
+  </group>
+
+  <!-- republishes car state odom in frenet frame -->
+  <include file="$(find frenet_odom_republisher)/launch/frenet_odom_republisher.launch" />
+
+  <!-- analyses and publishes lap times and lateral errors -->
+  <node name="lap_analyser" pkg="lap_analyser" type="lap_analyser.py" output="screen">
+    <param name="loc_algo" value="$(arg algo)" />
+  </node>
+
+  <!-- Scan Alignment Analyzer -->
+  <group if="$(arg scanalign)">
+    <node name="scan_alignment" pkg="lap_analyser" type="scan_align_analyzer_cppnode"
+      output="screen">
+      <param name="debug" value="True" /> <!-- Set to True to see the utilised LiDAR Points -->
+      <param name="downsample_factor" value="20" /> <!-- Downsample factor for the LiDAR points -->
+      <param name="threshold" value="0.22" /> <!-- Threshold distance for a match [m] -->
+      <param name="frequency" value="40" /> <!-- Frequency of the node [Hz] -->
+    </node>
+  </group>
+</launch>

@@ -1,0 +1,4 @@
+<launch>
+
+  <node name="lap_analyser" pkg="lap_analyser" type="lap_analyser.py" output="screen" />
+</launch>

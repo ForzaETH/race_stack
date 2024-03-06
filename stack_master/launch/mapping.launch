@@ -1,0 +1,36 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+    <arg name="racecar_version" default="NUC4"
+        doc="Physical racecar used. Possible values: NUC2/NUC3/NUC4/NUC5" />
+    <arg name="map_name" doc="" />
+    <arg name="ftg_max_speed" default="1.0" />
+    <arg name="ftg_track_width" default="2.0" />
+    <arg name="gb_conf_path" default="$(find stack_master)/config/global_planner_params.yaml" />
+    <arg name="sim" default="False" />
+
+    <!-- ON PHYSICAL SYSTEM -->
+    <group unless="$(arg sim)">
+        <!-- Launch Mapping from racecar package -->
+        <include file="$(find racecar)/launch/mapping.launch">
+            <arg name="racecar_version" value="$(arg racecar_version)" />
+            <arg name="map_name" value="$(arg map_name)" />
+            <arg name="gb_conf_path" value="$(arg gb_conf_path)" />
+        </include>
+
+        <!-- Launch FTG for Mapping -->
+        <rosparam file="$(find stack_master)/config/state_machine_params.yaml" ns="state_machine" />
+        <node pkg="controller" type="controller_manager.py" name="controller_manager" output="screen">
+            <param name="mapping" value="True" />
+        </node>
+    </group>
+
+    <!-- ON SIM -->
+    <group if="$(arg sim)">
+        <!-- Launch pbl sim --> 
+        <include file="$(find f1tenth_simulator)/launch/pbl_sim.launch">
+            <arg name="mapping_bool" value="True" />
+            <arg name="map_name" value="$(arg map_name)" />
+        </include>
+    </group>
+
+</launch>

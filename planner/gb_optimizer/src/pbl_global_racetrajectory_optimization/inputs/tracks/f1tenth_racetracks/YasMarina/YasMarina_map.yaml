@@ -1,0 +1,6 @@
+image: YasMarina_map.png
+resolution: 0.07314
+origin: [-63.668374337708805,-64.68282000152614, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

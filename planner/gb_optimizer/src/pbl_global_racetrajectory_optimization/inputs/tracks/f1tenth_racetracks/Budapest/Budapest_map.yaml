@@ -1,0 +1,6 @@
+image: Budapest_map.png
+resolution: 0.06446
+origin: [-60.229461062734515,-21.68761063512184, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

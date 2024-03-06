@@ -1,0 +1,6 @@
+image: Sochi_map.png
+resolution: 0.08501
+origin: [-156.29705697778897,-120.87730224217698, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

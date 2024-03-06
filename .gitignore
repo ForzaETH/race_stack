@@ -1,0 +1,58 @@
+# rosbags 
+*.bag
+bags/
+
+# JSON files for waypoints
+*/maps/*/*.json
+# but not the test ones
+!*/maps/test_map/*.json
+
+# vscode
+.vscode/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# packages
+*.egg-info
+
+# C extensions
+*.so
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/*
+
+# packages 
+*.egg-info
+
+#no lapanalyser maps
+f110_utils/nodes/lap_analyser/maps/*
+
+#no map_editor maps
+f110_utils/nodes/map_editor/maps/*
+
+#no slam_tuner maps
+f110_utils/nodes/slam_tuner/maps/*
+
+#no realsense logs
+perception/logs/*
+
+# ot yamls
+f110_utils/nodes/overtaking_sector_tuner/cfg/ot_sectors.yaml
+# scaler yamls
+f110_utils/nodes/sector_tuner/cfg/speed_scaling.yaml
+# no changes to sector yamls
+stack_master/maps/*/ot_sectors.yaml
+stack_master/maps/*/speed_scaling.yaml
+
+# Bayesian optimization
+stack_master/config/BayesOpt_MAP/
+f110_utils/nodes/param_optimizer/logs/*
+
+# Test artifacts
+stack_master/test/artifacts/*

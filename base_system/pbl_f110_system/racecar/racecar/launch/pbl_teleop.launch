@@ -1,0 +1,95 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <arg name="racecar_version" default="NUC2" />
+  <arg name="loc_only" default="False" />
+  <arg name="algo" default="slam" />
+  <arg name="map_name" default="hangar" />
+  <arg name="publish_tf" default="False" />
+  <arg name="pf_covariance" default="True" />
+
+  <group ns="vesc">
+    <!-- joystick node -->
+    <include file="$(find stack_master)/config/$(arg racecar_version)/joy_teleop.launch.xml">
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+    </include>
+
+    <!-- Spawn MUXs -->
+    <include file="$(find racecar)/launch/mux.launch">
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+    </include>
+
+    <!-- start electronic speed controller driver -->
+    <!-- NUC1 vesc launch uses custom ackermann to driver node that lets us command acceleration -->
+    <include file="$(find stack_master)/config/$(arg racecar_version)/vesc.launch.xml">
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+    </include>
+  </group>
+
+  <!-- start laser scanner -->
+  <include file="$(find stack_master)/config/$(arg racecar_version)/sensors.launch.xml">
+    <arg name="racecar_version" value="$(arg racecar_version)" />
+  </include>
+
+  <!-- static transforms, e.g. base_link to imu -->
+  <include
+    file="$(find stack_master)/config/$(arg racecar_version)/static_transforms.launch.xml">
+    <arg name="pub_map_to_odom" value="$(eval not arg('publish_tf'))" />
+  </include>
+
+  <!-- LAUNCH ESTIMATOR -->
+  <include file="$(find racecar)/launch/SE_launch.launch">
+    <arg name="loc_algo" value="$(arg algo)" />
+    <arg name="pose_loc_topic" default="/tracked_pose" />
+    <arg name="publish_tf" value="$(arg publish_tf)" />
+    <arg name="pf_covariance" value="$(arg pf_covariance)" />
+    <arg name="loc_only" value="$(arg loc_only)" />
+    <arg name="map_name" value="$(arg map_name)" />
+    <arg name="racecar_version" value="$(arg racecar_version)" />
+  </include>
+
+  <!-- Sector tuners / Mapping -->
+  <group if="$(arg loc_only)">
+    <!-- Launch republisher -->
+    <node name="global_republisher" pkg="gb_optimizer" type="global_trajectory_publisher.py">
+      <param name="map_name" value="$(arg map_name)" />
+    </node>
+
+    <!--  launch dynamic reconfigure for the sectors -->
+    <node pkg="sector_tuner" type="sector_server.py" name="dyn_sector_server" output="screen" />
+    <rosparam ns="map_params" command="load"
+      file="$(find stack_master)/maps/$(arg map_name)/speed_scaling.yaml" />
+
+    <!--  launch Velocity Interpolator for dynamic sector -->
+    <include file="$(find sector_tuner)/launch/velocity_scaler.launch">
+      <arg name="debug_plot" value="False" />
+    </include>
+
+    <!--  launch Frenet Conversion Service (only useful when global trajectory exists) -->
+    <node pkg="frenet_conversion_server" name="frenet_conversion_server_node" type="frenet_conversion_server_node" output="screen" >
+        <param name="PerceptionOnly" type="bool" value="false"/>
+    </node>
+
+    <!--  Launch Overtaking Sector Server -->
+    <node pkg="overtaking_sector_tuner" type="ot_sector_server.py" name="ot_dyn_sector_server"
+      output="screen" />
+    <rosparam ns="ot_map_params" command="load"
+      file="$(find stack_master)/maps/$(arg map_name)/ot_sectors.yaml" />
+    <!--  Launch Overtaking Interpolator -->
+    <include file="$(find overtaking_sector_tuner)/launch/ot_interpolator.launch">
+      <arg name="yeet_factor" value="1.25" />
+    </include>
+  </group>
+  <group unless="$(arg loc_only)">
+    <!-- Launch Sector Slicer/Tuner from Utils -->
+    <node pkg="sector_tuner" type="sector_slicing.py" name="sector_node" output="screen">
+      <param name="save_dir" value="$(find stack_master)/maps/$(arg map_name)" />
+    </node>
+
+    <!-- Launch Overtaking Sector Slicer/Tuner from Utils -->
+    <node pkg="overtaking_sector_tuner" type="ot_sector_slicing.py" name="ot_sector_node"
+      output="screen">
+      <param name="save_dir" value="$(find stack_master)/maps/$(arg map_name)" />
+    </node>
+  </group>
+
+</launch>

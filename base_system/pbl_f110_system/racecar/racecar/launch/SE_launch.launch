@@ -1,0 +1,70 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <!-- launches the state estimation nodes -->
+  <!-- PARAMS -->
+  <arg name="loc_algo" default="slam" />
+  <arg name="pose_loc_topic" default="/tracked_pose" />
+  <arg name="publish_tf" default="False" />
+  <arg name="pf_covariance" default="False" />
+  <arg name="loc_only" default="False" />
+  <arg name="map_name" default="hangar" />
+  <arg name="racecar_version" default="2" />
+
+  <!-- Launch mapping/localization as required -->
+  <include file="$(find racecar)/launch/loc_map_launch.launch">
+    <arg name="loc_only" value="$(arg loc_only)" />
+    <arg name="algo" value="$(arg loc_algo)" />
+    <arg name="map_name" value="$(arg map_name)" />
+    <arg name="racecar_version" value="$(arg racecar_version)" />
+    <arg name="pf_covariance" value="$(arg pf_covariance)" />
+  </include>
+
+  <!-- Odometry Filter -->
+  <node pkg="robot_localization" type="ekf_localization_node"
+    name="robot_localization_ekf_node_map" clear_params="true">
+    <param name="frequency" value="50" />
+    <param name="sensor_timeout" value="1.0" />
+    <param name="two_d_mode" value="true" />
+    <param name="publish_tf" value="false" />
+    <param name="odom_frame" value="odom" />
+    <param name="base_link_frame" value="base_link" />
+    <param name="world_frame" value="odom" />
+    <param name="gravitational_acceleration" value="10.1" />
+
+    <!-- Format: 
+      [x, y, z, roll, pitch, yaw, x_vel, y_vel, z_vel, roll_vel, pitch_vel, yaw_vel, x_acc, y_acc, z_acc] 
+    -->
+
+    <!-- vesc odometry -->
+    <param name="odom0" value="/vesc/odom" />
+    <rosparam param="odom0_config">
+      [false, false, false,
+      false, false, false,
+      true, true, false,
+      false, false, false,
+      false, false, false]
+    </rosparam>
+
+    <!-- imu -->
+    <param name="imu0" value="/vesc/sensors/imu/raw" />
+    <rosparam param="imu0_config">
+      [false, false, false,
+      false, false, true,
+      false, false, false,
+      false, false, true,
+      false, false, false]
+    </rosparam>
+    <param name="imu0_remove_gravitational_acceleration" value="true" />
+    <param name="imu0_relative" value="true" />
+
+    <remap from="odometry/filtered" to="/state_estimation/odom" /> <!-- .../new when not using cov on PF2 -->
+  </node>
+
+  <!-- start Car State Node -->
+  <node name="carstate_node" pkg="racecar" type="carstate_node.py" output="screen">
+      <param name="debug" value="False" />
+      <param name="localization" value="$(arg loc_algo)" />
+      <param name="odom_topic" value="/state_estimation/odom" />
+  </node>
+
+</launch>

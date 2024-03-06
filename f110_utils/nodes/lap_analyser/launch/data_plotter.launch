@@ -1,0 +1,12 @@
+<launch>
+
+    <node ns="data_analyser" name="data_plotter_lap" pkg="plotjuggler" type="plotjuggler"
+        args="-l $(find lap_analyser)/config/long_ana_pj.xml" output="screen">
+    </node>
+    <!-- 
+    <node ns="data_analyser" name="data_plotter_nadine" pkg="plotjuggler" type="plotjuggler"
+        args="-l $(find lap_analyser)/config/nadineplot_pj.xml" output="screen">
+    </node>
+    This section opens another plotjuggler with different config, if you need it-->
+    
+</launch>

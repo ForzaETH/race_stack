@@ -1,0 +1,6 @@
+image: MexicoCity_map.png
+resolution: 0.06991
+origin: [-47.26438405496835,-110.2481836331018, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

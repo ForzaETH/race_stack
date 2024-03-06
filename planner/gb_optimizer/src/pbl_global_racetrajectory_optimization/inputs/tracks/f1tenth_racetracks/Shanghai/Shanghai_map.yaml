@@ -1,0 +1,6 @@
+image: Shanghai_map.png
+resolution: 0.06505
+origin: [-75.7934346866365,-35.95358066976158, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196

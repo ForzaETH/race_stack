@@ -1,0 +1,6 @@
+image: Nuerburgring_map.png
+resolution: 0.07542
+origin: [-98.11326416920916,-106.53776182200401, 0.000000]
+negate: 0
+occupied_thresh: 0.45
+free_thresh: 0.196
