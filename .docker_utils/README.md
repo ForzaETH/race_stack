@@ -95,6 +95,7 @@ Since we prefer to not launch the car nodes with a VS Code session attached to t
 Then, for the first time launching the setup, use the [`main_dock.sh`](./main_dock.sh) file:
 ```bash
 cd <race_stack folder>
+export RACE_STACK_ROOT=${pwd}
 source ./.devcontainer/.install_utils/xauth_setup.sh
 ./.docker_utils/main_dock.sh
 ```

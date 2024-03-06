@@ -13,10 +13,10 @@ docker run --tty \
     --volume $XAUTH_LOC:/home/$USER/.Xauthority \
     --volume /dev:/dev \
     --volume /tmp/.X11-unix:/tmp/.X11-unix \
-    --volume /home/$USER/catkin_ws/src/race_stack:/home/$USER/catkin_ws/src/race_stack \
-    --volume /home/$USER/catkin_ws/build:/home/$USER/catkin_ws/build \
-    --volume /home/$USER/catkin_ws/devel:/home/$USER/catkin_ws/devel \
-    --volume /home/$USER/catkin_ws/logs:/home/$USER/catkin_ws/logs \
+    --volume $RACE_STACK_ROOT:/home/$USER/catkin_ws/src/race_stack \
+    --volume $RACE_STACK_ROOT/../../cache/noetic/build:/home/$USER/catkin_ws/build \
+    --volume $RACE_STACK_ROOT/../../cache/noetic/devel:/home/$USER/catkin_ws/devel \
+    --volume $RACE_STACK_ROOT/../../cache/noetic/logs:/home/$USER/catkin_ws/logs \
     --privileged \
     --name forzaeth_devcontainer \
     --entrypoint /bin/bash \
