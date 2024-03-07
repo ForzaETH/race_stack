@@ -4,7 +4,7 @@ Basically like the Sector Tuner but for the overtaking line.
 It takes care of providing the GUI for slicing the overtaking line in sectors and then publishes the sectors and the corresponding scaling factors once the system is running. 
 
 ## Overtaking sector slicer
-An example usage is in `<race_stack folder>/base_system/pbl_f110_system/racecar/racecar/launch/pbl_teleop.launch`, where the overtaking sector slicer is launched as follows:
+An example usage is in `<race_stack folder>/base_system/f1tenth_system/racecar/racecar/launch/pbl_teleop.launch`, where the overtaking sector slicer is launched as follows:
 ```xml
 <!-- Launch Overtaking Sector Slicer/Tuner from Utils -->
 <node pkg="overtaking_sector_tuner" type="ot_sector_slicing.py" name="ot_sector_node" output="screen">
@@ -14,7 +14,7 @@ An example usage is in `<race_stack folder>/base_system/pbl_f110_system/racecar/
 This specifically provides the functionality to slice the sectors.
 
 ## Overtaking sector server
-An example usage is in `<race_stack folder>/base_system/pbl_f110_system/racecar/racecar/launch/pbl_teleop.launch`, where the overtaking sector server is launched as follows:
+An example usage is in `<race_stack folder>/base_system/f1tenth_system/racecar/racecar/launch/pbl_teleop.launch`, where the overtaking sector server is launched as follows:
 ```xml
 <!--  Launch Overtaking Sector Server -->
 <node pkg="overtaking_sector_tuner" type="ot_sector_server.py" name="ot_dyn_sector_server" output="screen"/>

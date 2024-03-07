@@ -1,7 +1,7 @@
 <!-- -*- mode: XML -*- -->
 <launch>
-    <arg name="racecar_version" default="NUC4"
-        doc="Physical racecar used. Possible values: NUC2/NUC3/NUC4/NUC5" />
+    <arg name="racecar_version" default="NUC2"
+        doc="Physical racecar used. Possible values: NUC2/JET1" />
     <arg name="map_name" doc="" />
     <arg name="ftg_max_speed" default="1.0" />
     <arg name="ftg_track_width" default="2.0" />
