@@ -13,3 +13,6 @@
 [submodule "base_system/f1tenth_system"]
 	path = base_system/f1tenth_system
 	url = https://github.com/ForzaETH/f1tenth_system.git
+[submodule "sensors/vesc"]
+	path = sensors/vesc
+	url = https://github.com/ForzaETH/vesc.git
