@@ -79,7 +79,7 @@ To test if the steering to servo position gain is correct do the following:
 2. Calculate the circle radius the car should drive at with a steering angle of 0.1. 
 3. Measure out a circle with with radius and mark the start position of the car and where it should drive through
 4. Start the base system like above
-```roslaunch racecar pbl_teleop.launch racecar_version:=NUC4 ```
+```roslaunch racecar pbl_teleop.launch racecar_version:=NUC2 ```
 5. Start the id_controller with ```roslaunch id_controller id_controller.launch experiment:=5```
 6. Hold the top right button on the remote to make the car follow the commands from the id controller. 
 7. Check if the radius of the driven circle matches the marked positions:
