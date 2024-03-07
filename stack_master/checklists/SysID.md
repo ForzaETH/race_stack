@@ -41,7 +41,7 @@ Typically these don't change significantly and need to be identified only once. 
 ## Steering Angle to Servo Position [Verify or Identify before Tire Identification]
 
 The parameters that are affected by this are found in 
-```pbl_f110_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
+```f1tenth_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
 
 ```
 steering_angle_to_servo_gain: # e.g. -0.8390
@@ -53,7 +53,7 @@ This mapping should already be identified correctly. This can be checked by doin
 ### Verify: Driving Straight
 
 1. Launch the base system with the correct racecar version
-```roslaunch racecar pbl_teleop.launch racecar_version:=NUC4 ```
+```roslaunch racecar pbl_teleop.launch racecar_version:=NUC2 ```
 
 2. Drive straight
   2.1 If the car drives to the right: decrease ```steering_angle_to_servo_offset```
@@ -79,7 +79,7 @@ To test if the steering to servo position gain is correct do the following:
 2. Calculate the circle radius the car should drive at with a steering angle of 0.1. 
 3. Measure out a circle with with radius and mark the start position of the car and where it should drive through
 4. Start the base system like above
-```roslaunch racecar pbl_teleop.launch racecar_version:=NUC4 ```
+```roslaunch racecar pbl_teleop.launch racecar_version:=NUC2 ```
 5. Start the id_controller with ```roslaunch id_controller id_controller.launch experiment:=5```
 6. Hold the top right button on the remote to make the car follow the commands from the id controller. 
 7. Check if the radius of the driven circle matches the marked positions:
@@ -138,7 +138,7 @@ rosbag record -a -x "scan"
 ```
 5. The terminal with the experiment will notice you when the experiment is about to be over: "Ending soon, stop the bag" <-- Do so
 6. Repeat 2 - 5 with all different settings in step 2.
-7. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_tires.py```and change the model name to the one that you are working on (e.g. NUC4_pacejka)
+7. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_tires.py```and change the model name to the one that you are working on (e.g. NUC2_pacejka)
 8. Run the script: 
 ``` 
 source .venv/bin/activate
@@ -179,7 +179,7 @@ In ```~/catkin_ws/src/race_stack/system_identification/id_analyser/model/NUCX/NU
 ## Speed to ERPM Mapping [SHOULD NOT BE REQUIRED]
 
 The parameters that are affected by this are found in 
-`race_stack/base_system/pbl_f110_system/racecar/racecar/config/<NUCX>/vesc.yaml`. We need to set 
+`race_stack/base_system/f1tenth_system/racecar/racecar/config/<NUCX>/vesc.yaml`. We need to set 
 
 ```
 speed_to_erpm_gain: # e.g. 4316
@@ -209,7 +209,7 @@ The script will print the parameters that it estimated and will also update them
 ## Steering Angle to Servo Position [SHOULD NOT BE REQUIRED]
 
 The parameters that are affected by this are found in 
-```pbl_f110_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
+```f1tenth_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
 
 ```
 steering_angle_to_servo_gain: # e.g. -0.8390
@@ -247,7 +247,7 @@ To test if the steering to servo position gain is correct do the following:
 2. Calculate the circle radius the car should drive at with a steering angle of 0.1. 
 3. Measure out a circle with with radius and mark the start position of the car and where it should drive through
 4. Start the base system like above
-```roslaunch racecar pbl_teleop.launch racecar_version:=NUC4 ```
+```roslaunch racecar pbl_teleop.launch racecar_version:=NUC2 ```
 5. Start the id_controller with ```roslaunch id_controller id_controller.launch experiment:=5```
 6. Hold the top right button on the remote to make the car follow the commands from the id controller. 
 7. Check if the radius of the driven circle matches the marked positions:
@@ -300,7 +300,7 @@ roslaunch id_controller id_controller.launch experiment:=3
 
 7. The terminal with the experiment will notice you when the experiment is  over: "Experiment over", so stop the rosbag
 8. Repeat 2 - 7 with all different settings in step 2.
-9. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_accel.py```and change the model name to the one that you are working on (e.g. NUC4_pacejka)
+9. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_accel.py```and change the model name to the one that you are working on (e.g. NUC2_pacejka)
 10. Run the script: 
 ``` 
 source .venv/bin/activate
@@ -311,7 +311,7 @@ python3 analyse_tires.py
 
 12.  In ```~/catkin_ws/src/race_stack/system_identification/id_analyser/models/NUCX/NUCX_pacejka.txt``` look at the parameters C_acc, C_dec and C_R
 
-13. In ```~/catkin_ws/src/race_stack/base_system/pbl_f110_system/racecar/racecar/config/NUCX/vesc.yaml```, input the found parameters in the following way:
+13. In ```~/catkin_ws/src/race_stack/base_system/f1tenth_system/racecar/racecar/config/NUCX/vesc.yaml```, input the found parameters in the following way:
     
     acceleration_to_current_gain: C_acc 
 

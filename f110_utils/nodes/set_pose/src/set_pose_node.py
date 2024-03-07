@@ -11,7 +11,7 @@ class SetInitialPose():
 
         rospy.on_shutdown(self.shutdown)
 
-        # '/home/icra_crew/catkin_ws/src/pbl_f110_system/racecar/racecar/config/common/slam'
+        # '/home/icra_crew/catkin_ws/src/f1tenth_system/racecar/racecar/config/common/slam'
         self.CONFIG_DIR = rospy.get_param('set_slam_pose_node/config_dir')
         self.CONFIG_BASE = rospy.get_param('set_slam_pose_node/config_base')  # 'f110_2d_loc.lua'
 

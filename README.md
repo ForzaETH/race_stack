@@ -87,7 +87,7 @@ pip install <path_to_race_stack>/f110_utils/libs/ccma
 It can be done with the following command 
 ```
 # Optional
-rm -rf ~/catkin_ws/src/race_stack/base_system/pbl_f110_system
+rm -rf ~/catkin_ws/src/race_stack/base_system/f1tenth_system
 ``` 
 
 Then build the whole system!
