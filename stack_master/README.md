@@ -16,7 +16,7 @@ roslaunch stack_master mapping.launch map_name:=<map name of choice> racecar_ver
 ```
 
   - `<map name of choice>` can be any name with no white space. Conventionally we use the location name (eg, 'hangar', 'ETZ', 'icra') followed by the day of the month followed by an incremental version number. For instance, `hangar_12_v0`.
-  - `<NUCX>` depends on which car you are using. NUC3, NUC4, etc.
+  - `<NUCX>` depends on which car you are using. NUC2, JET1, etc.
 
 After completing a lap, press the requested button and the raceline will be generated. Then two GUI will be shown, and within them a slider can be used to select the sectors.
 Be careful as once a sector is chosen it cannot be further subdivided.

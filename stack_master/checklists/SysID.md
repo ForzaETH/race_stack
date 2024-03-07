@@ -53,7 +53,7 @@ This mapping should already be identified correctly. This can be checked by doin
 ### Verify: Driving Straight
 
 1. Launch the base system with the correct racecar version
-```roslaunch racecar pbl_teleop.launch racecar_version:=NUC4 ```
+```roslaunch racecar pbl_teleop.launch racecar_version:=NUC2 ```
 
 2. Drive straight
   2.1 If the car drives to the right: decrease ```steering_angle_to_servo_offset```
@@ -138,7 +138,7 @@ rosbag record -a -x "scan"
 ```
 5. The terminal with the experiment will notice you when the experiment is about to be over: "Ending soon, stop the bag" <-- Do so
 6. Repeat 2 - 5 with all different settings in step 2.
-7. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_tires.py```and change the model name to the one that you are working on (e.g. NUC4_pacejka)
+7. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_tires.py```and change the model name to the one that you are working on (e.g. NUC2_pacejka)
 8. Run the script: 
 ``` 
 source .venv/bin/activate
@@ -247,7 +247,7 @@ To test if the steering to servo position gain is correct do the following:
 2. Calculate the circle radius the car should drive at with a steering angle of 0.1. 
 3. Measure out a circle with with radius and mark the start position of the car and where it should drive through
 4. Start the base system like above
-```roslaunch racecar pbl_teleop.launch racecar_version:=NUC4 ```
+```roslaunch racecar pbl_teleop.launch racecar_version:=NUC2 ```
 5. Start the id_controller with ```roslaunch id_controller id_controller.launch experiment:=5```
 6. Hold the top right button on the remote to make the car follow the commands from the id controller. 
 7. Check if the radius of the driven circle matches the marked positions:
@@ -300,7 +300,7 @@ roslaunch id_controller id_controller.launch experiment:=3
 
 7. The terminal with the experiment will notice you when the experiment is  over: "Experiment over", so stop the rosbag
 8. Repeat 2 - 7 with all different settings in step 2.
-9. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_accel.py```and change the model name to the one that you are working on (e.g. NUC4_pacejka)
+9. Open ```~/catkin_ws/src/race_stack/system_identification/id_analyser/analyse_accel.py```and change the model name to the one that you are working on (e.g. NUC2_pacejka)
 10. Run the script: 
 ``` 
 source .venv/bin/activate
