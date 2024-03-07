@@ -1,13 +1,13 @@
 # State Estimation
 ![State Estimation Architecture](./misc/state_estimation_arch.png)
 
-This directory contains the localization submodules and the information required to understand the state estimation framework. Note that the state estimation components not related to the localization are launched seperately, namely in `base_system/pbl_f110_system/racecar/racecar/launch/SE_launch.launch`, where the associated parameters can be adjusted. 
+This directory contains the localization submodules and the information required to understand the state estimation framework. Note that the state estimation components not related to the localization are launched seperately, namely in `base_system/f1tenth_system/racecar/racecar/launch/SE_launch.launch`, where the associated parameters can be adjusted. 
 
 ## Kalman Filter ##
 
 The Kalman Filter is implemented using the `robot_localization` package published [here](https://github.com/cra-ros-pkg/robot_localization) [see our paper for reference]. 
 
-During operation, the EKF is launched in the State Estimaiton launch file, located in `base_system/pbl_f110_system/racecar/racecar/launch/SE_launch.launch`.
+During operation, the EKF is launched in the State Estimaiton launch file, located in `base_system/f1tenth_system/racecar/racecar/launch/SE_launch.launch`.
 
 ### Parameters
 

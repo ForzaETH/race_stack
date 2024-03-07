@@ -5,7 +5,7 @@ It takes care of providing the GUI for slicing the racing line in sectors and th
 ## Sector slicer
 ### Basic usage
 
-An example usage is in `<race_stack folder>/base_system/pbl_f110_system/racecar/racecar/launch/pbl_teleop.launch`, where the overtaking sector slicer is launched as follows:
+An example usage is in `<race_stack folder>/base_system/f1tenth_system/racecar/racecar/launch/pbl_teleop.launch`, where the overtaking sector slicer is launched as follows:
 ```xml
 <!-- Launch Sector Slicer/Tuner from Utils -->
 <node pkg="sector_tuner" type="sector_slicing.py" name="sector_node" output="screen">
@@ -30,7 +30,7 @@ Now you can launch the sim without the mapping bool and launch `rqt > Plugins > 
 ## Sector server
 
 ### Basic usage
-An example is in `<race_stack folder>/base_system/pbl_f110_system/racecar/racecar/launch/pbl_teleop.launch`, where the sector server is launched as follows:
+An example is in `<race_stack folder>/base_system/f1tenth_system/racecar/racecar/launch/pbl_teleop.launch`, where the sector server is launched as follows:
 ```xml
 <!--  launch dynamic reconfigure for the sectors -->
 <node pkg="sector_tuner" type="sector_server.py" name="dyn_sector_server" output="screen"/>

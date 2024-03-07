@@ -41,7 +41,7 @@ Typically these don't change significantly and need to be identified only once. 
 ## Steering Angle to Servo Position [Verify or Identify before Tire Identification]
 
 The parameters that are affected by this are found in 
-```pbl_f110_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
+```f1tenth_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
 
 ```
 steering_angle_to_servo_gain: # e.g. -0.8390
@@ -179,7 +179,7 @@ In ```~/catkin_ws/src/race_stack/system_identification/id_analyser/model/NUCX/NU
 ## Speed to ERPM Mapping [SHOULD NOT BE REQUIRED]
 
 The parameters that are affected by this are found in 
-`race_stack/base_system/pbl_f110_system/racecar/racecar/config/<NUCX>/vesc.yaml`. We need to set 
+`race_stack/base_system/f1tenth_system/racecar/racecar/config/<NUCX>/vesc.yaml`. We need to set 
 
 ```
 speed_to_erpm_gain: # e.g. 4316
@@ -209,7 +209,7 @@ The script will print the parameters that it estimated and will also update them
 ## Steering Angle to Servo Position [SHOULD NOT BE REQUIRED]
 
 The parameters that are affected by this are found in 
-```pbl_f110_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
+```f1tenth_system/racecar/racecar/config/<NUCX>/vesc.yaml```. We need to set 
 
 ```
 steering_angle_to_servo_gain: # e.g. -0.8390
@@ -311,7 +311,7 @@ python3 analyse_tires.py
 
 12.  In ```~/catkin_ws/src/race_stack/system_identification/id_analyser/models/NUCX/NUCX_pacejka.txt``` look at the parameters C_acc, C_dec and C_R
 
-13. In ```~/catkin_ws/src/race_stack/base_system/pbl_f110_system/racecar/racecar/config/NUCX/vesc.yaml```, input the found parameters in the following way:
+13. In ```~/catkin_ws/src/race_stack/base_system/f1tenth_system/racecar/racecar/config/NUCX/vesc.yaml```, input the found parameters in the following way:
     
     acceleration_to_current_gain: C_acc 
 

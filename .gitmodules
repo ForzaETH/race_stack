@@ -10,3 +10,6 @@
 [submodule "state_estimation/cartographer_pbl/cartographer_ros"]
 	path = state_estimation/cartographer_pbl/cartographer_ros
 	url = https://github.com/cartographer-project/cartographer_ros
+[submodule "base_system/f1tenth_system"]
+	path = base_system/f1tenth_system
+	url = git@github.com:ForzaETH/f1tenth_system.git
