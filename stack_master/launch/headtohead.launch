@@ -2,7 +2,7 @@
 <launch>
     <arg name="racecar_version" default="NUC2" /> <!--  SIM / NUC2 ... -->
     <arg name="MAP_mode" default="safe" /> <!--  safe / aggressive -->
-    <arg name="LU_table" default="NUC2_hangar_pacejka" />
+    <arg name="LU_table" default="NUC2_pacejka" />
     <arg name="ctrl_algo" default="MAP" /> <!--  MAP / PP -->
     <arg name="measure" default="false" />
     <param name="measure" value="$(arg measure)" />
