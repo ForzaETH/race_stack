@@ -16,3 +16,6 @@
 [submodule "sensors/vesc"]
 	path = sensors/vesc
 	url = https://github.com/ForzaETH/vesc.git
+[submodule "state_estimation/particle_filter"]
+	path = state_estimation/particle_filter
+	url = git@github.com:ForzaETH/particle_filter.git
