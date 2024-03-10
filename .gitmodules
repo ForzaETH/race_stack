@@ -16,3 +16,6 @@
 [submodule "sensors/vesc"]
 	path = sensors/vesc
 	url = https://github.com/ForzaETH/vesc.git
+[submodule "planner/gb_optimizer/src/global_racetrajectory_optimization"]
+	path = planner/gb_optimizer/src/global_racetrajectory_optimization
+	url = https://github.com/ForzaETH/global_racetrajectory_optimization.git

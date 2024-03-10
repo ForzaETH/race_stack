@@ -1,4 +1,0 @@
-import pbl_global_racetrajectory_optimization.opt_mintime_traj.powertrain_src.src.Battery
-import pbl_global_racetrajectory_optimization.opt_mintime_traj.powertrain_src.src.EMachine
-import pbl_global_racetrajectory_optimization.opt_mintime_traj.powertrain_src.src.Inverter
-import pbl_global_racetrajectory_optimization.opt_mintime_traj.powertrain_src.src.Radiators

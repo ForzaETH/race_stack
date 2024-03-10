@@ -1,7 +1,0 @@
-numpy==1.18.1
-# matplotlib==3.3.1
-trajectory_planning_helpers==0.76
-# the following is required for minimum time optimization only
-# casadi==3.5.1
-# scipy==1.6.2
-# scikit-learn==0.23.1
