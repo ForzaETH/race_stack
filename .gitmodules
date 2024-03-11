@@ -16,3 +16,6 @@
 [submodule "sensors/vesc"]
 	path = sensors/vesc
 	url = https://github.com/ForzaETH/vesc.git
+[submodule "base_system/f110-simulator"]
+	path = base_system/f110-simulator
+	url = https://github.com/ForzaETH/f1tenth_simulator.git
