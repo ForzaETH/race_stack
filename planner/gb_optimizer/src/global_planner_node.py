@@ -14,11 +14,11 @@ from scipy.signal import savgol_filter
 from skimage.morphology import skeletonize
 from skimage.segmentation import watershed
 
-from pbl_global_racetrajectory_optimization import main_globaltraj
-import pbl_global_racetrajectory_optimization.helper_funcs_glob as helper_funcs_glob
+from global_racetrajectory_optimization.trajectory_optimizer import trajectory_optimizer
+from global_racetrajectory_optimization import helper_funcs_glob
 import trajectory_planning_helpers as tph
 
-from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Pose, PoseStamped
 from f110_msgs.msg import Wpnt, WpntArray
 from tf.transformations import euler_from_quaternion
@@ -28,15 +28,13 @@ from std_msgs.msg import String, Bool, Float32
 # To write global waypoints
 from readwrite_global_waypoints import write_global_waypoints
 
-# Save Slam_toolbox maps
-from slam_toolbox_msgs.srv import SaveMap, SerializePoseGraph
-
 class GlobalPlanner:
     """
     Global planner node
     """
 
     def __init__(self):
+        self.input_path = os.path.join(RosPack().get_path('stack_master'), 'config', 'gb_optimizer')
         self.rate = rospy.get_param('/global_planner/rate')
         self.test_on_car = rospy.get_param('/global_planner/test_on_car')
         self.current_key = ''
@@ -528,11 +526,11 @@ class GlobalPlanner:
         self.vis_wpnt_cent_pub.publish(centerline_markers)
 
         rospy.loginfo('[GB Planner]: Start Global Trajectory optimization with iterative minimum curvature...')
-        global_trajectory_iqp, bound_r_iqp, bound_l_iqp, est_t_iqp = main_globaltraj. \
-            main_globaltraj(track_name='map_centerline',
-                            curv_opt_type='mincurv_iqp',
-                            safety_width=self.safety_width,
-                            plot=(self.show_plots and not self.map_editor))
+        global_trajectory_iqp, bound_r_iqp, bound_l_iqp, est_t_iqp = trajectory_optimizer(input_path=self.input_path,
+                                                                                          track_name='map_centerline',
+                                                                                          curv_opt_type='mincurv_iqp',
+                                                                                          safety_width=self.safety_width,
+                                                                                          plot=(self.show_plots and not self.map_editor))
 
         self.map_info_str += f'IQP estimated lap time: {round(est_t_iqp, 4)}s; '
         self.map_info_str += f'IQP maximum speed: {round(np.amax(global_trajectory_iqp[:, 5]), 4)}m/s; '
@@ -568,11 +566,11 @@ class GlobalPlanner:
         rospy.loginfo('[GB Planner]: Start reverse Global Trajectory optimization with shortest path...')
 
         rospy.loginfo('[GB Planner]: Start Global Trajectory optimization with iterative minimum curvature for overtaking...')
-        global_trajectory_iqp_ot, *_ = main_globaltraj. \
-            main_globaltraj(track_name='map_centerline',
-                            curv_opt_type='mincurv_iqp',
-                            safety_width=self.safety_width_sp,
-                            plot=(self.show_plots and not self.map_editor))
+        global_trajectory_iqp_ot, *_ = trajectory_optimizer(input_path=self.input_path,
+                                                            track_name='map_centerline',
+                                                            curv_opt_type='mincurv_iqp',
+                                                            safety_width=self.safety_width_sp,
+                                                            plot=(self.show_plots and not self.map_editor))
 
         # use new iqp path as centerline
         new_cent_with_dist = self.add_dist_to_cent(centerline_smooth=global_trajectory_iqp_ot[:, 1:3],
@@ -586,11 +584,11 @@ class GlobalPlanner:
 
         # to use iqp as new centerline, set trackname='map_centerline_2', otherwise use track_name='map_centerline'
         # is a bit faster but cuts corner a bit more
-        global_trajectory_sp, bound_r_sp, bound_l_sp, est_t_sp = main_globaltraj. \
-            main_globaltraj(track_name='map_centerline_2',
-                            curv_opt_type='shortest_path',
-                            safety_width=self.safety_width_sp,
-                            plot=(self.show_plots and not self.map_editor))
+        global_trajectory_sp, bound_r_sp, bound_l_sp, est_t_sp = trajectory_optimizer(input_path=self.input_path,
+                                                                                      track_name='map_centerline_2',
+                                                                                      curv_opt_type='shortest_path',
+                                                                                      safety_width=self.safety_width_sp,
+                                                                                      plot=(self.show_plots and not self.map_editor))
         
         self.est_lap_time = est_t_sp # variable which will be published and used in l1_param_optimizer
         self.est_lap_time_pub.publish(self.est_lap_time)
@@ -829,7 +827,7 @@ class GlobalPlanner:
                     rospy.logwarn('[GB Planner]: Could not create a yaml file for simulator map')
                     print(exp)
                 else:
-                    sim_info_str = '[GB Planner]:' + f'Map for simulation done! Stored in {self.map_dir}'
+                    sim_info_str = '[GB Planner]:' + f' Map for simulation done! Stored in {self.map_dir}'
                     rospy.loginfo(sim_info_str)
                     save_img = False
 
