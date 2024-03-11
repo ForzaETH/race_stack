@@ -19,3 +19,6 @@
 [submodule "planner/gb_optimizer/src/global_racetrajectory_optimization"]
 	path = planner/gb_optimizer/src/global_racetrajectory_optimization
 	url = https://github.com/ForzaETH/global_racetrajectory_optimization.git
+[submodule "base_system/f110-simulator"]
+	path = base_system/f110-simulator
+	url = https://github.com/ForzaETH/f1tenth_simulator.git
