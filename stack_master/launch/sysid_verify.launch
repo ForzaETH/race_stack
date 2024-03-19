@@ -1,0 +1,124 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <arg name="racecar_version" default="NUC3" />
+  <arg name="loc_only" default="False" />
+  <arg name="localization" default="slam"/> 
+  <arg name="carstate_debug" default="False" />
+
+  <arg name="map_name" default="hangar_04_v1"/> 
+  <rosparam ns="map_params" command="load" file="$(find stack_master)/maps/$(arg map_name)/speed_scaling.yaml"/>
+  <rosparam ns="ot_map_params" command="load" file="$(find stack_master)/maps/$(arg map_name)/ot_sectors.yaml"/>
+
+ 
+  <group ns="vesc">
+    <!-- joystick node -->
+    <include file="$(find stack_master)/launch/includes/common/joy_teleop.launch.xml" >
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+    </include>
+
+    <!-- Spawn MUXs -->
+    <include file="$(find racecar)/launch/mux.launch">
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+    </include>
+
+    <!-- start electronic speed controller driver -->
+    <!-- NUC1 vesc launch uses custom ackermann to driver node that lets us command acceleration -->
+    <include file="$(find stack_master)/launch/includes/$(arg racecar_version)/vesc.launch.xml" >
+      <arg name="racecar_version" value="$(arg racecar_version)" />
+    </include>
+  </group>
+
+  <!-- start laser scanner -->
+  <include file="$(find stack_master)/launch/includes/common/sensors.launch.xml" >
+    <arg name="racecar_version" value="$(arg racecar_version)" />
+  </include>
+
+  <!-- static transforms, e.g. base_link to imu -->
+  <include file="$(find stack_master)/launch/includes/$(arg racecar_version)/static_transforms.launch.xml" />
+ 
+  <!-- LAUNCH NEW EKF -->
+  <node pkg="robot_localization" type="ekf_localization_node" name="robot_localization_ekf_node_map" clear_params="true">
+  <param name="frequency" value="50" />  
+  <param name="sensor_timeout" value="1.0" />  
+  <param name="two_d_mode" value="true" />
+  <param name="publish_tf" value="false" />
+  <param name="odom_frame" value="odom" />
+  <param name="base_link_frame" value="base_link" />
+  <param name="world_frame" value="odom" />
+  <param name="imu0_remove_gravitational_acceleration" value="true"/>
+  
+  <param name="odom0" value="/vesc/odom" />
+  <rosparam param="odom0_config">
+  [false,  false,  false,
+  false, false, true,
+  true,  false, false,
+  false, false, false,
+  false, false, false]
+  </rosparam>
+  
+  <param name="imu0" value="/vesc/sensors/imu/raw" />
+  <rosparam param="imu0_config">
+  [false, false, false,
+   false, false, true,
+   false, false, false,
+   false, false, true,
+   false, false, false]
+  </rosparam>
+  <remap from="odometry/filtered" to="ekf/odometry/filtered"/>
+  </node>
+  
+<!-- start cartographer SLAM NORMAL -->
+<node name="cartographer_node" pkg="cartographer_ros"
+type="cartographer_node" args="
+    -configuration_directory $(find stack_master)/config/$(arg racecar_version)/slam
+    -configuration_basename f110_2d.lua">
+<remap from="odom" to="ekf/odometry/filtered" />
+</node>
+
+<node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+    type="cartographer_occupancy_grid_node" args="-resolution 0.05" />
+
+<!-- start Car State Node -->
+<node name="carstate_node" pkg="racecar" type="carstate_node.py" output="screen">
+    <param name="debug" value="$(arg carstate_debug)" />
+    <param name="localization" value="$(arg localization)" />
+</node>
+
+    <arg name="LU_table" default="NUC3_hangar_icra_pacejka"/>
+    <arg name="L1_mode" default="safe"/>
+    <arg name="planner_mode" default="safe"/>
+    <arg name="safe_local_speed" default="1.0"/>
+    <arg name="aggressive_local_speed" default="1.0"/>
+
+    <param name="racecar_version" value="$(arg racecar_version)"/>
+
+    <!--  launch L1 controller -->
+    <node pkg="controller" name="L1_controller" type="L1_controller.py" output="screen">
+        <param name="test_on_car" value="True"/>
+        <param name="mode" value="$(arg L1_mode)"/>
+        <param name="LU_table" value="$(arg LU_table)"/>
+    </node>    
+    
+    <!-- LAUNCH GB TRAJ NODE -->
+    <!-- Ellipse center (x_o, y_o) and radius r in meters and number of discretised circle -->
+    <node name="gb_traj_pub" pkg="gb_traj_publisher" type="gb_traj_publisher.py" output="screen">
+      <param name="speed" type="double" value="3"/>
+      <param name="experiment"  type="string" value="ellipse"/>
+      <param name="x_o"  type="double" value="0"/>
+      <param name="y_o" type="double" value="2"/>
+      <param name="nb" type="int" value="75"/>
+
+      <param name="a" type="double" value="4"/>
+      <param name="b" type="double" value="2"/>
+    </node>
+
+    <!--  launch local planner -->
+    <arg name="node_start_delay" default="1.0" />  
+    <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+            <rosparam file="$(find stack_master)/config/local_sysid_ver_params.yaml" />
+            <param name="mode" value="$(arg planner_mode)"/>
+            <param name="safe_speed_scaling" value="$(arg safe_local_speed)"/>
+            <param name="aggressive_speed_scaling" value="$(arg aggressive_local_speed)"/>
+    </node>
+</launch>
+

@@ -1,0 +1,43 @@
+{
+    "name": "ForzaETH ROS Development Container",
+    "containerUser": "${localEnv:USER}",
+    "privileged": true,
+    "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/.install_utils/xauth_setup.sh'",
+    "image": "race_stack_sim_x86", // change name in case you are working on arm/on the car
+    "workspaceFolder": "/home/${localEnv:USER}/catkin_ws",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/${localEnv:USER}/catkin_ws/src/race_stack,type=bind",
+    "customizations": {
+        "vscode": {
+            "extensions":[
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-themes",
+                "twxs.cmake",
+                "donjayamanne.python-extension-pack",
+                "eamodio.gitlens",
+                "ms-iot.vscode-ros",
+                "redhat.vscode-xml",
+                "ms-python.autopep8"
+            ]
+        }
+    },
+    "containerEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}",
+        "USER" : "${localEnv:USER}",
+        "XAUTHORITY" : "/tmp/.Xauthority",
+        "ROS_HOSTNAME" : "${localEnv:ROS_HOSTNAME}"
+    },
+    "runArgs": [
+        "--name", "forzaeth_devcontainer",
+        "--net", "host",
+        "--privileged"
+    ],
+    "mounts": [
+        "source=/home/${localEnv:USER}/.Xauthority,target=/tmp/.Xauthority,type=bind,consistency=cached",
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+        "source=/dev,target=/dev,type=bind,consistency=cached",
+        "source=${localWorkspaceFolder}/../cache/noetic/build,target=/home/${localEnv:USER}/catkin_ws/build,type=bind",
+        "source=${localWorkspaceFolder}/../cache/noetic/devel,target=/home/${localEnv:USER}/catkin_ws/devel,type=bind",
+        "source=${localWorkspaceFolder}/../cache/noetic/logs,target=/home/${localEnv:USER}/catkin_ws/logs,type=bind"
+    ],
+    "postCreateCommand": "/bin/bash /home/${localEnv:USER}/catkin_ws/src/race_stack/.devcontainer/.install_utils/post_installation.sh"
+}

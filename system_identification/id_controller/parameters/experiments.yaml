@@ -1,0 +1,46 @@
+## Experiment 1 ##
+
+# Commanded VESC speed in electrical RPM. Electrical RPM is the mechanical RPM
+# multiplied by the number of motor poles. Any value is accepted by this
+# driver. However, note that the VESC may impose a more restrictive bounds on the
+# range depending on its configuration.
+const_erpm: 3000
+
+# Commanded VESC servo output position. Valid range is 0 to 1., check out vesc driver and vesc.yaml: servo_min: 0.1, servo_max: 0.85
+const_servo: 0.415
+
+## Experiment 2, send direct current commands and look at acceleration ##
+#from vesc.yaml: current_min: 0.0, current_max: 100.0
+const_curr: 40
+const_brake: 50
+
+accel_time: 1.5 # never exceed 2s
+decel_time: 1.5 # never exceed 2s
+
+# Experiment 3 const accel decel with acceleration commands via drive message
+const_accel: 5
+const_decel: -5
+
+# experiment 4, increase angle from start_pos, to end_pos over angle_time
+# drives with const_erpm defined above
+angle_time: 20
+
+start_pos: -0.1
+end_pos: 0.4
+
+# experiment 5, increase steering angle, drive with const_speed
+const_speed: 3
+
+start_angle: 0.1 # rad
+end_angle: 0.4    # rad
+
+# experiment 6, follow given acceleration profile and record IMU data 
+# profile 1: Step velocity input 2s v=0, 4s v=3, then v=0
+# profile 2: Full acceleration for 2s then full brake for 2s.
+  #accel_time and decel_time are used as well (profile 2)
+acc_profile: 3
+
+# experiment 7, constant speed (const_speed from 5), bang bang steer
+period: 3 # [s]
+repetitions: 5 # total experiment duration will be <repetitions>*<period> seconds
+bangbang_steer: 0.1 # [rad]

@@ -1,0 +1,16 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <arg name="pub_map_to_odom" default="True"/>
+  <!-- Dummy Repub for EKF -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_imu" 
+        args="0.07 0.0 0.05 0.0 0.0 0.7071068 0.7071068 /base_link /imu" />
+
+  <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_laser" 
+        args="0.285 0.0 0.127 0.0 0.0 0.0 1.0 /base_link /laser" />
+
+  <!-- Map to Odom  -->
+  <group if="$(arg pub_map_to_odom)">
+    <node pkg="tf" type="static_transform_publisher" name="map_to_odom" args="0 0 0 0 0 0 /map /odom 10" />
+  </group>
+ 
+</launch>

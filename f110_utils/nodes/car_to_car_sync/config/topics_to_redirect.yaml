@@ -1,0 +1,7 @@
+car2car_topics:
+  - subname: "/car_state/odom"
+    pubname: "/opp/car_state/odom"
+    type: "nav_msgs/msg/Odometry"
+  - subname: "/car_state/odom_frenet"
+    pubname: "/opp/car_state/odom_frenet"
+    type: "nav_msgs/msg/Odometry"

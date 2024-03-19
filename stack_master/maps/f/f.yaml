@@ -1,0 +1,9 @@
+free_thresh: 0.196
+image: f.png
+negate: 0
+occupied_thresh: 0.65
+origin:
+- -11.60654
+- -26.520793
+- 0
+resolution: 0.05000000074505806

@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+
+    <param name="/test" value="true" type="bool"/>
+
+    <include file="$(find stack_master)/launch/base_system.launch">
+        <arg name="map_name" value="test_map" />
+        <arg name="racecar_version" value="SIM" />
+        <arg name="sim" value="true" />
+    </include>
+
+    <include file="$(find stack_master)/launch/time_trials.launch">
+        <arg name="LU_table" value="SIM_linear"/>
+    </include>
+
+    <test test-name="time_trials_test" pkg="stack_master" type="time_trials_test.py" time-limit="300.0"/>
+
+</launch>

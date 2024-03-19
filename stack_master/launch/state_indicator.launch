@@ -1,0 +1,11 @@
+<launch>
+  <!-- Launch the rosserial node to communicate with the Arduino -->
+  <node pkg="rosserial_python" type="serial_node.py" name="state_indicator_node" output="screen">
+    <param name="port" type="string" value="/dev/state_indicator"/>
+    <param name="baud" type="int" value="57600"/>
+  </node>
+
+  <!-- Launch the mode switcher node to switch between steer/speed and state visualisation -->
+  <node pkg="state_machine" type="state_indicator_node.py" name="state_indicator" output="screen"/>
+
+</launch>

@@ -1,0 +1,21 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <arg name="racecar_version" />
+
+  <arg name="vesc_config" default="$(find stack_master)/config/$(arg racecar_version)/vesc.yaml" />
+  <rosparam file="$(arg vesc_config)" command="load" />
+
+  <node pkg="vesc_ackermann" type="ackermann_to_vesc_node" name="ackermann_to_vesc">
+    <!-- Remap to make mux control work with the VESC -->
+    <remap from="ackermann_cmd" to="low_level/ackermann_cmd_mux/output" />
+    <!-- Remap to make vesc have trapezoidal control on the throttle to avoid skipping -->
+    <remap from="commands/motor/speed" to="commands/motor/unsmoothed_speed" />
+    <!-- Remap to make vesc have trapezoidal control on the servo to avoid incorrect odometry and damange -->
+    <remap from="commands/servo/position" to="commands/servo/unsmoothed_position" />
+  </node>
+
+  <node pkg="vesc_driver" type="vesc_driver_node" name="vesc_driver" output="screen" />
+  <node pkg="vesc_ackermann" type="vesc_to_odom_node" name="vesc_to_odom" />
+  <node name="throttle_interpolator" pkg="ackermann_cmd_mux" type="throttle_interpolator.py" />
+
+</launch>

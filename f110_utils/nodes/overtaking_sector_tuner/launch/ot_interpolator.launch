@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="yeet_factor" default="1.25"/>
+
+    <!-- launch interpolator -->
+    <node pkg="overtaking_sector_tuner" type="ot_interpolator.py" name="ot_interpolator" output="screen">
+        <param name="yeet_factor" value="$(arg yeet_factor)"/>
+    </node>
+    
+</launch>
+

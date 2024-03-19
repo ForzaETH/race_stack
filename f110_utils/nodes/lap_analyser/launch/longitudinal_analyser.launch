@@ -1,0 +1,6 @@
+<launch>
+
+<node name="longitudinal_analyser" pkg="lap_analyser" type="longitudinal_analyser.py" output="screen">
+</node>
+
+</launch>

@@ -1,0 +1,19 @@
+detect:
+  rate: 40 # rate at which the node is running
+  lambda: 10 # minimum reliables detection angle in degrees
+  sigma: 0.03 # standard deviation of the noise of the lidar ranges in m
+  min_2_points_dist: 0.01 # minimum distance between two points
+
+tracking:
+  rate: 40 # rate at which the node is running
+  P_vs: 0.2 # proportional gain for the vs
+  P_d: 0.02 # proportional gain for the d
+  P_vd: 0.2 # proportional gain for the vd
+  measurment_var_s: 0.002 # the variance of the measurment noise in the s direction
+  measurment_var_d: 0.002 # the variance of the measurment noise in the d direction
+  measurment_var_vs: 0.2
+  measurment_var_vd: 0.2
+  process_var_vs: 2 # the variance of the process velocity noise in the s direction
+  process_var_vd: 8 # the variance of the process velocity noise in the d direction
+  max_dist: 0.5 # max distance for association
+  var_pub: 1 # obstacles with bigger variance are not published

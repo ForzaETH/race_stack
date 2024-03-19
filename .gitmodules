@@ -1,0 +1,27 @@
+[submodule "f110_utils/nodes/bayesopt4ros"]
+	path = f110_utils/nodes/bayesopt4ros
+	url = https://github.com/IntelligentControlSystems/bayesopt4ros
+[submodule "f110_utils/nodes/cpu_monitor"]
+	path = f110_utils/nodes/cpu_monitor
+	url = https://github.com/alspitz/cpu_monitor.git
+[submodule "state_estimation/cartographer_pbl/cartographer"]
+	path = state_estimation/cartographer_pbl/cartographer
+	url = https://github.com/cartographer-project/cartographer
+[submodule "state_estimation/cartographer_pbl/cartographer_ros"]
+	path = state_estimation/cartographer_pbl/cartographer_ros
+	url = https://github.com/cartographer-project/cartographer_ros
+[submodule "base_system/f1tenth_system"]
+	path = base_system/f1tenth_system
+	url = https://github.com/ForzaETH/f1tenth_system.git
+[submodule "sensors/vesc"]
+	path = sensors/vesc
+	url = https://github.com/ForzaETH/vesc.git
+[submodule "state_estimation/particle_filter"]
+	path = state_estimation/particle_filter
+	url = https://github.com/ForzaETH/particle_filter.git
+[submodule "planner/gb_optimizer/src/global_racetrajectory_optimization"]
+	path = planner/gb_optimizer/src/global_racetrajectory_optimization
+	url = https://github.com/ForzaETH/global_racetrajectory_optimization.git
+[submodule "base_system/f110-simulator"]
+	path = base_system/f110-simulator
+	url = https://github.com/ForzaETH/f1tenth_simulator.git

@@ -1,0 +1,8 @@
+# I assume most maps in stack_master/.../ are not going to be uploaded to Github. 
+# This gitignore exists for that purpose.
+**.yaml
+**.png
+**.pbstream
+**.data
+**.posegraph
+**.pgm
