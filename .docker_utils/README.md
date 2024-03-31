@@ -32,7 +32,7 @@ This should take much less time, less than 1 minute.
 **Step 3/4**: Create  folder structure that resembles the following. Note that it is two folders up from the position of the `race_stack`.
 
 ```bash
-<race_stack directory>/../../
+<race_stack directory>/../
 ...
 ├── cache
 │   └── noetic
@@ -73,7 +73,7 @@ docker compose build nuc
 **Step 3/4**: Create  folder structure that resembles the following. Note that it is two folders up from the position of the `race_stack`.
 
 ```bash
-<race_stack directory>/../../
+<race_stack directory>/../
 ...
 ├── cache
 │   └── noetic
