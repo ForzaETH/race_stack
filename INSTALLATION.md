@@ -38,7 +38,7 @@ docker compose build sim_x86
 
 Then check that the following folder structure is existing:
 ```bash
-<race_stack directory>/../../
+<race_stack directory>/../
 ...
 ├── cache
 │   └── noetic
@@ -50,7 +50,7 @@ Then check that the following folder structure is existing:
 It can be created from the command line, for example:
 ```bash
 cd <race_stack folder>
-mkdir -p ../../cache/noetic/build ../../cache/noetic/devel ../../cache/noetic/logs
+mkdir -p ../cache/noetic/build ../cache/noetic/devel ../cache/noetic/logs
 ```
 Then launch the devcontainer from VS Code
 
