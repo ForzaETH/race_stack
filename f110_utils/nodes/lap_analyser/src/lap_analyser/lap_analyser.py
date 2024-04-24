@@ -66,7 +66,10 @@ class LapAnalyser:
 
         # Open up logfile
         self.logfile_name = f"lap_analyzer_{datetime.now().strftime('%d%m_%H%M')}.txt"
-        self.logfile_dir = os.path.join(RosPack().get_path('lap_analyser'), 'data', self.logfile_name)
+        self.logfile_par = os.path.join(RosPack().get_path('lap_analyser'), 'data')
+        self.logfile_dir = os.path.join(self.logfile_par, self.logfile_name)
+        if not os.path.exists(self.logfile_par):
+            os.makedirs(self.logfile_par)
         with open(self.logfile_dir, 'w') as f:
             f.write(f"Laps done on " + datetime.now().strftime('%d %b %H:%M:%S') + '\n')
 
