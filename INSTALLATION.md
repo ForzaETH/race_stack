@@ -18,7 +18,17 @@ The two lines to be added are (if you are using `bash`)
 source /opt/ros/noetic/setup.bash
 source <path to your catkin_ws>/devel/setup.bash
 ```
+**Note**: 
+In case you want to deploy/develop with docker, have `docker` and `docker-compose` installed!
+Follow the official docker guide [here](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository).
+And make sure to have docker accessible **without** sudo, follow the official docker post-installation steps [here](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user).
 
+## Clone the Repo
+Recursive clone the main repository together with it's submodules!
+```bash
+git clone --recurse-submodules git@github.com:ForzaETH/race_stack.git 
+cd race_stack
+```
 
 ## Docker
 For quick deployment, a docker image can be used.
@@ -74,7 +84,7 @@ cd ~/catkin_ws/src
 ```
 ### Car installation
 #### [Step 1 of 5] 
-First you'll have to clone the repository with all the submodules in it
+First you'll have to clone the repository with all the submodules in it **(in case you haven't done so from above)**. 
 ```
 git clone --recurse-submodules git@github.com:ForzaETH/race_stack.git 
 cd race_stack
@@ -122,7 +132,7 @@ The car is now ready to be tested. For examples on how to run the different modu
 
 ### Sim installation
 #### [Step 1 of 2]
-First you'll have to clone the repository
+First you'll have to clone the repository **(in case you haven't done so from above)**.
 ```
 git clone --recurse-submodules git@github.com:ForzaETH/race_stack.git 
 cd race_stack
