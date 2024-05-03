@@ -20,7 +20,11 @@ RUN mkdir -p /home/${USER}/catkin_ws/src
 RUN catkin init && . /opt/ros/noetic/setup.bash && . /.install_utils/catkin_skiplist_car.sh
 
 USER root
-RUN chown -R ${USER}:${USER} /home/${USER}
+RUN chown -R ${USER}:${USER} /home/${USER}\
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USER ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USER \
+    && chmod 0440 /etc/sudoers.d/$USER
 USER $USER
 
 ENTRYPOINT [ "bash", "/.install_utils/ros_entrypoint.sh" ]

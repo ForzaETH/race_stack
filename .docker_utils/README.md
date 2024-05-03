@@ -118,5 +118,9 @@ cd <race_stack folder>
 ./.docker_utils/sec_dock.sh
 ```
 
+## How to use GUI applications with the container
+To have more information on how to use GUI applications with the container, please refer to the [GUI applications documentation](./README_GUI.md).
+
+
 ---
 [Go back to the main README](../README.md)

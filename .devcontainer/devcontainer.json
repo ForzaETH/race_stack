@@ -21,7 +21,7 @@
         }
     },
     "containerEnv": {
-        "DISPLAY": "${localEnv:DISPLAY}",
+        // "DISPLAY": "${localEnv:DISPLAY}", // this has to be set anyway once the devcontainer is opened
         "USER" : "${localEnv:USER}",
         "XAUTHORITY" : "/tmp/.Xauthority",
         "ROS_HOSTNAME" : "${localEnv:ROS_HOSTNAME}"
