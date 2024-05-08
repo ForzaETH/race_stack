@@ -1,0 +1,11 @@
+<launch>
+    <arg name="mode" default="timetrials" description="choose between: dummy / timetrials / (headtohead). Methods in brackets are not implemented" /> <!--  TODO implement head to head-->
+    <arg name="log-level" default="debug"/>
+
+    <!-- launch state machine -->
+    <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen">
+        <param from="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
+        <param name="mode" value="$(var mode)"/>
+    </node>
+
+</launch>

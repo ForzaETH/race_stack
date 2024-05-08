@@ -1,62 +1,23 @@
 version: "3.8"
 services:
-  base_arm: 
-    build: 
-      context: .
-      dockerfile: .docker_utils/Dockerfile.base_arm
-    image: base_arm
-  
-  sim_arm:
-    build:
-      context: .
-      dockerfile: .docker_utils/Dockerfile.sim_arm
-      args:
-        - USER=${USER} 
-        - UID=${UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
-        - GID=${GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
-    image: race_stack_sim_arm
-    depends_on:
-      - base_arm
-
-  jet:
-    build:
-      context: .
-      dockerfile: .docker_utils/Dockerfile.jet
-      args:
-        - USER=${USER} 
-        - UID=${UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
-        - GID=${GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
-    image: race_stack_jet
-    depends_on:
-      - base_arm
-
-  base_x86: 
-    build: 
-      context: .
-      dockerfile: .docker_utils/Dockerfile.base_x86
-    image: base_x86
-  
   sim_x86:
     build:
       context: .
-      dockerfile: .docker_utils/Dockerfile.sim_x86
+      dockerfile: .devcontainer/Dockerfile
       args:
-        - USER=${USER} 
-        - UID=${UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
-        - GID=${GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
-    image: race_stack_sim_x86
-    # container_name: race_stack_sim_x86
-    depends_on:
-      - base_x86
-
+        - SIM=1
+        - USERNAME=${USER}
+        - UID=${UID}
+        - GID=${GID}
+    image: sim_x86_forzaeth_racestack_ros2
+  
   nuc:
     build:
       context: .
-      dockerfile: .docker_utils/Dockerfile.nuc
+      dockerfile: .devcontainer/Dockerfile
       args:
-        - USER=${USER} 
-        - UID=${UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
-        - GID=${GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
-    image: race_stack_nuc
-    depends_on:
-      - base_x86
+        - SIM=0
+        - USERNAME=${USER}
+        - UID=${UID}
+        - GID=${GID}
+    image: nuc_forzaeth_racestack_ros2

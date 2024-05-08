@@ -4,5 +4,5 @@
 
 docker exec --tty \
     --interactive \
-    forzaeth_devcontainer \
+    sim_x86_forzaeth_racestack_ros2 \
     /bin/bash

@@ -1,0 +1,21 @@
+<launch>
+    <arg name="trajectory" default="min_curv"/> <!-- centerline/min_curv/shortest_path/min_time -->
+    <arg name="start_s" default="0.0"/>
+    <arg name="speed_scaler" default="0.5"/>
+    <arg name="constant_speed" default="false"/>
+    <arg name="type" default="lidar"/><!-- virtual/lidar -->
+
+    <!-- Launch Collision detector as well -->
+    <node name="collision_detector" pkg="opponent_publisher" exec="collision_detector" output="screen"/>
+    
+    <node name="obstacle_publisher" pkg="opponent_publisher" exec="obstacle_publisher" 
+            output="screen">
+            <param name="start_s" value="$(var start_s)"/>
+            <param name="trajectory" value="$(var trajectory)"/>
+            <param name="speed_scaler" value="$(var speed_scaler)"/>
+            <param name="constant_speed" value="$(var constant_speed)"/>
+            <param name="type" value="$(var type)"/>
+    </node>
+
+</launch>
+ 

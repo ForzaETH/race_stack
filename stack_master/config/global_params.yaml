@@ -1,0 +1,4 @@
+stack_master:
+  ros__parameters:
+    racecar_version: NUC2
+    sim: true

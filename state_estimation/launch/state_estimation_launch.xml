@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="mapping_bool" default="True"/>
+    <arg name="racecar_version" default="NUC2"/>
+    <arg name="map_name" default="hangar" />
+    <arg name="frenet_bool" default="False" />
+    <arg name="skip_early_fusion" default="False" />
+    <arg name="use_sim_time" default="False" />
+
+    <!-- EKF IMU + Odom Fusion -->
+    <group unless="$(var skip_early_fusion)">
+        <include file="$(find-pkg-share state_estimation)/launch/ekf_launch.py"/>
+    </group>
+
+    <!--  LOCALIZATION -->
+    <arg name="slam_config_path" default="$(find-pkg-share stack_master)/config/$(var racecar_version)" />
+    <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
+
+    <!-- IF SLAM LOC ONLY -->
+    <group unless="$(var mapping_bool)">
+        <!-- start cartographer SLAM LOCALIZATION -->
+        <node name="cartographer_node" pkg="cartographer_ros"
+            exec="cartographer_node"
+            args="
+            -configuration_directory $(var slam_config_path)
+            -configuration_basename f110_2d_loc.lua
+            -load_state_filename $(var map_path)/$(var map_name).pbstream
+            --minloglevel 2">
+            <remap from="odom" to="early_fusion/odom" />
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+
+        <!-- Map as occ grid -->
+        <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros" 
+            exec="cartographer_occupancy_grid_node" args="-resolution 0.05">
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+
+        <!-- Launch map server with regular map name reads from OG MAP-->
+        <node pkg="nav2_map_server" name="map_server" exec="map_server" output="screen">
+            <param name="yaml_filename" value="$(var map_path)/$(var map_name).yaml" />
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+        <node pkg="nav2_lifecycle_manager" name="lifecycle_manager" exec="lifecycle_manager"
+            output="screen">
+            <param name="autostart" value="True" />
+            <param name="node_names" value="[map_server]" />
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+
+    </group>
+
+    <!-- ELIF SLAM MAPPING -->
+    <group if="$(var mapping_bool)">
+        <!-- start cartographer SLAM MAPPING -->
+        <node name="cartographer_node" pkg="cartographer_ros"
+            exec="cartographer_node"
+            args=" 
+            -configuration_directory $(var slam_config_path)
+            -configuration_basename f110_2d.lua
+            --minloglevel 2">
+            <remap from="odom" to="early_fusion/odom" />
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+
+        <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+            exec="cartographer_occupancy_grid_node" args="-resolution 0.05" >
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+    </group>
+
+    <!-- Carstate Node -->
+    <node name="carstate_node" pkg="state_estimation" exec="carstate_node" args="" output='screen'>
+        <remap from="/odom_out" to="/car_state/odom" />
+        <param name="frenet_bool" value="$(var frenet_bool)" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+
+</launch>

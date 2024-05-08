@@ -1,0 +1,6 @@
+# forzaeth f1tenth extension
+source /opt/ros/$ROS_DISTRO/setup.bash
+source /home/$USERNAME/ws/install/setup.bash
+alias sauce='source /opt/ros/${ROS_DISTRO}/setup.bash && source /home/${USERNAME}/ws/install/setup.bash'
+alias scripz='cd /home/${USERNAME}/ws/src/race_stack/stack_master/scripts'
+export ROS_DOMAIN_ID=48

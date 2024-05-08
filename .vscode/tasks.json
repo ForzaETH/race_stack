@@ -1,0 +1,59 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Workspace",
+            "detail": "Builds all packages in the workspace",
+            "type": "shell",
+            "command": "cd ../../; ./src/race_stack/.vscode/build.sh ${input:build-type}",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Build Target",
+            "detail": "Builds one or more targets in the workspace",
+            "type": "shell",
+            "command": "cd ../../; ./src/race_stack/.vscode/build.sh ${input:build-type} ${input:packages}",
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Clean Workspace",
+            "detail": "Run colcon clean",
+            "type": "shell",
+            "command": "cd ../../; ./src/race_stack/.vscode/clean.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean Target",
+            "detail": "Run colcon clean on one or more targets",
+            "type": "shell",
+            "command": "cd ../../; ./src/race_stack/.vscode/clean.sh ${input:packages}",
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "packages",
+            "type": "promptString",
+            "description" : "Name of package to build",
+        },
+        {
+            "id" : "build-type",
+            "type": "pickString",
+            "description": "Choose between debug and release build modes",
+            "options": ["Debug", "Release", "Debug no-symlink", "Release no-symlink"],
+            "default": "Release"
+        }
+    ]
+}

@@ -1,61 +1,56 @@
-# rosbags 
-*.bag
-bags/
+# Prerequisites
+*.d
 
-# JSON files for waypoints
-*/maps/*/*.json
-# but not the test ones
-!*/maps/test_map/*.json
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
 
-# vscode
-.vscode/
+# Precompiled Headers
+*.gch
+*.pch
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# packages
-*.egg-info
-
-# C extensions
+# Compiled Dynamic libraries
 *.so
+*.dylib
+*.dll
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Fortran module files
+*.mod
+*.smod
 
-# VS Code
-.vscode/*
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
 
-# packages 
-*.egg-info
+# Executables
+*.exe
+*.out
+*.app
 
-#no lapanalyser maps
-f110_utils/nodes/lap_analyser/maps/*
+# macos
+.DS_Store
 
-#no map_editor maps
-f110_utils/nodes/map_editor/maps/*
+# py
+*.pyc
 
-#no slam_tuner maps
-f110_utils/nodes/slam_tuner/maps/*
+#vscode
+.vscode
 
-#no realsense logs
-perception/logs/*
+#maps
+stack_master/maps/*
+!stack_master/maps/GLC_smile_small
+stack_master/maps/GLC_smile_small/speed_scaling.yaml
+stack_master/maps/GLC_smile_small/ot_sectors.yaml
+!stack_master/maps/hangar_1905_v0
+stack_master/maps/hangar_1905_v0/speed_scaling.yaml
+stack_master/maps/hangar_1905_v0/ot_sectors.yaml
 
-# ot yamls
-f110_utils/nodes/overtaking_sector_tuner/cfg/ot_sectors.yaml
-# scaler yamls
-f110_utils/nodes/sector_tuner/cfg/speed_scaling.yaml
-# no changes to sector yamls
-stack_master/maps/*/ot_sectors.yaml
-stack_master/maps/*/speed_scaling.yaml
+#todo: what's up with maps -> external map folder?
+.vscode/build
+.vscode/log
+.vscode/c_cpp_properties.json
 
-# Bayesian optimization
-stack_master/config/BayesOpt_MAP/
-f110_utils/nodes/param_optimizer/logs/*
-
-# Test artifacts
-stack_master/test/artifacts/*
-
-# Range Libc
-range_libc/

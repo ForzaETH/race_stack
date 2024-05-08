@@ -1,0 +1,79 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+  <arg name="racecar_version" default="NUC2" description="'SIM' / 'NUCx'" />
+  <arg name="map_name" description="Map name in stack_master/maps" />
+  <arg name="sim" default="False" description="True/False if you want to run simulation" />
+  <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
+
+  <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
+  <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
+  <let name="joy_teleop_config"
+    value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
+  <let name="vesc_config"
+    value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
+
+  <!-- Note: This is merely the share path (read-only) as the base_system
+    is not expected to modify maps in any way. -->
+  <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
+
+  <!-- launch simulator -->
+  <group if="$(var sim)">
+    <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
+      <arg name="map_yaml_path" value="$(var map_path)/$(var map_name).yaml" />
+    </include>
+    <!-- only needed in sim -->
+    <include
+      file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml" />
+  </group>
+
+  <!-- launch real car system -->
+  <group unless="$(var sim)">
+    <!-- launch teleop -->
+    <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
+      <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
+      <arg name="vesc_config" value="$(var vesc_config)" />
+      <arg name="sensors_config" value="$(var sensors_config)" />
+      <arg name="mux_config" value="$(var mux_config)" />
+    </include>
+
+    <!-- launch SE -->
+    <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
+      <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="mapping_bool" value="False" />
+      <arg name="map_name" value="$(var map_name)" />
+      <arg name="frenet_bool" value="True" />
+    </include>
+  </group>
+
+  <!-- launch global parameter node -->
+  <node pkg="stack_master" name="global_parameters" exec="global_parameter_node">
+    <param name="racecar_version" value="$(var racecar_version)" />
+    <param name="sim" value="$(var sim)" />
+    <param name="map_path" value="$(var map_path)" />
+    <!-- Fails with l1 params for some reason
+    <param from="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml" /> -->
+    <param name="use_sim_time" value="$(var sim)" />
+  </node>
+
+  <!-- launch global trajectory republisher -->
+  <node pkg="global_planner" name="global_republisher" exec="global_trajectory_publisher">
+    <param name="map_path" value="$(var map_path)" />
+  </node>
+
+
+  <!-- launch sector tuner -->
+  <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
+    <param name="map_name" value="$(var map_name)" />
+    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/speed_scaling.yaml" />
+  </node>
+
+  <!-- launch ot sector tuner -->
+  <node pkg="sector_tuner" name="ot_interpolator" exec="ot_interpolator">
+    <param name="map_name" value="$(var map_name)" />
+    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/ot_sectors.yaml" />
+  </node>
+
+  <!-- launch lap analyser -->
+  <node pkg="lap_analyser" name="lap_analyser" exec="lap_analyser" output="screen" />
+
+</launch>

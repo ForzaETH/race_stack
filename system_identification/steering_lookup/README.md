@@ -1,16 +1,16 @@
 # Steering lookup
-This package provides an importable library to use the steering lookup obtained from sysid experiments for the MAP controller.
+This package provides an importable library to use the steering lookup obtained from sysid experiments.
 
-## How to use
+## How to import python lib 
 
-Build the library (catkin build steering_lookup) and source the workspace. After generating the lookup table using the scripts in 'id_analyser', you can import this library and use it in another ros package like so:
+Build the library (catkin build steering_lookup) and source the workspace. Then you can import it in another ros package like so:
 
 ```python
 from steering_lookup.lookup_steer_angle import LookupSteerAngle
 
 # [...]
 
-steer_lookup = LookupSteerAngle('<NAME>')
+steer_lookup = LookupSteerAngle('NUC1_pacejka')
 accel = 5.0 # m/s2
 vel = 3.5   # m/s
 steer_angle = steer_lookup.lookup_steer_angle(accel, vel)
@@ -18,5 +18,3 @@ steer_angle = steer_lookup.lookup_steer_angle(accel, vel)
 # rospy.loginfo(steer_angle)
 
 ```
-
-Replace \<NAME\> with the name of your config without "_lookup_table.csv". So if your config is called CAR2_pacejka_lookup_table.csv, \<NAME\> would be CAR2_pecejka.

@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <arg name="bag" default="default_bag_folder" />
+    <arg name="map_name" default="default_map_name" />
+    <arg name="racecar_version" default="NUC2" />
+    <arg name="pub_tf" default="True" />
+    <arg name="bag_path" default="$(find-pkg-share slam_tuner)/data/$(var bag).db3" description="ros2 bag .db3 file path"/>
+    <arg name="bag_ekf" default="False"/>
+    <arg name="rviz" default="True"/>
+    <arg name="frenet" default="False"/>
+    <arg name="rate" default="1.0"/>
+    <arg name="mapping_bool" default="False"/>
+
+    <!-- static transformations -->
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_map_to_odom" args="0 0 0 0 0 0 map odom" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_baselink_to_laser" args="0.27 0 0.11 0 0 0 base_link laser" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_baselink_to_imu" args="0 .07 0 0.05 0 0 1.5707963 base_link imu" />
+
+    <!-- launch frenet odom republisher -->
+    <group if="$(var frenet)">
+        <include file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml" />
+    </group>
+
+    <!-- launch state estimation -->
+    <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
+        <arg name="mapping_bool" value="$(var mapping_bool)"/>
+        <arg name="racecar_version" value="$(var racecar_version)"/>
+        <arg name="map_name" value="$(var map_name)"/>
+        <arg name="frenet_bool" value="$(var frenet)" />
+        <arg name="skip_early_fusion" value="$(var bag_ekf)" />
+        <arg name="slam_config_path" value="$(find-pkg-share slam_tuner)/config/" />
+        <arg name="use_sim_time" value="True" />
+        <arg name="skip_early_fusion" value="True"/>
+    </include>
+    <!-- EKF launcher with sim time -->
+    <group unless="$(var bag_ekf)">
+        <include file="$(find-pkg-share slam_tuner)/launch/ekf_sim_launch.py"/>
+    </group>
+
+    <!-- play rosbag -->
+    <group unless="$(var bag_ekf)">
+        <executable cmd="ros2 bag play $(var bag_path) --clock --disable-keyboard-controls --topics /scan /odom /sensors/imu/raw -r $(var rate)" />
+    </group>
+    <group if="$(var bag_ekf)">
+        <executable cmd="ros2 bag play $(var bag_path) --clock --disable-keyboard-controls --topics /scan /odom /sensors/imu/raw /early_fusion/odom -r $(var rate)"/>
+    </group>
+
+    <!-- launch RVIZ -->
+    <group if="$(var rviz)">    
+        <node name="rviz2_py" pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share slam_tuner)/rviz/tuner_rviz.rviz">
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+    </group>
+
+</launch>

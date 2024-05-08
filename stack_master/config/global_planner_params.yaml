@@ -1,9 +1,0 @@
-# Parameters for global planner
-rate: 10  # [hz]
-test_on_car: True  # also set True if using on a bag
-required_laps: 1  # how many laps to drive until calculating global waypoints
-safety_width: 0.7  # [m] including the width of the car
-safety_width_sp: 0.7  # [m] including the width of the car for shortest path optimization
-occupancy_grid_threshold: 10
-
-show_plots: False

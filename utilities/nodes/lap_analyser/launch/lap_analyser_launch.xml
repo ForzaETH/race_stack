@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node name="lap_analyser" pkg="lap_analyser" type="lap_analyser.py" output="screen" />
+</launch>

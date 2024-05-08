@@ -1,0 +1,18 @@
+mu: 1.0489  # surface friction coefficient
+C_Sf: 4.718 # Cornering stiffness coefficient, front
+C_Sr: 5.4562 # Cornering stiffness coefficient, rear
+lf: 0.15875 # Distance from center of gravity to front axle
+lr: 0.17145 # Distance from center of gravity to rear axle
+h: 0.074 # Height of center of gravity
+m: 3.47 # Total mass of the vehicle
+I: 0.04712 # Moment of inertial of the entire vehicle about the z axis
+s_min: -0.4189 # Minimum steering angle constraint
+s_max: 0.4189 # Maximum steering angle constraint
+sv_min: -3.2 # Minimum steering velocity constraint
+sv_max: 3.2 # Maximum steering velocity constraint
+v_switch: 7.319 # Switching velocity (velocity at which the acceleration is no longer able to create wheel spin)
+a_max: 9.51 # Maximum longitudinal acceleration
+v_min: -5.0 # Minimum longitudinal velocity
+v_max: 20.0 # Maximum longitudinal velocity
+width: 0.2032 # width of the vehicle in meters
+length: 0.58 # length of the vehicle in meters

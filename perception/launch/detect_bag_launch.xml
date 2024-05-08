@@ -1,0 +1,18 @@
+<launch>
+    <arg name="param_file" default="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
+    <arg name="bag_file" default="path_to_your_rosbag.bag" description="Path to the rosbag file to play" />
+
+    <node pkg="perception" name="detect" exec="detect" output="log"
+        args="--ros-args --log-level info">
+        <param from= "$(var param_file)" />
+        <param name="use_sim_time" value="true" />
+    </node>
+
+    <node pkg="perception" name="detect" exec="tracking" output="log"
+        args="--ros-args --log-level warn">
+        <param from= "$(var param_file)" />
+    </node>
+
+    <!-- Play the ROS bag -->
+    <executable cmd="ros2 bag play $(var bag_file) --topics /tf /tf_static /scan /car_state/frenet/odom /global_waypoints --clock" output="screen" />
+</launch>

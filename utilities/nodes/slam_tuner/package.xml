@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>slam_tuner</name>
+  <version>0.0.0</version>
+  <description>A helpful tool for offline tuning of SLAM parameters using rosbags</description>
+  <maintainer email="bastuckn@student.ethz.ch">niklas</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rosbag2</exec_depend>
+  <depend>rclpy</depend>
+  <depend>state_estimation</depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

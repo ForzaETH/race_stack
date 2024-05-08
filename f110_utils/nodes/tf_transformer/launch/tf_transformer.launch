@@ -1,7 +1,0 @@
-<launch>
-
-<node name="tf_transformer" pkg="tf_transformer" type="tf_transformer_node.py" 
-       output="screen">
-</node>
-
-</launch>

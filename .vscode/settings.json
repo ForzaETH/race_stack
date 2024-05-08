@@ -1,0 +1,27 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.envFile": "${workspaceFolder}/.env",
+    "search.exclude": {
+        "**/build": true,
+        "**/install": true,
+        "**/log": true
+    },
+    "autopep8.args": [
+        "--aggressive",
+        "--aggressive",
+        "--max-line-length",
+        "120"
+    ],
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        120
+    ],
+    "editor.renderWhitespace": "trailing",
+}

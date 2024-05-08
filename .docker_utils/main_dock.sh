@@ -1,7 +1,8 @@
 #! /bin/bash
 
 # Script to launch the main docker instance for the pblf110 car
-IMAGE=race_stack_sim_x86
+IMAGE=nuc_forzaeth_racestack_ros2
+FORZETH_DIR=/home/forzapblnuc/ros2_devcontainer/src/race_stack
 
 docker run --tty \
     --interactive \
@@ -9,15 +10,14 @@ docker run --tty \
     --env DISPLAY=$DISPLAY \
     --env USER=$USER \
     --env XAUTHORITY=/home/$USER/.Xauthority \
-    --env ROS_HOSTNAME=$ROS_HOSTNAME \
     --volume $XAUTH_LOC:/home/$USER/.Xauthority \
     --volume /dev:/dev \
     --volume /tmp/.X11-unix:/tmp/.X11-unix \
-    --volume $RACE_STACK_ROOT:/home/$USER/catkin_ws/src/race_stack \
-    --volume $RACE_STACK_ROOT/../../cache/noetic/build:/home/$USER/catkin_ws/build \
-    --volume $RACE_STACK_ROOT/../../cache/noetic/devel:/home/$USER/catkin_ws/devel \
-    --volume $RACE_STACK_ROOT/../../cache/noetic/logs:/home/$USER/catkin_ws/logs \
+    --volume $FORZETH_DIR/../cache/humble/build:/home/$USER/ws/build \
+    --volume $FORZETH_DIR/../cache/humble/install:/home/$USER/ws/install \
+    --volume $FORZETH_DIR/../cache/humble/log:/home/$USER/ws/log \
+    --volume $FORZETH_DIR:/home/$USER/ws/src/race_stack \
     --privileged \
-    --name forzaeth_devcontainer \
+    --name nuc_forzaeth_racestack_ros2 \
     --entrypoint /bin/bash \
     ${IMAGE}:latest

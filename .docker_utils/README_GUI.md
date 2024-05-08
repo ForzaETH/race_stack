@@ -1,7 +1,7 @@
 GUI applications in remote containers are a bit of a pain in the neck. Which makes GUI applications in remote VSCode devcontainers are even more of a pain.
 
 ## GUI applications in remote Docker containers
-If you want to launch a GUI application from a remote docker container, as for example during [mapping](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/tree/master/base_system/pbl_f110_system?ref_type=heads#mapping), a couple of specific steps need to be taken. 
+If you want to launch a GUI application from a remote docker container, as for example during [mapping](https://git.ee.ethz.ch/pbl/research/f1tenth2/race_stack/-/tree/master/base_system/pbl_f110_system?ref_type=heads#mapping), a couple of specific steps need to be taken. 
 
 1. Connect to a car via SSH, enabling X forwarding with the `-X` flag: 
 ```bash
@@ -47,7 +47,7 @@ non-network local connections being added to access control list
 xhost:  must be on local machine to add or remove hosts.
 ```
 
-3. Mmeorize the `DISPLAY` number in this SSH-connected terminal, afeter printing it to screen:
+3. Memorize the `DISPLAY` number in this SSH-connected terminal, after printing it to screen:
 ```bash
 echo $DISPLAY
 ```
@@ -62,8 +62,9 @@ localhost:10.0
 
 5. In the devcontainer terminal where you want to use the GUI application, export now the `DISPLAY` variable number. For example:
 ```bash
-export DISPLAY=:10.0
+export DISPLAY=localhost:10.0
 ```
+**Note**: use the full name as from the output of point 3.
  
 6. Enjoy a terminal with GUI forwarding!
 

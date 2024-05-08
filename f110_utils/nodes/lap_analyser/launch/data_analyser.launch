@@ -1,7 +1,0 @@
-<launch>
-
-<node ns="data_analyser" name="data_analyser" pkg="lap_analyser" type="data_analyser.py" 
-       output="screen">
-</node>
-
-</launch>

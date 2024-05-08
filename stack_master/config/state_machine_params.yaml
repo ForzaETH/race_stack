@@ -1,30 +1,25 @@
-# Parameters for local planner
-rate: 80  # [hz]
-test_on_car: True  # also set True if using on a bag
-n_loc_wpnts: 80  # number of local waypoints published, 1 waypoints every 0.1 meter
+state_machine:
+  ros__parameters:
+    rate_hz: 40  # [hz]
+    initial_state: 'GB_TRACK'  # "GB_TRACK", ...
+    test_on_car: True  # also set True if using on a bag
+    n_loc_wpnts: 80  # number of local waypoints published, 1 waypoints every 0.1 meter
 
-### FTG Parameters ###
-debug: False  # publishes filtered scans if True but may not run smoothly
+    volt_threshold: 11. # [V] voltage threshold below which we start screaming
 
-safety_radius: 40  # helps not to cut corners
-max_lidar_dist: 9.
+    force_state: False  # force state to be the one specified in force_state_choice
 
-range_offset: 180  # LiDAR has 1080 range points, only consider [range_offset,-range_offset]
-track_width: 2.6  # approx gap distance on a straight when there are no obstacles (set debug to True to see gap distances during driving)
-max_speed: 6.0
-######################
 
-splini_ttl: 2 # [s] ttl counter for validity of spliner waypoints -> NOW DYNAMIC RECONFIGURABLE
+    splini_ttl: 2. # [s] ttl counter for validity of spliner waypoints -> NOW DYNAMIC RECONFIGURABLE
 
-gb_ego_width_m: 0.4 # [m], distance from gb path for rejoining 
-lateral_width_gb_m: 1.1 # [m] lateral width within which we consider obstacles to be on the overtaking line -> NOW DYNAMIC RECONFIGURABLE
-gb_horizon_m: 6.9 # [m] horizon considered for the global waypoints to check for obstacles
+    gb_ego_width_m: 0.4 # [m], distance from gb path for rejoining 
+    lateral_width_gb_m: 1.1 # [m] lateral width within which we consider obstacles to be on the overtaking line -> NOW DYNAMIC RECONFIGURABLE
+    gb_horizon_m: 6.9 # [m] horizon considered for the global waypoints to check for obstacles
 
-overtaking_horizon_m: 6.9 # [m] horizon considered for overtaking
-lateral_width_ot_m: 0.3 # [m] lateral width within which we consider opponents to be on the overtaking line -> NOW DYNAMIC RECONFIGURABLE
-splini_hyst_timer_sec: 0.2 # [s] time we have to wait between switching from overtaking on one side to the other -> NOW DYNAMIC RECONFIGURABLE
+    overtaking_horizon_m: 6.9 # [m] horizon considered for overtaking
+    lateral_width_ot_m: 0.3 # [m] lateral width within which we consider opponents to be on the overtaking line -> NOW DYNAMIC RECONFIGURABLE
+    splini_hyst_timer_sec: 0.2 # [s] time we have to wait between switching from overtaking on one side to the other -> NOW DYNAMIC RECONFIGURABLE
 
-ftg_speed_mps: 0.1 # [m/s] speed threshold below which we start a timer for activating FTG
-ftg_timer_sec: 3 # [s] time we have to stay slower than the `ftg_speed` threshold before we activate FTG
+    ftg_threshold_speed: 0.1 # [m/s] speed threshold below which we start a timer for activating FTG
+    ftg_timer_sec: 3. # [s] time we have to stay slower than the `ftg_threshold_speed` threshold before we activate FTG
 
-volt_threshold: 11 # [V] voltage threshold below which we start screaming

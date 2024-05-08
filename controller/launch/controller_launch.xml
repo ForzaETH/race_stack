@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="LU_table" default="NUC5_hangar_pacejka"/>
+  <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented"/> <!-- TODO implement PP and MAPPING -->
+
+  <!--  launch L1 controller -->
+  <node pkg="controller" name="controller" exec="controller">
+      <param name="mode" value="$(var mode)"/>
+      <param name="LU_table" value="$(var LU_table)"/>
+  </node>
+
+</launch>

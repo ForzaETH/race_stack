@@ -1,0 +1,27 @@
+setuptools==58.2.0
+scikit-learn
+scikit-image==0.19.2
+opencv-python>=4.5.2
+casadi
+pynput
+pandas 
+matplotlib~=3.5.1
+numba
+filterpy
+tqdm
+transforms3d
+
+# Gym requirements
+gymnasium==0.29.1
+numpy>=1.18.0
+Pillow>=9.0.1
+scipy>=1.7.3
+numba>=0.55.2
+pyyaml>=5.3.1
+pyglet==1.5.20
+pyopengl
+
+# Global planner requirements
+trajectory-planning-helpers~=0.79 # TODO: update to 0.80 as soon as it is released, solves quadprog problems; https://github.com/TUMFTM/trajectory_planning_helpers/issues/5
+# Manually install quadprog: pip install quadprog~=0.1.11 
+# this will throw dependency error because of the trajectory planning helpers but it is not a problem, just can't be done in the requirements file

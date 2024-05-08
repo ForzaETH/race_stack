@@ -1,0 +1,88 @@
+<launch>
+    <arg name="map_name" description="Name of the map to be used, found in stack_master/maps" />
+    <arg name="reverse" default="False"
+        description="Set True if you want reverse direction of raceline" />
+    <arg name="map_editor_mapping" default="False"
+        description="Set True if you want to map live on the car, False if you want to post-process a map." />
+    <arg name="racecar_version" default=""
+        description="Physical description of the car. Only relevant if map_editor_mapping is True." />
+    <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
+    <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
+    <let name="joy_teleop_config"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
+    <let name="vesc_config"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
+
+    <!-- Start RViz -->
+    <node pkg="rviz2" exec="rviz2" name="rviz2"
+        args="-d $(find-pkg-share map_editor)/rviz/editor.rviz" />
+
+    <!-- Crawl backwards to find the maps in the src folder. -->
+    <let name="map_src_path"
+        value="$(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/maps/$(var map_name)" />
+
+    <!-- Mapping but only want to get .png, .yaml and .pbstream without global waypoints calc -->
+    <group if="$(var map_editor_mapping)">
+        <!-- launch teleop -->
+        <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
+            <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
+            <arg name="vesc_config" value="$(var vesc_config)" />
+            <arg name="sensors_config" value="$(var sensors_config)" />
+            <arg name="mux_config" value="$(var mux_config)" />
+        </include>
+
+        <!-- launch SE -->
+        <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
+            <arg name="racecar_version" value="$(var racecar_version)" />
+            <arg name="mapping_bool" value="True" />
+            <arg name="map_name" value="$(var map_name)" />
+            <arg name="frenet_bool" value="False" />
+        </include>
+
+        <!--  launch global planner -->
+        <node pkg="global_planner" exec="global_planner" name="global_planner" output="screen">
+            <param
+                from="$(find-pkg-share stack_master)/config/global_planner/global_planner_params.yaml" />
+            <param name="map_editor" value="True" />
+            <param name="create_map" value="True" />
+            <param name="map_name" value="$(var map_name)" />
+        </node>
+    </group>
+
+    <!-- Computing the global traj from edited map only -->
+    <group unless="$(var map_editor_mapping)">
+        <node pkg="nav2_map_server" name="map_server" exec="map_server" output="screen">
+            <param name="yaml_filename" value="$(var map_src_path)/$(var map_name).yaml" />
+        </node>
+        <node pkg="nav2_lifecycle_manager" name="lifecycle_manager" exec="lifecycle_manager"
+            output="screen">
+            <param name="autostart" value="True" />
+            <param name="node_names" value="[map_server]" />
+        </node>
+
+
+        <!-- Launch map editor -->
+        <node pkg="global_planner" exec="global_planner" name="global_planner" output="screen">
+            <param
+                from="$(find-pkg-share stack_master)/config/global_planner/global_planner_params.yaml" />
+            <param name="map_editor" value="True" />
+            <param name="create_map" value="False" />
+            <param name="map_name" value="$(var map_name)" />
+            <param name="reverse_mapping" value="$(var reverse)" />
+        </node>
+
+        <!-- Launch Sector Slicer from Utils -->
+        <node pkg="sector_tuner" exec="sector_slicer" name="sector_slicer" output="screen">
+            <param name="map_name" value="$(var map_name)" />
+        </node>
+
+        <!-- Launch Overtaking Sector Slicer from Utils -->
+        <node pkg="sector_tuner" exec="ot_sector_slicer" name="ot_sector_slicer" output="screen">
+            <param name="map_name" value="$(var map_name)" />
+        </node>
+
+        <!-- Launch gb repub without arguments when mapping-->
+        <node name="global_republisher" pkg="global_planner" exec="global_trajectory_publisher" />
+    </group>
+
+</launch>

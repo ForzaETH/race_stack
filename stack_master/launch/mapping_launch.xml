@@ -1,0 +1,79 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+    <arg name="racecar_version" default="NUC2" /> <!-- NUCX -->
+    <arg name="map_name" description="Name of the map to be created" />
+    <arg name="sim" default="False" />
+    <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
+    <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
+    <let name="joy_teleop_config"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
+    <let name="vesc_config"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
+
+    <!-- Crawl backwards to find the maps in the src folder. -->
+    <let name="map_src_path"
+        value="$(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/maps/$(var map_name)" />
+
+    <!-- ON PHYSICAL SYSTEM -->
+    <group unless="$(var sim)">
+        <node pkg="global_planner" exec="global_planner" name="global_planner" output="screen">
+            <param
+                from="$(find-pkg-share stack_master)/config/global_planner/global_planner_params.yaml" />
+            <param name="map_editor" value="False" />
+            <param name="create_map" value="True" />
+            <param name="map_name" value="$(var map_name)" />
+        </node>
+
+        <!-- launch teleop -->
+        <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
+            <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
+            <arg name="vesc_config" value="$(var vesc_config)" />
+            <arg name="sensors_config" value="$(var sensors_config)" />
+            <arg name="mux_config" value="$(var mux_config)" />
+        </include>
+
+        <!-- launch SE -->
+        <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
+            <arg name="racecar_version" value="$(var racecar_version)" />
+            <arg name="mapping_bool" value="True" />
+            <arg name="map_name" value="$(var map_name)" />
+            <arg name="frenet_bool" value="False" />
+        </include>
+
+        <!-- Launch FTG for Mapping -->
+        <!-- <node pkg="controller" type="ftg.py" name="mapping_ftg_node" output="screen">
+            <param name="/ftg/max_speed" value="$(arg ftg_max_speed)"/>
+            <param name="/ftg/track_width" value="$(arg ftg_track_width)"/>
+            <param name="mapping" value="True" />
+        </node> -->
+    </group>
+
+    <!-- ON SIM -->
+    <group if="$(var sim)">
+        <node pkg="global_planner" exec="global_planner" name="global_planner" output="screen">
+            <param
+                from="$(find-pkg-share stack_master)/config/global_planner/global_planner_params.yaml" />
+            <param name="map_editor" value="True" />
+            <param name="create_map" value="False" />
+            <param name="map_name" value="$(var map_name)" />
+        </node>
+
+        <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
+            <arg name="map_yaml_path" value="$(var map_src_path)/$(var map_name).yaml" />
+        </include>
+    </group>
+
+    <!-- Launch Sector Slicer from Utils -->
+    <node pkg="sector_tuner" exec="sector_slicer" name="sector_slicer" output="screen">
+        <param name="map_name" value="$(var map_name)" />
+    </node>
+
+    <!-- Launch Overtaking Sector Slicer from Utils -->
+    <node pkg="sector_tuner" exec="ot_sector_slicer" name="ot_sector_slicer" output="screen">
+        <param name="map_name" value="$(var map_name)" />
+    </node>
+
+    <!-- Launch gb repub without arguments when mapping-->
+    <node name="global_republisher" pkg="global_planner" exec="global_trajectory_publisher" />
+
+</launch>

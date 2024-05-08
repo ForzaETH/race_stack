@@ -1,0 +1,3 @@
+<launch>
+  <node name="frenet_odom_republisher" pkg="frenet_odom_republisher" exec="frenet_odom_republisher_node" output="screen"/>
+</launch>

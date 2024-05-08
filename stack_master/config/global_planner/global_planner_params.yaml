@@ -1,0 +1,11 @@
+global_planner:
+  ros__parameters:
+    rate: 10  # [hz]
+    required_laps: 1  # how many laps to drive until calculating global waypoints
+    safety_width: 0.7  # [m] including the width of the car
+    safety_width_sp: 0.7  # [m] including the width of the car for shortest path optimization
+    occupancy_grid_threshold: 10
+    filter_kernel_size: 9 # how much filtering to do to raw map images
+    reverse_mapping: False  # By default, do not reverse the direction of the track
+
+    show_plots: False
