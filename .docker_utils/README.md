@@ -133,15 +133,15 @@ If not present, further create a folder structure that resembles the following. 
 ├── cache
 │   └── humble
 │       ├── build
-│       ├── devel
-│       └── logs
+│       ├── install
+│       └── log
 └ ...
 ```
 
 It can be done with the following command:
 ```bash
 cd <race_stack folder>
-mkdir -p ../cache/humble/build ../cache/humble/devel ../cache/humble/logs
+mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
 ```
 
 **Step 3/5: Build the container**
@@ -153,7 +153,7 @@ docker compose build <sim_x86/nuc>
 ```
 **Note**: You have to choose between the different available services in the compose file, i.e. choose between ´sim_x86´ and ´nuc´.
 
-Change the `image` attribute in the decontainer file correspondingly:
+Change the `image` attribute in the devcontainer file correspondingly:
 ```json
 //<race_stack_directory>/.devcontainer/devcontainer.json
 ...
