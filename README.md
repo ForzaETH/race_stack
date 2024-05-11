@@ -16,6 +16,8 @@ Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Auton
 - Scan Alignment
 - System Identification
 
+**Note:** In general the ROS 2 stack is significantly less tested and explored than the ROS 1 version!
+
 ## Installation
 
 We provide an installation guide [here](.docker_utils/README.md). 
@@ -41,7 +43,7 @@ This project would not be possible without the use of multiple great open-source
 - [BayesOpt4ROS](https://github.com/IntelligentControlSystems/bayesopt4ros)
 - [cpu_monitor](https://github.com/alspitz/cpu_monitor)
 
-#### Problems
+### Problems
 If you are having problem with the SIM (no car/scans showing for example), try the setup once again:
 ```bash
 source ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh
