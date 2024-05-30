@@ -1,5 +1,5 @@
 {
-    "name": "ROS 2 RaceCrew",
+    "name": "ForzaETH Race Stack Humble",
     "privileged": true,
     "remoteUser": "${localEnv:USER}",
     // "build": {
@@ -10,7 +10,7 @@
     //     },
     //     "context": ".."
     // },
-    "image": "nuc_forzaeth_racestack_ros2",
+    "image": "nuc_forzaeth_racestack_ros2:humble",
     "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
     "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/${localEnv:USER}/ws/src/race_stack,type=bind",
@@ -44,8 +44,10 @@
         "RCUTILS_COLORIZED_OUTPUT": "1"
     },
     "runArgs": [
-        "--name", "nuc_forzaeth_racestack_ros2",
-        "--net", "host",
+        "--name",
+        "nuc_forzaeth_racestack_ros2_humble",
+        "--net",
+        "host",
         "--privileged"
     ],
     "mounts": [
