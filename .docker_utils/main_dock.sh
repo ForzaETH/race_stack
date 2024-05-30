@@ -18,6 +18,6 @@ docker run --tty \
     --volume $FORZETH_DIR/../cache/humble/log:/home/$USER/ws/log \
     --volume $FORZETH_DIR:/home/$USER/ws/src/race_stack \
     --privileged \
-    --name nuc_forzaeth_racestack_ros2 \
+    --name nuc_forzaeth_racestack_ros2_humble \
     --entrypoint /bin/bash \
-    ${IMAGE}:latest
+    ${IMAGE}:humble

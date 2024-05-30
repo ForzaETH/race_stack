@@ -4,5 +4,5 @@
 
 docker exec --tty \
     --interactive \
-    sim_x86_forzaeth_racestack_ros2 \
+    nuc_forzaeth_racestack_ros2_humble \
     /bin/bash
