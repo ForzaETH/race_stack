@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-source /opt/ros/humble/setup.bash
+source /opt/ros/$ROS_DISTRO/setup.bash
 
 if [ $1 = "Debug" ]; then
     BUILD_TYPE=$1
@@ -34,4 +34,4 @@ colcon build \
     $SYMLINK \
     --continue-on-error \
     --cmake-args "-DCMAKE_BUILD_TYPE=$BUILD_TYPE" "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
-        -Wall -Wextra -Wpedantic
+    -Wall -Wextra -Wpedantic
