@@ -5,7 +5,7 @@ libgl1
 x11-apps
 python3-pip
 python3-colcon-clean
-ros-humble-diagnostic-updater
-ros-humble-robot-localization
-ros-humble-tf-transformations
-ros-humble-cartographer-ros
+ros-jazzy-diagnostic-updater
+ros-jazzy-robot-localization
+ros-jazzy-tf-transformations
+ros-jazzy-cartographer-ros

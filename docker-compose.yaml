@@ -9,7 +9,7 @@ services:
         - USERNAME=${USER}
         - UID=${UID}
         - GID=${GID}
-    image: sim_x86_forzaeth_racestack_ros2:humble
+    image: sim_x86_forzaeth_racestack_ros2:jazzy
 
   nuc:
     build:
@@ -20,4 +20,4 @@ services:
         - USERNAME=${USER}
         - UID=${UID}
         - GID=${GID}
-    image: nuc_forzaeth_racestack_ros2:humble
+    image: nuc_forzaeth_racestack_ros2:jazzy

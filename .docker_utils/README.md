@@ -4,7 +4,7 @@
 ## Clone Repo
 Be aware to clone the ROS 2 branch!
 ```bash
-git clone -b ros2-humble --recurse-submodules git@github.com:ForzaETH/race_stack.git 
+git clone -b ros2-jazzy --recurse-submodules git@github.com:ForzaETH/race_stack.git 
 cd race_stack
 ```
 
@@ -40,7 +40,7 @@ Create a folder structure that resembles the following. Note that it is a folder
 <race_stack directory>/../
 ...
 ├── cache
-│   └── humble
+│   └── jazzy
 │       ├── build
 │       ├── install
 │       └── log
@@ -50,7 +50,7 @@ Create a folder structure that resembles the following. Note that it is a folder
 It can be done with the following command:
 ```bash
 cd <race_stack folder>
-mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
+mkdir -p ../cache/jazzy/build ../cache/jazzy/install ../cache/jazzy/log
 ```
 
 **Step 3/5: Set up the launch script**
@@ -131,7 +131,7 @@ If not present, further create a folder structure that resembles the following. 
 <race_stack directory>/../
 ...
 ├── cache
-│   └── humble
+│   └── jazzy
 │       ├── build
 │       ├── install
 │       └── log
@@ -141,7 +141,7 @@ If not present, further create a folder structure that resembles the following. 
 It can be done with the following command:
 ```bash
 cd <race_stack folder>
-mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
+mkdir -p ../cache/jazzy/build ../cache/jazzy/install ../cache/jazzy/log
 ```
 
 **Step 3/5: Build the container**
@@ -202,7 +202,7 @@ xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/lin
 xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req_car.txt
 
 # python dependencies
-pip install -r ~/ws/src/race_stack/.install_utils/python_req.txt
+pip install -r ~/ws/src/race_stack/.install_utils/python_req.txt --break-system-packages
 
 # setup f1tenth_gym
 source ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh

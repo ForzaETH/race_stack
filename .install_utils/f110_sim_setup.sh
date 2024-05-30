@@ -10,4 +10,4 @@ WS_DIR=$(readlink -f "$SCRIPT_DIR/../../..")   # should end up in the workspace 
 # pip3 install -r "$SCRIPT_DIR/requirements.txt"
 
 # setup f1tenth_gym
-cd $SCRIPT_DIR && pip3 install -e ../base_system/f110_simulator/f1tenth_gym/
+cd $SCRIPT_DIR && pip3 install -e ../base_system/f110_simulator/f1tenth_gym/ --break-system-packages

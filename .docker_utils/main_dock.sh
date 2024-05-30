@@ -13,11 +13,11 @@ docker run --tty \
     --volume $XAUTH_LOC:/home/$USER/.Xauthority \
     --volume /dev:/dev \
     --volume /tmp/.X11-unix:/tmp/.X11-unix \
-    --volume $FORZETH_DIR/../cache/humble/build:/home/$USER/ws/build \
-    --volume $FORZETH_DIR/../cache/humble/install:/home/$USER/ws/install \
-    --volume $FORZETH_DIR/../cache/humble/log:/home/$USER/ws/log \
+    --volume $FORZETH_DIR/../cache/jazzy/build:/home/$USER/ws/build \
+    --volume $FORZETH_DIR/../cache/jazzy/install:/home/$USER/ws/install \
+    --volume $FORZETH_DIR/../cache/jazzy/log:/home/$USER/ws/log \
     --volume $FORZETH_DIR:/home/$USER/ws/src/race_stack \
     --privileged \
-    --name nuc_forzaeth_racestack_ros2 \
+    --name nuc_forzaeth_racestack_ros2_jazzy \
     --entrypoint /bin/bash \
-    ${IMAGE}:latest
+    ${IMAGE}:jazzy

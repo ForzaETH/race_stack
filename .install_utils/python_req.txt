@@ -1,6 +1,6 @@
-setuptools==58.2.0
+setuptools>=58.2.0
 scikit-learn
-scikit-image==0.19.2
+scikit-image>=0.19.2
 opencv-python>=4.5.2
 casadi
 pynput

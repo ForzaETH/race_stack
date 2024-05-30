@@ -1,5 +1,5 @@
 {
-    "name": "ForzaETH Race Stack Humble",
+    "name": "ForzaETH Race Stack Jazzy",
     "privileged": true,
     "remoteUser": "${localEnv:USER}",
     // "build": {
@@ -10,7 +10,7 @@
     //     },
     //     "context": ".."
     // },
-    "image": "nuc_forzaeth_racestack_ros2:humble",
+    "image": "nuc_forzaeth_racestack_ros2:jazzy",
     "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
     "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/${localEnv:USER}/ws/src/race_stack,type=bind",
@@ -45,7 +45,7 @@
     },
     "runArgs": [
         "--name",
-        "nuc_forzaeth_racestack_ros2_humble",
+        "nuc_forzaeth_racestack_ros2_jazzy",
         "--net",
         "host",
         "--privileged"
@@ -54,9 +54,9 @@
         "source=/home/${localEnv:USER}/.Xauthority,target=/tmp/.Xauthority,type=bind,consistency=cached",
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
         "source=/dev,target=/dev,type=bind,consistency=cached",
-        "source=${localWorkspaceFolder}/../cache/humble/build,target=/home/${localEnv:USER}/ws/build,type=bind",
-        "source=${localWorkspaceFolder}/../cache/humble/install,target=/home/${localEnv:USER}/ws/install,type=bind",
-        "source=${localWorkspaceFolder}/../cache/humble/log,target=/home/${localEnv:USER}/ws/log,type=bind"
+        "source=${localWorkspaceFolder}/../cache/jazzy/build,target=/home/${localEnv:USER}/ws/build,type=bind",
+        "source=${localWorkspaceFolder}/../cache/jazzy/install,target=/home/${localEnv:USER}/ws/install,type=bind",
+        "source=${localWorkspaceFolder}/../cache/jazzy/log,target=/home/${localEnv:USER}/ws/log,type=bind"
     ],
     "postCreateCommand": "~/ws/src/race_stack/.install_utils/post_create_command.sh"
 }
