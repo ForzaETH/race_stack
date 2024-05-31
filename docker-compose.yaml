@@ -1,22 +1,9 @@
-version: "3.8"
 services:
-  sim_x86:
-    build:
-      context: .
-      dockerfile: .devcontainer/Dockerfile
-      args:
-        - SIM=1
-        - USERNAME=${USER}
-        - UID=${UID}
-        - GID=${GID}
-    image: sim_x86_forzaeth_racestack_ros2:jazzy
-
   nuc:
     build:
       context: .
       dockerfile: .devcontainer/Dockerfile
       args:
-        - SIM=0
         - USERNAME=${USER}
         - UID=${UID}
         - GID=${GID}

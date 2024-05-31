@@ -1,8 +1,7 @@
-FROM osrf/ros:jazzy-desktop-full
+FROM osrf/ros:jazzy-desktop
 ARG USERNAME
 ARG UID
 ARG GID
-ARG SIM=1
 
 ENV SHELL /bin/bash
 
@@ -24,11 +23,7 @@ RUN apt-get update && apt-get upgrade -y
 # install folders are added granularly to avoid unnecessary rebuilds when developing the Dockerfile
 ADD .install_utils/linux_req/ /tmp/.install_utils/ 
 RUN xargs apt-get install -y < /tmp/.install_utils/linux_req.txt
-# if sim is set to 1, install sim dependencies, else car dep
-RUN if [ "$SIM" = "1" ]; \
-    then xargs apt-get install -y < /tmp/.install_utils/linux_req_sim.txt;\
-    else xargs apt-get install -y < /tmp/.install_utils/linux_req_car.txt;\
-    fi
+
 # separate installation is needed for quadprog because of trajectory-planning-helpers
 RUN apt-get remove python3-kiwisolver -y
 ADD .install_utils/python_req.txt /tmp/.install_utils/python_req.txt
@@ -48,7 +43,7 @@ RUN source /opt/ros/$ROS_DISTRO/setup.bash &&\
     --symlink-install --packages-up-to nav2_map_server nav2_lifecycle_manager &&\
     rm -r /opt/nav2/src
 # flag desktop-full package as manually installed (otherwise apt suggests to uninstall it)
-RUN apt-get install -y ros-jazzy-desktop-full
+RUN apt-get install -y ros-jazzy-desktop
 
 
 # ********************************************************

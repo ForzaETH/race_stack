@@ -2,14 +2,6 @@
     "name": "ForzaETH Race Stack Jazzy",
     "privileged": true,
     "remoteUser": "${localEnv:USER}",
-    // "build": {
-    //     "dockerfile": "Dockerfile",
-    //     "args": {
-    //         "USERNAME": "${localEnv:USER}",
-    //         "SIM" : "1"
-    //     },
-    //     "context": ".."
-    // },
     "image": "nuc_forzaeth_racestack_ros2:jazzy",
     "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
     "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
