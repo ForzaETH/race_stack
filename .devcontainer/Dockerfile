@@ -1,8 +1,7 @@
-FROM osrf/ros:humble-desktop-full
+FROM osrf/ros:humble-desktop
 ARG USERNAME
 ARG UID
 ARG GID
-ARG SIM=1
 
 ENV SHELL /bin/bash
 
@@ -23,12 +22,7 @@ RUN apt-get update && apt-get upgrade -y
 # install folders are added granularly to avoid unnecessary rebuilds when developing the Dockerfile
 ADD .install_utils/linux_req/ /tmp/.install_utils/ 
 RUN xargs apt-get install -y < /tmp/.install_utils/linux_req.txt
-# if sim is set to 1, install sim dependencies, else car dep
-RUN if [ "$SIM" = "1" ]; \
-    then xargs apt-get install -y < /tmp/.install_utils/linux_req_sim.txt;\
-    else xargs apt-get install -y < /tmp/.install_utils/linux_req_car.txt;\
-    fi
-# separate installation is needed for quadprog because of trajectory-planning-helpers
+
 ADD .install_utils/python_req.txt /tmp/.install_utils/python_req.txt
 RUN pip3 install -r /tmp/.install_utils/python_req.txt &&\
     pip3 install quadprog~=0.1.11

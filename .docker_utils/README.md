@@ -29,9 +29,8 @@ export GID=$(id -g)
 ```
 then, in the same terminal, build the docker image with `docker compose`:
 ```bash
-docker compose build <sim_x86/nuc>
+docker compose build nuc
 ```
-**Note**: You have to choose between the different available services in the compose file, i.e. choose between ´sim_x86´ and ´nuc´.
 
 **Step 2/5: create the folder structure for caching colcon builds**
 Create a folder structure that resembles the following. Note that it is a folder up from the position of the `race_stack`.
@@ -149,15 +148,14 @@ mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
 In a terminal connected to the remote machine you want to use, move to the location of the racestack, and build the docker container with the compose command:
 ```bash
 cd <race_stack_directory>
-docker compose build <sim_x86/nuc>
+docker compose build nuc
 ```
-**Note**: You have to choose between the different available services in the compose file, i.e. choose between ´sim_x86´ and ´nuc´.
 
 Change the `image` attribute in the devcontainer file correspondingly:
 ```json5
 //<race_stack_directory>/.devcontainer/devcontainer.json
 ...
-    "image": "nuc_forzaeth_racestack_ros2", //substitute "nuc" with "sim_x86" in case you want to use the sim setup
+    "image": "nuc_forzaeth_racestack_ros2", 
 ...
 ```
 
