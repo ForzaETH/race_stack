@@ -18,3 +18,6 @@ ros-jazzy-serial-driver
 ros-jazzy-test-msgs
 ros-jazzy-rqt
 ros-jazzy-xacro
+ros-jazzy-asio-cmake-module
+ros-jazzy-nav2-map-server
+ros-jazzy-nav2-lifecycle-manager

@@ -29,19 +29,6 @@ RUN apt-get remove python3-kiwisolver -y
 ADD .install_utils/python_req.txt /tmp/.install_utils/python_req.txt
 RUN pip3 install -r /tmp/.install_utils/python_req.txt --break-system-packages &&\
     pip3 install quadprog~=0.1.11 --break-system-packages
-
-SHELL ["/bin/bash", "-c"] 
-# install nav2 packages from source
-RUN source /opt/ros/$ROS_DISTRO/setup.bash &&\
-    mkdir -p /opt/nav2/src && cd /opt/nav2 &&\
-    git clone https://github.com/ros-navigation/navigation2.git ./src/navigation2 &&\
-    rosdep install -r -y \
-    --from-paths ./src \
-    --ignore-src \
-    --skip-keys=turtlebot3_gazebo &&\
-    colcon build \
-    --symlink-install --packages-up-to nav2_map_server nav2_lifecycle_manager &&\
-    rm -r /opt/nav2/src
 # flag desktop-full package as manually installed (otherwise apt suggests to uninstall it)
 RUN apt-get install -y ros-jazzy-desktop
 
