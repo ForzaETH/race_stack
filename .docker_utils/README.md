@@ -28,8 +28,13 @@ export UID=$(id -u)
 export GID=$(id -g)
 ```
 then, in the same terminal, build the docker image with `docker compose`:
+**For x86 platforms**:
 ```bash
 docker compose build nuc
+```
+**For arm platforms**:
+```bash
+docker compose build jet
 ```
 
 **Step 2/5: create the folder structure for caching colcon builds**
@@ -59,6 +64,10 @@ cd <race_stack folder>
 pwd
 ```
 Then copy the output of the `pwd` command and paste it in the `FORZAETH_DIR` variable in the [`main_dock.sh`](./main_dock.sh) file.
+
+Furthermore, change the name of the image accordingly depending on if you are using an x86 or an arm platform. 
+
+
 
 **Step 4/5: Set up X forwarding and launch the container**
 To get GUI application properly forwarded, run the additional setup script that sets up the xauth file for the container. This can be done by running the following command:
@@ -146,12 +155,16 @@ mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
 **Step 3/5: Build the container**
 
 In a terminal connected to the remote machine you want to use, move to the location of the racestack, and build the docker container with the compose command:
+**For x86 platforms**:
 ```bash
-cd <race_stack_directory>
 docker compose build nuc
 ```
+**For arm platforms**:
+```bash
+docker compose build jet
+```
 
-Change the `image` attribute in the devcontainer file correspondingly:
+Change the `image` attribute in the devcontainer file correspondingly, change ´nuc´ to ´jet´ in case of an arm platform:
 ```json5
 //<race_stack_directory>/.devcontainer/devcontainer.json
 ...
