@@ -8,6 +8,8 @@ ForzaETH Race Stack by the [D-ITET Center for Project Based Learning (PBL)](http
 
 Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware* is available on [arXiv](https://arxiv.org/abs/2403.11784), detailing the system's architecture, algorithms, and performance benchmarks.
 
+**NOTE**: For extensions on said paper, tied to specific publications, please refer to the later paragraph [Additional Publications](#additional-publications) 
+
 ## Installation
 
 We provide an installation guide [here](./INSTALLATION.md).
@@ -45,3 +47,8 @@ If you found our race stack helpful in your research, we would appreciate if you
       eprint={2403.11784}
 }
 ```
+
+## Additional Publications
+
+### Learning-Based On-Track System Identification for Scaled Autonomous Racing in Under a Minute.
+Please refer to the [`system_identification` README](./system_identification/README.md).
