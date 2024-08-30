@@ -1,8 +1,9 @@
 #! /bin/bash
 
 # Script to launch the main docker instance for the pblf110 car
-IMAGE=nuc_forzaeth_racestack_ros2
-FORZETH_DIR=/home/forzapblnuc/ros2_devcontainer/src/race_stack
+IMAGE=nuc_forzaeth_racestack_ros2 # for x86
+# IMAGE=jet_forzaeth_racestack_ros2 # for ARM
+FORZETH_DIR=/home/forzapbljet/ros2/race_stack
 
 docker run --tty \
     --interactive \
@@ -18,6 +19,6 @@ docker run --tty \
     --volume $FORZETH_DIR/../cache/humble/log:/home/$USER/ws/log \
     --volume $FORZETH_DIR:/home/$USER/ws/src/race_stack \
     --privileged \
-    --name nuc_forzaeth_racestack_ros2_humble \
+    --name forzaeth_racestack_ros2_humble \
     --entrypoint /bin/bash \
     ${IMAGE}:humble
