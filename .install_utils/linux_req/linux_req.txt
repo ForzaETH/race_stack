@@ -6,6 +6,7 @@ python3-colcon-clean
 apt-utils
 net-tools
 joystick
+ros-humble-asio-cmake-module
 ros-humble-diagnostic-updater
 ros-humble-robot-localization
 ros-humble-tf-transformations
