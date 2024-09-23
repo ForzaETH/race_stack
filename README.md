@@ -6,7 +6,7 @@
 
 ForzaETH Race Stack by the [D-ITET Center for Project Based Learning (PBL)](https://pbl.ee.ethz.ch/) at ETH Zurich. 
 
-Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware* is available on [arXiv](https://arxiv.org/abs/2403.11784), detailing the system's architecture, algorithms, and performance benchmarks.
+Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware* is available on [Journal of Field Robotics](https://onlinelibrary.wiley.com/doi/pdf/10.1002/rob.22429), detailing the system's architecture, algorithms, and performance benchmarks.
 
 **NOTE**: For extensions on said paper, tied to specific publications, please refer to the later paragraph [Additional Publications](#additional-publications) 
 
@@ -17,6 +17,20 @@ We provide an installation guide [here](./INSTALLATION.md).
 ## Getting started
 
 After installation, the car (or the simulation environment) is ready to be tested. For examples on how to run the different modules on the car, refer to the [`stack_master` README](./stack_master/README.md). As a further example, the [time-trials](./stack_master/checklists/TimeTrials.md) or the [head-to-head](./stack_master/checklists/HeadToHead.md) checklists are a good starting point.
+
+Or check out our [video playlist on Youtube](https://www.youtube.com/playlist?list=PLMzSGo5LtaW9cgdwHB_FnX3qlAYx7P6JI):  
+<a href="https://www.youtube.com/watch?v=A9Clg1n6rII">
+  <img src="./base_system/misc/install_thumbnail.png" alt="Install" style="width: 33%;"/>
+</a>
+<a href="https://www.youtube.com/watch?v=6PtFzrRz1GU">
+  <img src="./base_system/misc/simulator_thumbnail.png" alt="Simulation" style="width: 33%;"/>
+</a>
+<a href="https://www.youtube.com/watch?v=ACQdLD27v-k">
+  <img src="./base_system/misc/hardware_thumbnail.png" alt="Car" style="width: 33%;"/>
+</a>
+
+**Note:** Click on the thumbnails to watch the videos.
+
 
 ## Contributing
 
@@ -40,11 +54,12 @@ This project would not be possible without the use of multiple great open-source
 
 If you found our race stack helpful in your research, we would appreciate if you cite it as follows:
 ```
-@misc{baumann2024forzaeth,
-      title={ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware}, 
-      author={Nicolas Baumann and Edoardo Ghignone and Jonas Kühne and Niklas Bastuck and Jonathan Becker and Nadine Imholz and Tobias Kränzlin and Tian Yi Lim and Michael Lötscher and Luca Schwarzenbach and Luca Tognoni and Christian Vogt and Andrea Carron and Michele Magno},
-      year={2024},
-      eprint={2403.11784}
+@article{baumann2024forzaeth,
+  title={ForzaETH Race Stack—Scaled Autonomous Head-to-Head Racing on Fully Commercial Off-the-Shelf Hardware},
+  author={Baumann, Nicolas and Ghignone, Edoardo and K{\"u}hne, Jonas and Bastuck, Niklas and Becker, Jonathan and Imholz, Nadine and Kr{\"a}nzlin, Tobias and Lim, Tian Yi and L{\"o}tscher, Michael and Schwarzenbach, Luca and others},
+  journal={Journal of Field Robotics},
+  year={2024},
+  publisher={Wiley Online Library}
 }
 ```
 
