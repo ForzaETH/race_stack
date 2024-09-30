@@ -10,7 +10,7 @@ from f110_msgs.msg import ObstacleArray, OTWpntArray, WpntArray
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
-from std_msgs.msg import String, Float32
+from std_msgs.msg import String, Float32, Float32MultiArray, Bool
 from visualization_msgs.msg import Marker, MarkerArray
 
 try:
@@ -127,6 +127,15 @@ class StateMachine:
                     StateType.FTGONLY: state_transitions.SpliniFTGOnlyTransition,
                 }
             )
+        elif self.ot_planner == "predictive_spliner":
+            self.state_transitions = (
+                {  # this is very manual, but should not be a problem as in general states should not be too many
+                    StateType.GB_TRACK: state_transitions.PSGlobalTrackingTransition,
+                    StateType.TRAILING: state_transitions.PSTrailingTransition,
+                    StateType.OVERTAKE: state_transitions.PSOvertakingTransition,
+                    StateType.FTGONLY: state_transitions.PSFTGOnlyTransition,
+                }
+            )
         # Here a new state transition can be added if wanted
         else:
             raise NotImplementedError(f"Planner {self.ot_planner} not supported!")
@@ -156,8 +165,11 @@ class StateMachine:
         rospy.Subscriber("/dyn_sector_server/parameter_updates", Config, self.sector_dyn_param_cb)
         rospy.Subscriber("/ot_dyn_sector_server/parameter_updates", Config, self.ot_dyn_param_cb)
         rospy.Subscriber("/perception/obstacles", ObstacleArray, self.obstacle_perception_cb)
-        if self.ot_planner == "spliner":
+        if self.ot_planner == "spliner" or self.ot_planner == "predictive_spliner":
             rospy.Subscriber("/planner/avoidance/otwpnts", OTWpntArray, self.avoidance_cb)
+        if self.ot_planner == "predictive_spliner":
+            rospy.Subscriber("/planner/avoidance/merger", Float32MultiArray, self.merger_cb)
+            rospy.Subscriber("collision_prediction/force_trailing", Bool, self.force_trailing_cb)
         if not rospy.get_param("/sim"):
             rospy.Subscriber("/vesc/sensors/core", VescStateStamped, self.vesc_state_cb) # for reading battery voltage
 
@@ -388,12 +400,13 @@ class StateMachine:
         o_free = True
 
         # Slightly different for spliner
-        if self.ot_planner == "spliner":
+        if self.ot_planner == "spliner" or self.ot_planner == "predictive_spliner":
             if not self.timetrials_only and self.last_valid_avoidance_wpnts is not None:
                 horizon = self.overtaking_horizon_m  # Horizon in front of cur_s [m]
 
+                # Use frenet conversion service to convert (s, d) wrt min curv trajectory to (x, y) in map
                 for obs in self.obstacles:
-                    if self.ot_planner == "spliner":
+                    if self.ot_planner == "spliner" or (self.ot_planner == "predictive_spliner" and obs.is_static == True):
                         obs_s = obs.s_center
                         # Wrapping madness to check if infront
                         dist_to_obj = (obs_s - self.cur_s) % self.max_s
@@ -407,7 +420,7 @@ class StateMachine:
                             ot_obs_dist = ot_d - obs_d
                             if abs(ot_obs_dist) < self.lateral_width_ot_m:
                                 o_free = False
-                                rospy.loginfo(f"[{self.name}] O_FREE False, obs dist to ot lane: {ot_obs_dist} m")
+                                rospy.loginfo("[State Machine] O_FREE False, obs dist to ot lane: {} m".format(ot_obs_dist))
                                 break
             else:
                 o_free = True
@@ -484,29 +497,45 @@ class StateMachine:
                 return False
 
     def _check_emergency_break(self) -> bool:
-        # NOTE: unused flag, but could be useful
         emergency_break = False
-        if not self.timetrials_only:
-            if self.obstacles != []:
-                horizon = self.emergency_break_horizon # Horizon in front of cur_s [m]
+        if self.ot_planner == "predictive_spliner":
+            if not self.timetrials_only:
+                obstacles = self.obstacles_perception.copy()
+                if obstacles != []:
+                    horizon = self.emergency_break_horizon # Horizon in front of cur_s [m]
 
-                for obs in self.obstacles:
-                    # Wrapping madness to check if infront
-                    dist_to_obj = (obs.s_center - self.cur_s) % self.max_s
-                    if dist_to_obj < horizon:
-                
-                        # Get d wrt to mincurv from the overtaking line
-                        local_wpnt_idx = np.argmin(
-                            np.array([abs(avoid_s.s_m - obs.s_center) for avoid_s in self.local_wpnts.wpnts])
-                        )
-                        ot_d = self.local_wpnts.wpnts[local_wpnt_idx].d_m
-                        ot_obs_dist = ot_d - obs.d_center
-                        if abs(ot_obs_dist) < self.lateral_width_ot_m:
-                            emergency_break = True
-                            rospy.loginfo("[{self.name}] emergency break")
-        else:
-            emergency_break = False
-        return emergency_break
+                    for obs in obstacles:
+                        # Only use opponent for emergency break
+                        # Wrapping madness to check if infront
+                        dist_to_obj = (obs.s_start - self.cur_s) % self.max_s
+                        # Check if opponent is closer than emegerncy
+                        if dist_to_obj < horizon:
+                    
+                            # Get estimated d from local waypoints
+                            local_wpnt_idx = np.argmin(
+                                np.array([abs(avoid_s.s_m - obs.s_center) for avoid_s in self.local_wpnts.wpnts])
+                            )
+                            ot_d = self.local_wpnts.wpnts[local_wpnt_idx].d_m
+                            ot_obs_dist = ot_d - obs.d_center
+                            if abs(ot_obs_dist) < self.emergency_break_d:
+                                emergency_break = True
+                                print("emergency break")
+            else:
+                emergency_break = False
+            return emergency_break
+    
+    def _check_on_spline(self) -> bool:
+        if self.last_valid_avoidance_wpnts is not None:
+            # Check if section goes over end of track
+            if self.last_valid_avoidance_wpnts[0].s_m > self.last_valid_avoidance_wpnts[-1].s_m:
+                if self.cur_s > self.last_valid_avoidance_wpnts[0].s_m and self.cur_s < self.max_s:
+                    return True
+                elif self.cur_s < self.last_valid_avoidance_wpnts[-1].s_m and self.cur_s > 0:
+                    return True
+            else:
+                if self.cur_s > self.last_valid_avoidance_wpnts[0].s_m and self.cur_s < self.last_valid_avoidance_wpnts[-1].s_m:
+                    return True
+        return False
 
     ################
     # HELPER FUNCS #
@@ -753,6 +782,18 @@ class StateMachine:
                 self.last_valid_avoidance_wpnts = None
                 self.avoidance_wpnts = WpntArray()
                 self.splini_ttl_counter = -1
+        elif self.ot_planner == "predictive_spliner":
+            self.splini_ttl_counter -= 1
+            # Once ttl has reached 0 we overwrite the avoidance waypoints with the empty waypoints
+            if self.splini_ttl_counter <= 0:
+                if not self._check_on_spline():
+                    self.avoidance_wpnts = None
+                    self.last_valid_avoidance_wpnts = None
+                elif self.splini_ttl_counter <= -int(self.splini_ttl * self.rate_hz)*3:
+                    self.avoidance_wpnts = None
+                    self.splini_ttl_counter = -10
+        else:
+            pass
 
 
         # get the proper local waypoints based on the new state
