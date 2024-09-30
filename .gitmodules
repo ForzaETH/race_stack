@@ -28,3 +28,6 @@
 [submodule "planner/predictive-spliner"]
 	path = planner/predictive-spliner
 	url = https://github.com/ForzaETH/predictive-spliner.git
+[submodule "f110_utils/libs/ccma"]
+	path = f110_utils/libs/ccma
+	url = https://github.com/ForzaETH/ccma.git
