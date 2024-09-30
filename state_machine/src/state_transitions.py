@@ -146,7 +146,7 @@ def PSTrailingTransition(state_machine: StateMachine) -> StateType:
 
     if not state_machine._check_only_ftg_zone():
         # If we have been sitting around in TRAILING for a while then FTG
-        if state_machine._check_jesus_take_the_wheel():
+        if state_machine._check_ftg():
             return StateType.FTGONLY
         elif force_trailing:
             print("Trailing --> Trailing: force_trailing")

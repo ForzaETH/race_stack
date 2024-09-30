@@ -87,25 +87,27 @@ class StateMachine:
         # obstacle avoidance variables
         self.obstacles = []
         self.obstacles_perception = []
+        self.obstacles_prediction = []
         self.obstacle_was_here = True
         self.side_by_side_threshold = 0.6
         self.merger = None
         self.force_trailing = False
 
         # spliner variables
-        self.splini_ttl = rospy.get_param("state_machine/splini_ttl", 2.0)
+        self.splini_ttl = rospy.get_param("state_machine/splini_ttl", 2.0) if self.ot_planner == "spliner" else rospy.get_param("state_machine/pred_splini_ttl", 0.2)
         self.splini_ttl_counter = int(self.splini_ttl * self.rate_hz)  # convert seconds to counters
         self.avoidance_wpnts = None
         self.last_valid_avoidance_wpnts = None
         self.overtaking_horizon_m = rospy.get_param("state_machine/overtaking_horizon_m", 6.9)
         self.lateral_width_ot_m = rospy.get_param("state_machine/lateral_width_ot_m", 0.3)  # [m] DYNIAMIC PARAMETER
         self.splini_hyst_timer_sec = rospy.get_param("state_machine/splini_hyst_timer_sec", 0.75)
-
         self.emergency_break_horizon = 1.1  # [m]
+        self.emergency_break_d = 0.12  # [m]
 
         # FTG params
         self.ftg_speed_mps = rospy.get_param("state_machine/ftg_speed_mps", 1.0) # [mps] DYNIAMIC PARAMETER
         self.ftg_timer_sec = rospy.get_param("state_machine/ftg_timer_sec", 3.0) # [s] DYNIAMIC PARAMETER
+        self.ftg_disabled = True
 
         # Force GBTRACK state
         self.force_gbtrack_state = False # [s] DYNIAMIC PARAMETER
@@ -165,6 +167,7 @@ class StateMachine:
         rospy.Subscriber("/dyn_sector_server/parameter_updates", Config, self.sector_dyn_param_cb)
         rospy.Subscriber("/ot_dyn_sector_server/parameter_updates", Config, self.ot_dyn_param_cb)
         rospy.Subscriber("/perception/obstacles", ObstacleArray, self.obstacle_perception_cb)
+        rospy.Subscriber("/collision_prediction/obstacles", ObstacleArray, self.obstacle_prediction_cb)
         if self.ot_planner == "spliner" or self.ot_planner == "predictive_spliner":
             rospy.Subscriber("/planner/avoidance/otwpnts", OTWpntArray, self.avoidance_cb)
         if self.ot_planner == "predictive_spliner":
@@ -266,9 +269,17 @@ class StateMachine:
         if len(data.obstacles) != 0:
             self.obstacles_perception = data.obstacles
             self.obstacles = data.obstacles
+            self.obstacles = self.obstacles + self.obstacles_prediction
         else:
             self.obstacles = []
 
+    def obstacle_prediction_cb(self, data):
+        if len(data.obstacles) != 0:
+            self.obstacles_prediction = data.obstacles
+            self.obstacles = data.obstacles
+            self.obstacles = self.obstacles + self.obstacles_perception
+        else:
+            self.obstacles_prediction = []
 
     def pose_cb(self, data):
         """
@@ -451,6 +462,26 @@ class StateMachine:
             gb_free = True
 
         return gb_free
+    
+    def _check_prediction_gbfree(self) -> bool:
+        if not self.timetrials_only:
+            horizon = 10  # Horizon in front of cur_s [m]
+
+            # Use frenet conversion service to convert (s, d) wrt min curv trajectory to (x, y) in map
+            for obs in self.obstacles_prediction:
+                obs_s = obs.s_start
+                gap = (obs_s - self.cur_s) % self.track_length
+                if gap < horizon:
+                    return False
+        return True
+
+    def _check_availability_graph_wpts(self) -> bool:
+        if self.graph_based_wpts is None:
+            return False
+        elif len(self.graph_based_wpts) == 0:
+            return False
+        else:
+            return True
 
     def _check_enemy_in_front(self) -> bool:
         # If we are in time trial only mode -> return free overtake i.e. GB_FREE True
@@ -536,6 +567,21 @@ class StateMachine:
                 if self.cur_s > self.last_valid_avoidance_wpnts[0].s_m and self.cur_s < self.last_valid_avoidance_wpnts[-1].s_m:
                     return True
         return False
+
+    def _check_on_merger(self) -> bool:
+        if self.merger is not None:
+            if self.merger[0] < self.merger[1]:
+                if self.cur_s > self.merger[0] and self.cur_s < self.merger[1]:
+                    return True
+            elif self.merger[0] > self.merger[1]:
+                if self.cur_s > self.merger[0] or self.cur_s < self.merger[1]:
+                    return True
+            else:
+                return False
+        return False
+        
+    def _check_force_trailing(self) -> bool:
+        return self.force_trailing
 
     ################
     # HELPER FUNCS #
