@@ -24,7 +24,6 @@ NOTE 2: notice that, when implementing new states, if an attribute/condition in 
 
 NOTE 3: transistions must not have side effects on the state machine! 
     i.e. any attribute of the state machine should not be modified in the transitions.
-
 """
 
 
