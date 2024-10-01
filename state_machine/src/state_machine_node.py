@@ -185,6 +185,7 @@ class StateMachine:
         self.state_pub = rospy.Publisher("state_machine", String, queue_size=1)
         self.state_mrk = rospy.Publisher("/state_marker", Marker, queue_size=10)
         self.emergency_pub = rospy.Publisher("/emergency_marker", Marker, queue_size=5) # for low voltage
+        self.ot_section_check_pub = rospy.Publisher("/ot_section_check", Bool, queue_size=1)
         if self.measuring:
             self.latency_pub = rospy.Publisher("/state_machine/latency", Float32, queue_size=10)
 
@@ -304,7 +305,7 @@ class StateMachine:
         """
         self.lateral_width_gb_m = rospy.get_param("dynamic_statemachine_server/lateral_width_gb_m", 0.75)
         self.lateral_width_ot_m = rospy.get_param("dynamic_statemachine_server/lateral_width_ot_m", 0.3)
-        self.splini_ttl = rospy.get_param("dynamic_statemachine_server/splini_ttl")
+        self.splini_ttl = rospy.get_param("dynamic_statemachine_server/splini_ttl") if self.ot_planner == "spliner" else rospy.get_param("dynamic_statemachine_server/pred_splini_ttl")
         self.splini_ttl_counter = int(self.splini_ttl * self.rate_hz)  # convert seconds to counter
         self.splini_hyst_timer_sec = rospy.get_param("dynamic_statemachine_server/splini_hyst_timer_sec", 0.75)
         self.emergency_break_horizon = rospy.get_param("dynamic_statemachine_server/emergency_break_horizon", 1.1)
@@ -404,7 +405,9 @@ class StateMachine:
         for sector in self.overtake_zones:
             if sector[0] <= self.cur_s / self.waypoints_dist <= sector[1]:
                 # rospy.loginfo(f"[{self.name}] In overtaking sector!")
+                self.ot_section_check_pub.publish(True)
                 return True
+        self.ot_section_check_pub.publish(False)
         return False
 
     def _check_ofree(self) -> bool:

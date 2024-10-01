@@ -10,6 +10,7 @@ def callback(config, level):
 
     config.splini_hyst_timer_sec = round(config.splini_hyst_timer_sec * 20) / 20
     config.splini_ttl = round(config.splini_ttl * 20) / 20
+    config.pred_splini_ttl = round(config.pred_splini_ttl, 3)
     config.emergency_break_horizon = round(config.emergency_break_horizon, 2)
 
     config.ftg_speed_mps = round(config.ftg_speed_mps * 20) / 20

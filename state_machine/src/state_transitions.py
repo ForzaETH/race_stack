@@ -116,14 +116,12 @@ def PSGlobalTrackingTransition(state_machine: StateMachine) -> StateType:
 
     if not state_machine._check_only_ftg_zone():
         if force_trailing:
-            print("Global --> Trailing: force_trailing")
             return StateType.TRAILING
         elif valid_spline and o_free and ot_sector:
             return StateType.OVERTAKE
         elif enemy_in_front and gb_free and gb_predict_free and ot_sector and not force_trailing:
             return StateType.GB_TRACK
         elif enemy_in_front:
-            print("Global --> Trailing: enemy_in_front")
             return StateType.TRAILING
         else:
             return StateType.GB_TRACK
@@ -149,7 +147,6 @@ def PSTrailingTransition(state_machine: StateMachine) -> StateType:
         if state_machine._check_ftg():
             return StateType.FTGONLY
         elif force_trailing:
-            print("Trailing --> Trailing: force_trailing")
             return StateType.TRAILING
         elif valid_spline and not emergency_break and o_free and ot_sector and not on_merger:
             return StateType.OVERTAKE
@@ -177,12 +174,8 @@ def PSOvertakingTransition(state_machine: StateMachine) -> StateType:
         force_trailing = state_machine._check_force_trailing()
 
         if emergency_break or not ot_sector:
-            print("emergency break or not ot sector")
             return StateType.TRAILING
         elif not o_free or force_trailing:
-            print("OT --> Trailing: not o free")
-            print("force_trailing:", force_trailing)
-            print("o_free:", o_free)
             return StateType.TRAILING
         elif spline_valid and o_free and ot_sector:
             return StateType.OVERTAKE
@@ -191,8 +184,6 @@ def PSOvertakingTransition(state_machine: StateMachine) -> StateType:
         elif not spline_valid and not enemy_in_front and not on_avoidance_spline:
             return StateType.GB_TRACK
         else:
-            print("OT --> Trailing: default trailing")
-            print("spline_valid:", spline_valid)
             return StateType.TRAILING
     else:
         return StateType.FTGONLY
