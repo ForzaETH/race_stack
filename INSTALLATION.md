@@ -100,6 +100,7 @@ xargs sudo apt-get install -y < ./.install_utils/linux_req_car.txt
 # python dependencies
 pip install -r ./.devcontainer/.install_utils/requirements.txt
 pip install ~/catkin_ws/src/race_stack/f110_utils/libs/ccma
+pip install -e ~/catkin_ws/src/race_stack/planner/graph_based_planner/src/GraphBasedPlanner
 ```
 
 
@@ -149,6 +150,7 @@ xargs sudo apt-get install -y < ./.devcontainer/.install_utils/linux_req_sim.txt
 # python dependencies
 pip install -r ./.devcontainer/.install_utils/requirements.txt
 pip install ~/catkin_ws/src/race_stack/f110_utils/libs/ccma
+pip install -e ~/catkin_ws/src/race_stack/planner/graph_based_planner/src/GraphBasedPlanner
 ```
 #### [Step 3 of 3]
 **Optional**: if you want you can erase the simulator folder, so to not install it on the car too. 

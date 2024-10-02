@@ -6,7 +6,7 @@ import numpy as np
 import rospy
 import tf
 from dynamic_reconfigure.msg import Config
-from f110_msgs.msg import ObstacleArray, OTWpntArray, WpntArray
+from f110_msgs.msg import ObstacleArray, OTWpntArray, WpntArray, Wpnt
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
@@ -103,6 +103,10 @@ class StateMachine:
         self.splini_hyst_timer_sec = rospy.get_param("state_machine/splini_hyst_timer_sec", 0.75)
         self.emergency_break_horizon = 1.1  # [m]
         self.emergency_break_d = 0.12  # [m]
+        
+        # Graph Based Variables
+        self.graph_based_wpts = None
+        self.gb_wpnts_arr = None
 
         # FTG params
         self.ftg_speed_mps = rospy.get_param("state_machine/ftg_speed_mps", 1.0) # [mps] DYNIAMIC PARAMETER
@@ -136,6 +140,26 @@ class StateMachine:
                     StateType.TRAILING: state_transitions.PSTrailingTransition,
                     StateType.OVERTAKE: state_transitions.PSOvertakingTransition,
                     StateType.FTGONLY: state_transitions.PSFTGOnlyTransition,
+                }
+            )
+        elif self.ot_planner == "graph_based":
+            rospy.logwarn("[State Machine] Graph Based Planner is deprecated! Some packages might be missing!")
+            self.state_transitions = (
+                {  # this is very manual, but should not be a problem as in general states should not be too many
+                    StateType.GB_TRACK: state_transitions.GBGlobalTrackingTransition,
+                    StateType.TRAILING: state_transitions.GBTrailingTransition,
+                    StateType.OVERTAKE: state_transitions.GBOvertakingTransition,
+                    StateType.FTGONLY: state_transitions.GBFTGOnlyTransition,
+                }
+            )
+        elif self.ot_planner == "frenet":
+            rospy.logwarn("[State Machine] Graph Based Planner is deprecated! Some packages might be missing!")
+            self.state_transitions = (
+                {  # this is very manual, but should not be a problem as in general states should not be too many
+                    StateType.GB_TRACK: state_transitions.FrenetGlobalTrackingTransition,
+                    StateType.TRAILING: state_transitions.FrenetTrailingTransition,
+                    StateType.OVERTAKE: state_transitions.FrenetOvertakingTransition,
+                    StateType.FTGONLY: state_transitions.FrenetFTGOnlyTransition,
                 }
             )
         # Here a new state transition can be added if wanted
@@ -173,6 +197,8 @@ class StateMachine:
         if self.ot_planner == "predictive_spliner":
             rospy.Subscriber("/planner/avoidance/merger", Float32MultiArray, self.merger_cb)
             rospy.Subscriber("collision_prediction/force_trailing", Bool, self.force_trailing_cb)
+        elif self.ot_planner == "graph_based":
+            rospy.Subscriber("/planner/graph_based_wpnts", Float32MultiArray, self.graphbased_wpts_cb)
         if not rospy.get_param("/sim"):
             rospy.Subscriber("/vesc/sensors/core", VescStateStamped, self.vesc_state_cb) # for reading battery voltage
 
@@ -201,6 +227,10 @@ class StateMachine:
     def vesc_state_cb(self, data):
         """vesc state callback, reads the voltage"""
         self.cur_volt = data.state.voltage_input
+        
+    def frenet_planner_cb(self, data: WpntArray):
+        """frenet planner waypoints"""
+        self.frenet_wpnts = data
 
     def avoidance_cb(self, data: OTWpntArray):
         """spliniboi waypoints"""
@@ -251,6 +281,11 @@ class StateMachine:
         # Get spacing between wpnts for rough approximations
         self.wpnt_dist = data.wpnts[1].s_m - data.wpnts[0].s_m
         self.gb_max_idx = data.wpnts[-1].id
+        if self.ot_planner == "graph_based":
+            self.gb_wpnts_arr = np.array([
+                [w.s_m, w.d_m, w.x_m, w.y_m, w.d_right, w.d_left, w.psi_rad,
+                w.kappa_radpm, w.vx_mps, w.ax_mps2] for w in data.wpnts
+            ])
 
     def glb_wpnts_og_cb(self, data):
         """
@@ -265,6 +300,11 @@ class StateMachine:
             self.max_speed = max([wpnt.vx_mps for wpnt in data.wpnts])
         else:
             pass
+    
+    def graphbased_wpts_cb(self, data):
+        arr = np.asarray(data.data)
+        self.graph_based_wpts = arr.reshape(data.layout.dim[0].size, data.layout.dim[1].size)
+        self.graph_based_action = data.layout.dim[0].label
     
     def obstacle_perception_cb(self, data):
         if len(data.obstacles) != 0:
@@ -707,6 +747,34 @@ class StateMachine:
 
         self.vis_loc_wpnt_pub.publish(loc_markers)
 
+    def get_graph_based_wpts(self) -> WpntArray:
+        waypoint_arr = WpntArray()
+        # Fill waypoint and marker array
+        for i, coord in enumerate(self.graph_based_wpts[:self.n_loc_wpnts, :]):
+            wpnt = Wpnt()
+            wpnt.s_m = (coord[0] + self.cur_s) % self.max_s
+            wpnt.x_m = coord[1]
+            wpnt.y_m = coord[2]
+            #point = self.glob2frenet(wpnt.x_m, wpnt.y_m)
+            wpnt.d_m = 0.0
+            wpnt.psi_rad = coord[3]
+            wpnt.kappa_radpm = coord[4]
+            wpnt.vx_mps = coord[5] #* self._get_speed_scaler()
+            wpnt.ax_mps2 = coord[6]
+            wpnt.id = i
+            # Get index of closest global waypoint in terms of s-coordinate
+            idx = np.abs(self.gb_wpnts_arr[:, 0] - wpnt.s_m).argmin()
+            # Get left and right distances to track bounds from the global waypoint
+            d_left = self.gb_wpnts_arr[idx, 5]
+            d_right = self.gb_wpnts_arr[idx, 4]
+            # Use this information together with the d coordinate of the local waypoint in order to calculate
+            # left and right track bounds distances of the local waypoint
+            wpnt.d_left = d_left - wpnt.d_m
+            wpnt.d_right = d_right + wpnt.d_m
+            waypoint_arr.wpnts.append(wpnt)
+
+        return waypoint_arr
+    
     def visualize_state(self, state: str):
         """
         Function that visualizes the state of the car by displaying a colored cube in RVIZ.

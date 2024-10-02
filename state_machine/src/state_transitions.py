@@ -198,7 +198,127 @@ def PSFTGOnlyTransition(state_machine: StateMachine) -> StateType:
         else:
             return StateType.FTGONLY
 
+###########################
+# GRAPH BASED TRANSITIONS #
+###########################
+def GBGlobalTrackingTransition(state_machine: StateMachine) -> StateType:
+    """Transitions for being in `StateType.GB_TRACK`"""
+    if not state_machine._check_only_ftg_zone():
+        if state_machine._check_gbfree():
+            return StateType.GB_TRACK
+        else:
+            return StateType.TRAILING
+    else:
+        return StateType.FTGONLY
 
+
+def GBTrailingTransition(state_machine: StateMachine) -> StateType:
+    """Transitions for being in `StateType.TRAILING`"""
+    if not state_machine._check_only_ftg_zone():
+        if not state_machine._check_gbfree() and not state_machine._check_ot_sector():
+            return StateType.TRAILING
+        elif state_machine._check_gbfree() and state_machine._check_close_to_raceline():
+            return StateType.GB_TRACK
+        elif (
+            not state_machine._check_gbfree()
+            and state_machine._check_ot_sector()
+            and state_machine._check_availability_graph_wpts()
+        ):
+            return StateType.OVERTAKE
+        else:
+            return StateType.TRAILING
+    else:
+        return StateType.FTGONLY
+
+
+def GBOvertakingTransition(state_machine: StateMachine) -> StateType:
+    """Transitions for being in `StateType.OVERTAKE`"""
+    if not state_machine._check_only_ftg_zone():
+        if (
+            state_machine._check_ot_sector()
+            and state_machine._check_availability_graph_wpts()
+            and state_machine._check_enemy_in_front()
+        ):
+            return StateType.OVERTAKE
+        else:
+            return StateType.GB_TRACK
+    else:
+        return StateType.FTGONLY
+
+def GBFTGOnlyTransition(state_machine: StateMachine) -> StateType:
+    if state_machine._check_only_ftg_zone():
+        return StateType.FTGONLY
+    else:
+        if state_machine._check_close_to_raceline():
+            return StateType.GB_TRACK
+        else:
+            return StateType.FTGONLY
+        
+######################
+# FRENET TRANSITIONS #
+######################
+def FrenetGlobalTrackingTransition(state_machine: StateMachine) -> StateType:
+    """Transitions for being in `StateType.GB_TRACK`"""
+    if state_machine._check_gbfree() and not state_machine._check_only_ftg_zone():
+        return StateType.GB_TRACK
+    elif not state_machine._check_gbfree() and not state_machine._check_only_ftg_zone():
+        return StateType.TRAILING
+    elif state_machine._check_only_ftg_zone():
+        return StateType.FTGONLY
+    else:  # default
+        return StateType.GB_TRACK
+
+
+def FrenetTrailingTransition(state_machine: StateMachine) -> StateType:
+    """Transitions for being in `StateType.TRAILING`"""
+    if not state_machine._check_only_ftg_zone():
+        if ((not state_machine._check_gbfree() and not state_machine._check_ot_sector())
+            or (
+                not state_machine._check_gbfree()
+                and state_machine._check_ot_sector()
+                and not state_machine._check_ofree()
+            )
+            or (state_machine._check_gbfree() and not state_machine._check_close_to_raceline())
+        ):
+            return StateType.TRAILING
+        elif state_machine._check_gbfree() and state_machine._check_close_to_raceline():
+            return StateType.GB_TRACK
+        elif (
+            not state_machine._check_gbfree()
+            and state_machine._check_ot_sector()
+            and state_machine._check_ofree()
+        ):
+            return StateType.OVERTAKE
+        else:
+            return StateType.TRAILING
+    else:
+        return StateType.FTGONLY
+
+
+def FrenetOvertakingTransition(state_machine: StateMachine) -> StateType:
+    """Transitions for being in `StateType.OVERTAKE`"""
+    if not state_machine._check_only_ftg_zone():
+        if not state_machine._check_gbfree() and state_machine._check_ot_sector() and state_machine._check_ofree():
+            return StateType.OVERTAKE
+        elif (state_machine._check_gbfree() and state_machine._check_close_to_raceline()) or (not state_machine._check_ot_sector()):
+            return StateType.GB_TRACK
+        elif not state_machine._check_ofree():
+            return StateType.TRAILING
+        else:
+            return StateType.OVERTAKE
+    else:
+        return StateType.FTGONLY
+
+
+def FrenetFTGOnlyTransition(state_machine: StateMachine) -> StateType:
+    if state_machine._check_only_ftg_zone():
+        return StateType.FTGONLY
+    else:
+        if state_machine._check_close_to_raceline():
+            return StateType.GB_TRACK
+        else:
+            return StateType.FTGONLY
+       
 
 ####################################
 # OTHER TRANSITIONS  could go here #

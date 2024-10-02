@@ -6,7 +6,7 @@
     <arg name="ctrl_algo" default="MAP" /> <!--  MAP / PP -->
     <arg name="measure" default="False" />
     <arg name="perception" default="True" /> <!--  True / False. False to disable the perception module when using the dummy obstacle publisher -->
-    <arg name="planner" default="spliner" /> <!--  spliner / predictive_spliner -->
+    <arg name="planner" default="spliner" /> <!--  spliner / predictive_spliner / graph_based / frenet -->
     <param name="measure" value="$(arg measure)" />
 
     <!-- CONTROLLER -->
@@ -20,6 +20,7 @@
     <rosparam ns="L1_controller" command="load"
         file="$(find stack_master)/config/$(arg racecar_version)/l1_params.yaml" />
 
+    <!-- ######################################################PLANNERS###################################################### -->
     <!-- PLANNER SPLINER-->
     <group if="$(eval planner == 'spliner')">
         <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
@@ -66,6 +67,52 @@
         <node pkg="predictive_spliner" type="gaussian_process_opp_traj.py" name="GP_trajectory" output="screen"/>
         <node pkg="predictive_spliner" type="predictor_opponent_trajectory.py" name="Predictor_Opp" output="screen"/>
     </group>
+
+    <!-- PLANNER GRAPH BASED -->
+    <group if="$(eval planner == 'graph_based')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py" name="dynamic_statemachine_server" output="screen"/>
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+                <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+                <!--  tell state machine to pass entire logic -->
+                <param name="timetrials_only" value="False"/>
+                <!--  tell state machine which OT strategy we are using -->
+                <param name="ot_planner" value="graph_based"/>
+        </node>
+
+        <arg name="follow_mode" default="0"/>  <!-- Set to 2 for aggressive follow, 0 brakes often -->
+        <arg name="display_graph" default="True"/>
+        <arg name="map_name"/>
+        <node name="GraphPlanner" pkg="graph_based_planner" type="Planner.py" output="screen">
+            <param name="follow_mode" value="$(arg follow_mode)"/>
+            <param name="display_graph" value="$(arg display_graph)"/>
+            <param name="map_name" value="$(arg map_name)"/>
+        </node>
+    </group>
+
+    <!-- PLANNER FRENET-->
+    <group if="$(eval planner == 'frenet')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py" name="dynamic_statemachine_server" output="screen"/>
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+                <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+                <!--  tell state machine to pass entire logic -->
+                <param name="timetrials_only" value="False"/>
+                <!--  tell state machine which OT strategy we are using -->
+                <param name="ot_planner" value="frenet"/>
+        </node>
+
+        <!-- launch frenet planner frenet_planner_params_aggressive  -->
+        <include file="$(find frenet_planner)/launch/frenet_planner.launch"> 
+        <arg name="frenet_config" value="$(find stack_master)/config/Planning/frenet_planner_params_safe.yaml" />
+        <arg name="pub_only_if_obstacles" value="false"/>
+        <arg name="pub_global_track_advancement" value="false"/>
+        <arg name="frenet_speed_scaling" value="$(arg frenet_speed_scaling)"/>
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="measure" value="$(arg measure)"/>
+        </include>
+    </group>
+    <!-- ######################################################PLANNERS###################################################### -->
 
     <!-- PERCEPTION -->
     <group if="$(arg perception)">
