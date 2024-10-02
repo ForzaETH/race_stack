@@ -104,11 +104,11 @@
 
         <!-- launch frenet planner frenet_planner_params_aggressive  -->
         <include file="$(find frenet_planner)/launch/frenet_planner.launch"> 
-        <arg name="frenet_config" value="$(find stack_master)/config/Planning/frenet_planner_params_safe.yaml" />
+        <arg name="frenet_config" value="$(find stack_master)/config/frenet_planner_params_safe.yaml" />
         <arg name="pub_only_if_obstacles" value="false"/>
         <arg name="pub_global_track_advancement" value="false"/>
-        <arg name="frenet_speed_scaling" value="$(arg frenet_speed_scaling)"/>
-        <arg name="debug" value="$(arg debug)"/>
+        <arg name="frenet_speed_scaling" value="0.85"/> <!-- 0.85 for safe, 0.9 for aggressive -->
+        <arg name="debug" value="False"/>
         <arg name="measure" value="$(arg measure)"/>
         </include>
     </group>

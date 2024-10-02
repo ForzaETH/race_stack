@@ -107,6 +107,9 @@ class StateMachine:
         # Graph Based Variables
         self.graph_based_wpts = None
         self.gb_wpnts_arr = None
+        
+        #Frenet Variables
+        self.frenet_wpnts = WpntArray()
 
         # FTG params
         self.ftg_speed_mps = rospy.get_param("state_machine/ftg_speed_mps", 1.0) # [mps] DYNIAMIC PARAMETER
@@ -199,6 +202,8 @@ class StateMachine:
             rospy.Subscriber("collision_prediction/force_trailing", Bool, self.force_trailing_cb)
         elif self.ot_planner == "graph_based":
             rospy.Subscriber("/planner/graph_based_wpnts", Float32MultiArray, self.graphbased_wpts_cb)
+        elif self.ot_planner == "frenet":
+            rospy.Subscriber("/planner/waypoints", WpntArray, self.frenet_planner_cb)
         if not rospy.get_param("/sim"):
             rospy.Subscriber("/vesc/sensors/core", VescStateStamped, self.vesc_state_cb) # for reading battery voltage
 
@@ -480,6 +485,32 @@ class StateMachine:
                 o_free = True
             return o_free
 
+        # Slightly different for frenet
+        elif self.ot_planner == "frenet":
+            if not self.timetrials_only and self.overtake_wpnts is not None:
+                horizon = self.overtaking_horizon_m  # Horizon in front of cur_s [m]
+
+                # Use frenet conversion service to convert (s, d) wrt min curv trajectory to (x, y) in map
+                for obs in self.obstacles:
+                    obs_s = obs.s_center
+                    # Wrapping madness to check if infront
+                    dist_to_obj = (obs_s - self.cur_s) % self.max_s
+                    if dist_to_obj < horizon and len(self.frenet_wpnts.wpnts):
+                        obs_d = obs.d_center
+                        # Get d wrt to mincurv from the overtaking line
+                        avoid_wpnt_idx = np.argmin(
+                            np.array([abs(avoid_s.s_m - obs_s) for avoid_s in self.frenet_wpnts.wpnts])
+                        )
+                        ot_d = self.frenet_wpnts.wpnts[avoid_wpnt_idx].d_m
+                        ot_obs_dist = ot_d - obs_d
+                        if abs(ot_obs_dist) < self.lateral_width_ot_m:
+                            o_free = False
+                            rospy.loginfo("[State Machine] O_FREE False, obs dist to ot lane: {} m".format(ot_obs_dist))
+                            break
+            else:
+                o_free = True
+            return o_free
+
         else:
             rospy.logerr(f"[{self.name}] Unknown overtake planner")
             raise NotImplementedError
@@ -593,7 +624,7 @@ class StateMachine:
                             ot_obs_dist = ot_d - obs.d_center
                             if abs(ot_obs_dist) < self.emergency_break_d:
                                 emergency_break = True
-                                print("emergency break")
+                                rospy.logwarn("[State Machine] emergency break")
             else:
                 emergency_break = False
             return emergency_break
@@ -755,7 +786,6 @@ class StateMachine:
             wpnt.s_m = (coord[0] + self.cur_s) % self.max_s
             wpnt.x_m = coord[1]
             wpnt.y_m = coord[2]
-            #point = self.glob2frenet(wpnt.x_m, wpnt.y_m)
             wpnt.d_m = 0.0
             wpnt.psi_rad = coord[3]
             wpnt.kappa_radpm = coord[4]

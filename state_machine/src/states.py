@@ -1,5 +1,6 @@
 from state_machine_node import StateMachine
 from f110_msgs.msg import WpntArray, Wpnt
+from typing import List
 
 """
 Here we define the behaviour in the different states.
