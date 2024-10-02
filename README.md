@@ -67,3 +67,6 @@ If you found our race stack helpful in your research, we would appreciate if you
 
 ### Learning-Based On-Track System Identification for Scaled Autonomous Racing in Under a Minute.
 Please refer to the [`system_identification` README](./system_identification/README.md).
+
+### Predictive Spliner: Data-Driven Overtaking in Autonomous Racing Using Opponent Trajectory Prediction
+Please refer to the [`predictive-spliner` README](./planner/predictive-spliner/README.md).
