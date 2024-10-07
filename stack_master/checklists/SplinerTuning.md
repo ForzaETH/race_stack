@@ -8,9 +8,9 @@ roslaunch stack_master headtohead.launch LU_table:=NUCX_hangar_pacejka overtake_
 ```
 
 After successful launch, you should see the following messages in the command line:
-- `[OBS Spliner] Waiting for messages and services...`
+- `[OBS PSpliner] Waiting for messages and services...`
 - `[Planner] Dynamic Spline Server Launched...`
-- `[OBS Spliner] Ready!`
+- `[OBS PSpliner] Ready!`
 
 ## Dnyamic Reconfigurable State Machine Parameter Overview
 Launch `rqt` and go into `dynamic_statemachine_server`

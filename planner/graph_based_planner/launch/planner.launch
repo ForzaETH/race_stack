@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="testing" default="True"/>
+    <arg name="follow_mode" default="0"/>
+    <arg name="display_graph" default="True"/>
+    <arg name="map_name" default="f"/>
+    <param name="/state_machine/rate" value="40"/>
+        
+    <!-- <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+        <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+    </node> -->
+
+    <!-- setup params for gb node -->
+    <!-- Not launching graph based planner to launch it with a profiler   -->
+    <param name="/GraphPlanner/testing" value="$(arg testing)"/>
+    <param name="/GraphPlanner/follow_mode" value="$(arg follow_mode)"/>
+    <param name="/GraphPlanner/display_graph" value="$(arg display_graph)"/>
+    <param name="/GraphPlanner/map_name" value="$(arg map_name)"/>
+
+    <!--  launch graph planner node, full launch -->    
+    <node name="GraphPlanner" pkg="graph_based_planner" type="Planner.py" output="screen">
+        <param name="testing" value="$(arg testing)"/>
+        <param name="follow_mode" value="$(arg follow_mode)"/>
+        <param name="display_graph" value="$(arg display_graph)"/>
+        <param name="map_name" value="$(arg map_name)"/>
+    </node>
+        
+    <arg name="L1_mode" default="safe"/> <!--  safe / aggressive -->
+    <arg name="planner_mode" default="safe"/> <!--  safe / aggressive / mixed -->
+    <arg name="LU_table" default="SIM_linear"/> <!-- NUCX_hangar_pacejka / 		NUC4_higher / SIM_linear -->
+    <arg name="safe_local_speed" default="0.5"/>
+
+    <arg name="aggressive_local_speed" default="0.7"/>
+    <arg name="racecar_version" default="SIM"/> <!-- NUCX / SIM -->
+    <param name="racecar_version" value="$(arg racecar_version)"/>
+
+    <!--  launch L1 controller -->
+    <node pkg="controller" name="L1_controller" type="L1_controller.py" output="screen">
+    <param name="mode" value="$(arg L1_mode)"/>
+    <param name="LU_table" value="$(arg LU_table)"/>
+    </node>
+
+    <!--  launch path publisher -->
+    <node pkg="graph_based_planner" name="path_publisher" type="path_publisher.py" output="screen">
+    </node>
+        
+    <!-- Launch SAMI OD -->
+    <include file="$(find perception)/opponent_tracker/launch/opponent_track.launch"/>
+     
+</launch>
+        

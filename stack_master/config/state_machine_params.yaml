@@ -15,6 +15,7 @@ max_speed: 6.0
 ######################
 
 splini_ttl: 2 # [s] ttl counter for validity of spliner waypoints -> NOW DYNAMIC RECONFIGURABLE
+pred_splini_ttl: 0.2 # [s] ttl counter for validity of predictive spliner waypoints -> NOW DYNAMIC RECONFIGURABLE
 
 gb_ego_width_m: 0.4 # [m], distance from gb path for rejoining 
 lateral_width_gb_m: 1.1 # [m] lateral width within which we consider obstacles to be on the overtaking line -> NOW DYNAMIC RECONFIGURABLE
