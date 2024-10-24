@@ -9,13 +9,13 @@ matplotlib~=3.5.1
 numba
 filterpy
 tqdm
-transforms3d
+transforms3d>0.4
 
 # Gym requirements
 gymnasium==0.29.1
-numpy>=2.0.0
+numpy<1.25
 Pillow>=9.0.1
-scipy>=1.14.0
+scipy>=1.7.3
 numba>=0.55.2
 pyyaml>=5.3.1
 pyglet==1.5.20
