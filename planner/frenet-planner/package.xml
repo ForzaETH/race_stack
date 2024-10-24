@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>frenet_planner</name>
+  <version>0.0.0</version>
+  <description>
+
+    Planning in local frenet frame. From here https://github.com/erdos-project/frenet_optimal_trajectory_planner
+
+  </description>
+  <maintainer email="markus.achtelik@mavt.ethz.ch">Markus Achtelik</maintainer>
+  <license>Apache License 2.0, based on frenet_optimal_trajectory_planner from the erdos-project </license>
+  <url>https://github.com/erdos-project/frenet_optimal_trajectory_planner</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>f110_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>tf</depend>
+  <depend>frenet_conversion</depend>
+</package>
+
+

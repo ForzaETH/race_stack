@@ -1,0 +1,24 @@
+<launch>
+  <!-- Ideally needs to have an estimate for vy and vx. Velocities in body frame -->
+  <arg name="odom_topic" default="/car_state/odom"/> <!-- /odom, /tf_odom, /car_state/odom--> -->
+  
+  <arg name="frenet_config" default="$(find stack_master)/config/Planning/frenet_planner_params_safe.yaml" />
+  <arg name="pub_only_if_obstacles" default="false"/> <!-- true, false -->
+  <arg name="pub_global_track_advancement" default="true"/> <!-- true, false -->
+  <arg name="debug" default="False"/> <!-- true, false -->
+  <arg name="max_frequency" default="20.0"/> <!-- Hz -->
+  <arg name="frenet_speed_scaling" default="0.9"/> <!-- further scales down the /global_waypoints_scaled -->
+  <arg name="measure" default="false"/> <!-- true, false -->
+
+  <node pkg="frenet_planner" type="frenet_planner_node" name="frenet_planner" output="screen">
+    <remap from="/odom" to="$(arg odom_topic)"/>
+    <param name="pub_only_if_obstacles" type="bool" value="$(arg pub_only_if_obstacles)" />
+    <param name="pub_global_track_advancement" type="bool" value="$(arg pub_global_track_advancement)" />
+    <param name="max_frequency" type="double" value="$(arg max_frequency)" />
+    <param name="debug" type="bool" value="$(arg debug)" />
+    <param name="frenet_speed_scaling" type="double" value="$(arg frenet_speed_scaling)" />
+    <param name="measure" type="bool" value="$(arg measure)" />
+    <rosparam file="$(arg frenet_config)" command="load" />
+  </node>
+
+</launch>

@@ -190,51 +190,44 @@ class ObstaclePublisher:
         rospy.loginfo("Dummy Obstacle Publisher ready.")
 
         counter = 0
-
-        running = False
         while not rospy.is_shutdown():
-            if not running:
-                if self.car_odom.pose.pose.position.x > 0 and self.car_odom.pose.pose.position.x < 1:
-                    rospy.loginfo("Dummy Obstacle is spawned. Good luck!")
-                    running = True
-            else:
-                time_tracker = rospy.Time.now()
-                # publish obstacle message
-                obstacle_msg = ObstacleArray()
-                obstacle_msg.header.stamp = rospy.Time.now()
-                obstacle_msg.header.frame_id = "frenet"
+            time_tracker = rospy.Time.now()
+            # publish obstacle message
+            obstacle_msg = ObstacleArray()
+            obstacle_msg.header.stamp = rospy.Time.now()
+            obstacle_msg.header.frame_id = "frenet"
 
-                s = self.dynamic_obstacle.s_center
-                approx_idx = np.abs(opponent_s_array - s).argmin()
-                
-                self.dyn_obstacle_speed = self.opponent_wpnts.oppwpnts[approx_idx].proj_vs_mps
-                self.dynamic_obstacle.s_center = (self.dynamic_obstacle.s_center + self.dyn_obstacle_speed * self.looptime) % max_s
-                self.dynamic_obstacle.s_start = (self.dynamic_obstacle.s_center - self.obj_len/2) % max_s
-                self.dynamic_obstacle.s_end = (self.dynamic_obstacle.s_center + self.obj_len/2) % max_s
-                self.dynamic_obstacle.d_center = self.opponent_wpnts.oppwpnts[approx_idx].d_m 
-                self.dynamic_obstacle.d_right = self.dynamic_obstacle.d_center - 0.1
-                self.dynamic_obstacle.d_left = self.dynamic_obstacle.d_center + 0.1
-                self.dynamic_obstacle.vs = self.dyn_obstacle_speed
-                # Build s and d on selected reference line (self.waypoints_topic) by simply incrementing s and d=0
-                # self.dynamic_obstacle.s_start = (self.dynamic_obstacle.s_start + self.dyn_obstacle_speed * self.looptime + self.starting_s) % max_s
-                # self.dynamic_obstacle.s_end = max((self.dynamic_obstacle.s_start + self.obj_len), 0.1) % max_s
-                # self.dynamic_obstacle.s_center = (self.dynamic_obstacle.s_start + self.obj_len / 2) % max_s  # using len to avoid wrap problems
-                # self.dynamic_obstacle.d_center = (self.dynamic_obstacle.d_right + self.dynamic_obstacle.d_left) / 2
-                # self.dynamic_obstacle.vs = self.dyn_obstacle_speed
+            s = self.dynamic_obstacle.s_center
+            approx_idx = np.abs(opponent_s_array - s).argmin()
+            
+            self.dyn_obstacle_speed = self.opponent_wpnts.oppwpnts[approx_idx].proj_vs_mps
+            self.dynamic_obstacle.s_center = (self.dynamic_obstacle.s_center + self.dyn_obstacle_speed * self.looptime) % max_s
+            self.dynamic_obstacle.s_start = (self.dynamic_obstacle.s_center - self.obj_len/2) % max_s
+            self.dynamic_obstacle.s_end = (self.dynamic_obstacle.s_center + self.obj_len/2) % max_s
+            self.dynamic_obstacle.d_center = self.opponent_wpnts.oppwpnts[approx_idx].d_m 
+            self.dynamic_obstacle.d_right = self.dynamic_obstacle.d_center - 0.1
+            self.dynamic_obstacle.d_left = self.dynamic_obstacle.d_center + 0.1
+            self.dynamic_obstacle.vs = self.dyn_obstacle_speed
+            # Build s and d on selected reference line (self.waypoints_topic) by simply incrementing s and d=0
+            # self.dynamic_obstacle.s_start = (self.dynamic_obstacle.s_start + self.dyn_obstacle_speed * self.looptime + self.starting_s) % max_s
+            # self.dynamic_obstacle.s_end = max((self.dynamic_obstacle.s_start + self.obj_len), 0.1) % max_s
+            # self.dynamic_obstacle.s_center = (self.dynamic_obstacle.s_start + self.obj_len / 2) % max_s  # using len to avoid wrap problems
+            # self.dynamic_obstacle.d_center = (self.dynamic_obstacle.d_right + self.dynamic_obstacle.d_left) / 2
+            # self.dynamic_obstacle.vs = self.dyn_obstacle_speed
 
-                obstacle_msg.obstacles.append(self.dynamic_obstacle)
-                self.publish_obstacle_cartesian(obstacle_msg.obstacles)
+            obstacle_msg.obstacles.append(self.dynamic_obstacle)
+            self.publish_obstacle_cartesian(obstacle_msg.obstacles)
 
-                self.obstacle_pub.publish(obstacle_msg)
+            self.obstacle_pub.publish(obstacle_msg)
 
-                counter = counter + 1
+            counter = counter + 1
 
-                if counter > 25:
-                    # Lap count has to be bigger than 1 to show that the trajectory is updated after one lap
-                    opponent_traj_msg = OpponentTrajectory(header=rospy.Header(frame_id="map", stamp=rospy.Time.now()), lap_count = 2)
-                    opponent_traj_msg.oppwpnts = self.opponent_wpnts.oppwpnts
-                    self.opponent_traj_pub.publish(opponent_traj_msg)
-                    counter = 0
+            if counter > 25:
+                # Lap count has to be bigger than 1 to show that the trajectory is updated after one lap
+                opponent_traj_msg = OpponentTrajectory(header=rospy.Header(frame_id="map", stamp=rospy.Time.now()), lap_count = 2)
+                opponent_traj_msg.oppwpnts = self.opponent_wpnts.oppwpnts
+                self.opponent_traj_pub.publish(opponent_traj_msg)
+                counter = 0
 
             self.rate.sleep()
 

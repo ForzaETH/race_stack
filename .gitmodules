@@ -28,3 +28,9 @@
 [submodule "system_identification/on_track_sys_id"]
 	path = system_identification/on_track_sys_id
 	url = git@github.com:ForzaETH/On-Track-SysID.git
+[submodule "planner/predictive-spliner"]
+	path = planner/predictive-spliner
+	url = https://github.com/ForzaETH/predictive-spliner.git
+[submodule "f110_utils/libs/ccma"]
+	path = f110_utils/libs/ccma
+	url = https://github.com/ForzaETH/ccma.git
