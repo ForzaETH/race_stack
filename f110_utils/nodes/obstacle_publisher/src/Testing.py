@@ -6,7 +6,7 @@ import rospy
 from dynamic_reconfigure.msg import Config
 from f110_msgs.msg import Obstacle, ObstacleArray, OTWpntArray, Wpnt, WpntArray, OpponentTrajectory
 from visualization_msgs.msg import Marker, MarkerArray
-from ps_planner.msg import OTSection, OTSections
+from predictive_spliner.msg import OTSection, OTSections
 from f110_msgs.msg import LapData
 from std_msgs.msg import String
 

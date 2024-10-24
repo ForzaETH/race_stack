@@ -1,0 +1,36 @@
+# FrenetHyperparameters as defined in py_cpp_struct
+max_speed: 10.0
+min_speed: 0.5 # initial condition will always have at least this forward speed
+max_accel: 8.0
+max_curvature: 2.0
+max_road_width_l: 1.5
+max_road_width_r: 1.5
+d_road_w: 0.05
+dt: 0.05   # needs to be small enough for one sample to be inside of obstacle
+maxt: 1.5
+mint: 1.0
+d_sample_t: 0.5
+d_t_s: 0.25 # spacing between target speeds (never set to 0)
+d_t_s_ot: 2.0 # Dynamic OT d_t_s
+n_s_sample: 8.0 # how many target speeds up and down should be sampled
+# lower than for safe mode:
+track_clearance: 0.2 
+obstacle_clearance: 0.35
+k_lat_dev: 0.6   # deviation lateral 
+k_lat_v: 0.2   # lateral velocity
+k_lat_a: 0.0   # lateral/longitudinal acceleration
+k_lat_j: 0.1  # jerk
+# tune for overtaking: 0.5 for 1m/s opponent, 0.8 for 3m/s opponent
+# higher than for safe mode:
+k_lon_dev: 1.5  # deviation longitudinal tune to stay behind fast car and overtake it if enough space
+k_track_bounds: 0.05  # distance to track bounds
+k_obstacles: 0.2   # distance to obstacles
+k_temporal: 1.0 # temporal consistency
+k_lat: 1.0  # lateral cost scaling
+k_lon: 1.0 # longitudinal cost scaling
+k_time: 1000.0 # time cost scaling
+num_threads: 4
+# distance from old trajectory after which the frenet planner plans from the 
+# current position instead of following the previous trajectory:
+replanning_distance: 1.5
+ic_avoid_obstacles: false # bool: automatically move initial conditions of frenet planner outside of obstacles -> disable if used with FTG

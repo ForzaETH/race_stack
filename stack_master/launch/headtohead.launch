@@ -4,7 +4,9 @@
     <arg name="MAP_mode" default="safe" /> <!--  safe / aggressive -->
     <arg name="LU_table" default="NUC2_pacejka" />
     <arg name="ctrl_algo" default="MAP" /> <!--  MAP / PP -->
-    <arg name="measure" default="false" />
+    <arg name="measure" default="False" />
+    <arg name="perception" default="True" /> <!--  True / False. False to disable the perception module when using the dummy obstacle publisher -->
+    <arg name="planner" default="spliner" /> <!--  spliner / predictive_spliner / graph_based / frenet -->
     <param name="measure" value="$(arg measure)" />
 
     <!-- CONTROLLER -->
@@ -18,34 +20,110 @@
     <rosparam ns="L1_controller" command="load"
         file="$(find stack_master)/config/$(arg racecar_version)/l1_params.yaml" />
 
+    <!-- ######################################################PLANNERS###################################################### -->
     <!-- PLANNER SPLINER-->
-    <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
-    <node pkg="state_machine" type="dynamic_statemachine_server.py"
-        name="dynamic_statemachine_server" output="screen" />
-    <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
-        <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
-        <!--  tell state machine to pass entire logic -->
-        <param name="timetrials_only" value="False" />
-        <!--  tell state machine which OT strategy we are using -->
-        <param name="ot_planner" value="spliner" />
-    </node>
-    <!-- launch dynamic reconfigure -->
-    <node pkg="spliner" type="dynamic_spline_server.py" name="dynamic_spline_tuner_node"
-        output="screen" />
-    <node pkg="spliner" type="spliner_node.py" name="planner_spline" output="screen" />
-    <!-- needs frenet for trailing as of now -->
-    <!-- further scales down the /global_waypoints_scaled by that factor-->
-    <arg name="frenet_speed_scaling" if="$(eval MAP_mode == 'safe')" default="0.85" />
-    <arg name="frenet_speed_scaling" if="$(eval MAP_mode == 'aggressive')" default="0.9" />
+    <group if="$(eval planner == 'spliner')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py"
+            name="dynamic_statemachine_server" output="screen" />
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+            <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+            <!--  tell state machine to pass entire logic -->
+            <param name="timetrials_only" value="False" />
+            <!--  tell state machine which OT strategy we are using -->
+            <param name="ot_planner" value="spliner" />
+        </node>
+        <!-- launch dynamic reconfigure -->
+        <node pkg="spliner" type="dynamic_spline_server.py" name="dynamic_spline_tuner_node"
+            output="screen" />
+        <node pkg="spliner" type="spliner_node.py" name="planner_spline" output="screen" />
+    </group>
+
+    <!-- PLANNER PREDICTIVE SPLINER-->
+    <group if="$(eval planner == 'predictive_spliner')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py" name="dynamic_statemachine_server" output="screen"/>
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+                <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+                <!--  tell state machine to pass entire logic -->
+                <param name="timetrials_only" value="False"/>
+                <!--  tell state machine which OT strategy we are using -->
+                <param name="ot_planner" value="predictive_spliner"/>
+        </node>
+
+        <!-- launch collision predictor and dynamic reconfigure -->
+        <node pkg="predictive_spliner" type="dynamic_collision_server.py" name="dynamic_collision_tuner_node" output="screen"/>
+        <node pkg="predictive_spliner" type="collision_prediction.py" name="collision_predictor" output="screen"/>
+
+        <!-- launch sqp node and dynamic sqp server -->
+        <node pkg="predictive_spliner" type="dynamic_sqp_server.py" name="dynamic_sqp_tuner_node" output="screen"/>
+        <node pkg="predictive_spliner" type="sqp_avoidance_node.py" name="planner_sqp" output="screen"/>
+
+        <!-- launch waypoint updater -->
+        <node pkg="predictive_spliner" type="update_waypoints.py" name="waypoint_updater" output="screen"/>
+
+        <!-- launch GP_nodes if GP_trajectory is gp_predictive -->
+        <node pkg="predictive_spliner" type="opponent_trajectory.py" name="OpponentHalflap" output="screen"/>
+        <node pkg="predictive_spliner" type="gaussian_process_opp_traj.py" name="GP_trajectory" output="screen" launch-prefix="taskset -c 1"/>
+        <node pkg="predictive_spliner" type="predictor_opponent_trajectory.py" name="Predictor_Opp" output="screen"/>
+    </group>
+
+    <!-- PLANNER GRAPH BASED -->
+    <group if="$(eval planner == 'graph_based')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py" name="dynamic_statemachine_server" output="screen"/>
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+                <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+                <!--  tell state machine to pass entire logic -->
+                <param name="timetrials_only" value="False"/>
+                <!--  tell state machine which OT strategy we are using -->
+                <param name="ot_planner" value="graph_based"/>
+        </node>
+
+        <arg name="follow_mode" default="0"/>  <!-- Set to 2 for aggressive follow, 0 brakes often -->
+        <arg name="display_graph" default="True"/>
+        <arg name="map_name"/>
+        <node name="GraphPlanner" pkg="graph_based_planner" type="Planner.py" output="screen">
+            <param name="follow_mode" value="$(arg follow_mode)"/>
+            <param name="display_graph" value="$(arg display_graph)"/>
+            <param name="map_name" value="$(arg map_name)"/>
+        </node>
+    </group>
+
+    <!-- PLANNER FRENET-->
+    <group if="$(eval planner == 'frenet')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py" name="dynamic_statemachine_server" output="screen"/>
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+                <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+                <!--  tell state machine to pass entire logic -->
+                <param name="timetrials_only" value="False"/>
+                <!--  tell state machine which OT strategy we are using -->
+                <param name="ot_planner" value="frenet"/>
+        </node>
+
+        <!-- launch frenet planner frenet_planner_params_aggressive  -->
+        <include file="$(find frenet_planner)/launch/frenet_planner.launch"> 
+        <arg name="frenet_config" value="$(find stack_master)/config/frenet_planner_params_safe.yaml" />
+        <arg name="pub_only_if_obstacles" value="false"/>
+        <arg name="pub_global_track_advancement" value="false"/>
+        <arg name="frenet_speed_scaling" value="0.85"/> <!-- 0.85 for safe, 0.9 for aggressive -->
+        <arg name="debug" value="False"/>
+        <arg name="measure" value="$(arg measure)"/>
+        </include>
+    </group>
+    <!-- ######################################################PLANNERS###################################################### -->
 
     <!-- PERCEPTION -->
-    <rosparam command="load" file="$(find stack_master)/config/opponent_tracker_params.yaml" />
-    <node pkg="perception" type="detect.py" name="detect" output="screen" />
-    <arg name="var_vs" default="2" /> <!-- var_of vs-->
-    <arg name="var_vd" default="8" /> <!-- var_of vs-->
-    <node pkg="perception" type="tracking.py" name="tracking" output="screen" />
-    <node pkg="perception" type="dynamic_tracker_server.py" name="dynamic_tracker_server"
-        output="screen" />
+    <group if="$(arg perception)">
+        <rosparam command="load" file="$(find stack_master)/config/opponent_tracker_params.yaml" />
+        <node pkg="perception" type="detect.py" name="detect" output="screen" />
+        <arg name="var_vs" default="2" /> <!-- var_of vs-->
+        <arg name="var_vd" default="8" /> <!-- var_of vs-->
+        <node pkg="perception" type="tracking.py" name="tracking" output="screen" />
+        <node pkg="perception" type="dynamic_tracker_server.py" name="dynamic_tracker_server"
+            output="screen" />
+    </group>
 
     <!-- launch cpu_monitor if measuring -->
     <group if="$(arg measure)">
