@@ -64,7 +64,7 @@
 
         <!-- launch GP_nodes if GP_trajectory is gp_predictive -->
         <node pkg="predictive_spliner" type="opponent_trajectory.py" name="OpponentHalflap" output="screen"/>
-        <node pkg="predictive_spliner" type="gaussian_process_opp_traj.py" name="GP_trajectory" output="screen"/>
+        <node pkg="predictive_spliner" type="gaussian_process_opp_traj.py" name="GP_trajectory" output="screen" launch-prefix="taskset -c 1"/>
         <node pkg="predictive_spliner" type="predictor_opponent_trajectory.py" name="Predictor_Opp" output="screen"/>
     </group>
 
