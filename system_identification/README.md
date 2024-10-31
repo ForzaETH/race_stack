@@ -11,4 +11,4 @@ The generated lookup tables that are to be used by the controller are copied int
 On-track System Identification is furthermore available, as described in the following section. 
 
 ## Learning-Based On-Track System Identification for Scaled Autonomous Racing in Under a Minute.
-TODO: This part is currently under construction, will be fully completed upon publication of the corresponding paper. For now please refer to the `feature/ontrack_sysid` branch for the latest updates.
+TODO: This part is currently under construction, will be fully completed upon publication of the corresponding paper.
