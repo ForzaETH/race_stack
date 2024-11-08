@@ -27,7 +27,7 @@
 	url = https://github.com/ForzaETH/f1tenth_simulator.git
 [submodule "system_identification/on_track_sys_id"]
 	path = system_identification/on_track_sys_id
-	url = git@github.com:ForzaETH/On-Track-SysID.git
+	url = https://github.com/ForzaETH/On-Track-SysID.git
 [submodule "planner/predictive-spliner"]
 	path = planner/predictive-spliner
 	url = https://github.com/ForzaETH/predictive-spliner.git
