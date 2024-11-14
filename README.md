@@ -9,6 +9,7 @@ ForzaETH Race Stack by the [D-ITET Center for Project Based Learning (PBL)](http
 Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware* is available on [Journal of Field Robotics](https://onlinelibrary.wiley.com/doi/pdf/10.1002/rob.22429), detailing the system's architecture, algorithms, and performance benchmarks.
 
 **NOTE**: For extensions on said paper, tied to specific publications, please refer to the later paragraph [Additional Publications](#additional-publications) 
+**NOTE**: We have a **ROS2** version of this stack, check out the other branches of this repo! 
 
 ## Installation
 
