@@ -68,7 +68,7 @@ If you found our race stack helpful in your research, we would appreciate if you
 ## Additional Publications
 
 ### Learning-Based On-Track System Identification for Scaled Autonomous Racing in Under a Minute.
-Please refer to the [`system_identification` README](./system_identification/README.md).
+Please refer to the [`system_identification` README](https://github.com/ForzaETH/On-Track-SysID).
 
 ### Predictive Spliner: Data-Driven Overtaking in Autonomous Racing Using Opponent Trajectory Prediction
 Please refer to the [`predictive-spliner` README](https://github.com/ForzaETH/predictive-spliner).
