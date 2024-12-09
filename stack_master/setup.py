@@ -26,6 +26,7 @@ setup(
         (os.path.join('share', package_name, 'config', 'NUC5'), glob(os.path.join('config', 'NUC5', '*/*'), recursive=True)),
         (os.path.join('share', package_name, 'config', 'NUC5'), glob(os.path.join('config', 'NUC5', '*.yaml'))),
         (os.path.join('share', package_name, 'config', 'NUC6'), glob(os.path.join('config', 'NUC6', '*/*'), recursive=True)),
+        (os.path.join('share', package_name, 'config', 'NUC6'), glob(os.path.join('config', 'NUC6', '*.yaml'))),
         (os.path.join('share', package_name, 'config', 'NUC7'), glob(os.path.join('config', 'NUC7', '*.yaml'))),(os.path.join('share', package_name, 'config', 'NUC7'), glob(os.path.join('config', 'NUC7', '*/*'), recursive=True)),
         (os.path.join('share', package_name, 'config', 'NUC7'), glob(os.path.join('config', 'NUC7', '*.yaml'))),
         (os.path.join('share', package_name, 'config', 'SIM'), glob(os.path.join('config', 'SIM', '*.*'))),
