@@ -3,7 +3,7 @@
     "privileged": true,
     "remoteUser": "${localEnv:USER}",
     "image": "jet_forzaeth_racestack_ros2:humble",
-    // "image": "nuc_forzaeth_racestack_ros2:humble",
+    // "image": "hmcl_racestack:humble",
     "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
     "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/${localEnv:USER}/ws/src/race_stack,type=bind",
@@ -38,7 +38,7 @@
     },
     "runArgs": [
         "--name",
-        "nuc_forzaeth_racestack_ros2_humble",
+        "hmcl_racestack_humble",
         "--net",
         "host",
         "--privileged"

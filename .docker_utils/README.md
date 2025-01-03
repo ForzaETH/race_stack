@@ -168,7 +168,7 @@ Change the `image` attribute in the devcontainer file correspondingly, change ´
 ```json5
 //<race_stack_directory>/.devcontainer/devcontainer.json
 ...
-    "image": "nuc_forzaeth_racestack_ros2", 
+    "image": "hmcl_racestack", 
 ...
 ```
 
