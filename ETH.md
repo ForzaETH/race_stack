@@ -1,4 +1,4 @@
-# ROS 2 HMCar Race Stack at HMCL
+# ROS 2 ForzaETH Race Stack at Center for Project Based Learning
 
 <a href="https://arxiv.org/abs/2403.11784">
     <img src="https://img.shields.io/badge/arXiv.org-2403.11784-b31b1b" alt="arXiv e-print Badge">
