@@ -1,4 +1,4 @@
-# Opponent Detection & Tracking
+# Opponent Detection2 & Tracking
 ![Perception Architecture](./misc/perception_arch.png)
 
 This directory contains the Opponent Detection & Tracking system of the ForzaETH F110 Team. The Opponent Detection system is divided into two main components, namely the Opponent Detection and the Opponent Trackeing subsystems.  
