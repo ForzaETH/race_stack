@@ -2,29 +2,30 @@
     <arg name="racecar_version" default="NUC2" />
     <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="overtake_mode" default="spliner" /> <!--  spliner / graph_based -->
-    <arg name="ctrl_algo" default="MAP"/> <!-- MAP / PP -->
+    <arg name="ctrl_algo" default="MAP" /> <!-- MAP / PP -->
     <arg name="measure" default="False" />
 
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
-        <arg name="mode" value="$(var ctrl_algo)"/>
+        <arg name="mode" value="$(var ctrl_algo)" />
     </include>
-    
+
     <!-- launch state machine -->
     <include file="$(find-pkg-share state_machine)/launch/state_machine_launch.xml">
-        <arg name="mode" value="head_to_head"/>
-        <arg name="overtake_mode" value="$(var overtake_mode)"/>
+        <arg name="mode" value="head_to_head" />
+        <arg name="overtake_mode" value="$(var overtake_mode)" />
     </include>
 
     <!-- SPLINE PLANNER-->
     <!-- this is actually the only way this works -->
-    <group if="$(eval '\'$(var overtake_mode)\' == \'spliner\'')"> 
+    <group if="$(eval '\'$(var overtake_mode)\' == \'spliner\'')">
         <include file="$(find-pkg-share spline_planner)/launch/spline_planner_launch.xml" />
     </group>
 
     <!-- PERCEPTION -->
     <include file="$(find-pkg-share perception)/launch/perception_launch.xml">
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
-    </include> 
-    
+        <arg name="param_file"
+            value="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
+    </include>
+
 </launch>

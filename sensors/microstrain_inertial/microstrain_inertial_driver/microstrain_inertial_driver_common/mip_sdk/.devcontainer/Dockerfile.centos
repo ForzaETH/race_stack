@@ -1,0 +1,61 @@
+ARG ARCH="amd64"
+ARG CENTOS_VERSION="7"
+FROM ${ARCH}/centos:${CENTOS_VERSION}
+
+# Add some CA certificates
+COPY .devcontainer/extra_cas /etc/pki/ca-trust/source/anchors
+RUN set -ex && update-ca-trust
+
+# Install some build tools
+RUN set -ex \
+    && yum -y groupinstall "Development Tools" \
+    && yum -y install \
+        git \
+        gdb \
+        vim \
+        curl \
+        make \
+        subversion \
+        bash-completion
+
+# Add some python dependencies
+RUN set -ex && yum -y install python2-devel || yum -y install python-devel
+
+# We need CMake 3 for MIP, so install that here
+ARG CMAKE_VERSION="3.23.0"
+RUN set -ex \
+    && yum -y install epel-release \
+    && export CMAKE_MAJOR_VERSION=$(echo ${CMAKE_VERSION} | cut -d"." -f-2) \
+    && curl -fsSLo /tmp/cmake-${CMAKE_VERSION}.tar.gz https://cmake.org/files/v${CMAKE_MAJOR_VERSION}/cmake-${CMAKE_VERSION}.tar.gz \
+    && tar -C /tmp/ -xzf /tmp/cmake-${CMAKE_VERSION}.tar.gz \
+    && cd /tmp/cmake-${CMAKE_VERSION} \
+    && ./bootstrap \
+        --prefix="/usr" \
+        --parallel=$(nproc) \
+        -- \
+        -DCMAKE_INSTALL_PREFIX="/usr" \
+        -DCMAKE_BUILD_TYPE="RELEASE" \
+        -DCMAKE_USE_OPENSSL=OFF \
+    && make -j$(nproc) \
+    && make install \
+    && rm -rf /tmp/cmake-*
+
+# Add a user that will be used when shelling into this container and allow them to use devices
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN set -ex \
+    && yum install -y \
+        sudo \
+    && groupadd -g ${USER_ID} microstrain \
+    && useradd \
+        -N \
+        -m \
+        -u ${USER_ID} \
+        -g ${GROUP_ID} \
+        -G "dialout" \
+        -s "/bin/bash" \
+        microstrain \
+    && echo 'microstrain ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Append /usr/lib to LD_LIBRARY_PATH? Feels like we shouldn't need to do this
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:/usr/lib"

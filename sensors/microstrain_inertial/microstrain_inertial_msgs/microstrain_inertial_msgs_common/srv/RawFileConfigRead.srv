@@ -1,0 +1,8 @@
+# Service to allow users to read the raw file collection config
+
+---
+# Whether or not raw file collection is enabled
+bool enable
+
+# Full path to the file we are recording the data to.
+string file_path

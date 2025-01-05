@@ -1,0 +1,12 @@
+# Convenience rule for GX and GQ Devices
+# Uncomment this line if you want the legacy rule which will set up a single link to /dev/microstrain. If more than one device is connected, this rule will get continuously overridden which is why it is commented out by default
+#SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{product}=="Lord Inertial Sensor", SYMLINK="microstrain", MODE="0666"
+
+# Convenience rule that will register a single device to /dev/microstrain_main, /dev/microstrain_aux, or /dev/microstrain_rtk.
+# This link will get continuously overridden if you have multiple devices, in which case you should use the symlinks below that will symlink by serial number
+SUBSYSTEM=="tty", ATTRS{idVendor}=="199b", ATTRS{idProduct}=="3065", ATTRS{manufacturer}=="Lord Microstrain", PROGRAM="/bin/sh -c 'echo %s{serial} | sed s/^0000.*/main/g | sed s/^2-00.*/aux/g | sed -e s/[[:space:]]/_/g | tr -s _'", SYMLINK+="microstrain_%c", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", ATTRS{manufacturer}=="Lord Microstrain", PROGRAM="/bin/sh -c 'echo %s{serial} | sed s/^0000.*/main/g | sed s/^2-00.*/aux/g | sed -e s/[[:space:]]/_/g | tr -s _'", SYMLINK+="microstrain_%c", MODE="0666"
+
+# Rule to create links for multiple different devices
+SUBSYSTEM=="tty", ATTRS{idVendor}=="199b", ATTRS{idProduct}=="3065", ATTRS{manufacturer}=="Lord Microstrain", PROGRAM="/bin/sh -c 'echo %s{serial} | sed s/^0000/main/g | sed s/^2-00/aux/g | sed -e s/[[:space:]]/_/g | tr -s _'", SYMLINK+="microstrain_%c", MODE="0666"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", ATTRS{manufacturer}=="Lord Microstrain", PROGRAM="/bin/sh -c 'echo %s{serial} | sed s/^0000/main/g | sed s/^2-00/aux/g | sed -e s/[[:space:]]/_/g | tr -s _'", SYMLINK+="microstrain_%c", MODE="0666"

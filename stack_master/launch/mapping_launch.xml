@@ -25,12 +25,12 @@
         </node>
 
         <!-- launch teleop -->
-        <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
+        <!-- <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
             <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
             <arg name="vesc_config" value="$(var vesc_config)" />
             <arg name="sensors_config" value="$(var sensors_config)" />
             <arg name="mux_config" value="$(var mux_config)" />
-        </include>
+        </include> -->
 
         <!-- launch SE -->
         <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">

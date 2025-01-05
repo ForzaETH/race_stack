@@ -1,0 +1,4 @@
+microstrain_inertial_driver:
+  ros__parameters:
+    # Copy this file to a new file, fill out this section with desired parameters, and specify the new file via params_file to override the default params
+    foo: bar

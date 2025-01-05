@@ -1,0 +1,95 @@
+# escape=`
+
+ARG WINDOWS_IMAGE
+ARG WINDOWS_VERSION
+FROM ${WINDOWS_IMAGE}:${WINDOWS_VERSION}
+
+# Temporary directory
+ENV DOCKER_TEMP_DIR "C:\DockerTemp"
+
+# All dependencies will be installed in this directory
+ENV LIB_PATH "C:\lib"
+
+# Restore the default Windows shell for correct batch processing.
+SHELL ["cmd", "/S", "/C"]
+
+# Install any additional certificates
+COPY .devcontainer\extra_cas C:\DockerTemp\Certs
+RUN for %f in (%DOCKER_TEMP_DIR%\Certs\*.crt %DOCKER_TEMP_DIR%\Certs\*.pem) do ( `
+        powershell -Command "Import-Certificate -FilePath %f -CertStoreLocation Cert:\LocalMachine\Root" `
+    )
+
+# Install Microsoft Buildtools
+RUN `
+    # Download the Build Tools bootstrapper.
+    curl -SL --output %DOCKER_TEMP_DIR%\vs_buildtools.exe https://aka.ms/vs/15/release/vs_buildtools.exe `
+    `
+    # Install Build Tools
+    && echo Starting install `
+    && (start /w %DOCKER_TEMP_DIR%\vs_buildtools.exe --quiet --wait --norestart --nocache `
+        --add Microsoft.Net.Component.4.8.SDK `
+        --add Microsoft.Net.Component.4.8.TargetingPack `
+        --add Microsoft.Net.Component.4.TargetingPack `
+        --add Microsoft.VisualStudio.Workload.VCTools `
+        --add Microsoft.VisualStudio.Workload.NativeDesktop `
+        --add Microsoft.VisualStudio.Component.Windows81SDK `
+        --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+        --add Microsoft.VisualStudio.Component.VC.140 `
+        --add Microsoft.VisualStudio.Component.Windows10SDK.19041 `
+        --add Microsoft.Component.VC.Runtime.UCRTSDK `
+        --installPath "%ProgramFiles(x86)%\Microsoft Visual Studio\2017\BuildTools" `
+        || IF "%ERRORLEVEL%"=="3010" EXIT 0) `
+    `
+    # Cleanup
+    && del /q %DOCKER_TEMP_DIR%\vs_buildtools.exe
+
+# Install CMake
+ARG CMAKE_VERSION=3.23.1
+RUN `
+    # Download the cmake installer
+    curl -SL --output %DOCKER_TEMP_DIR%\cmake-%CMAKE_VERSION%-windows-x86_64.msi https://github.com/Kitware/CMake/releases/download/v%CMAKE_VERSION%/cmake-%CMAKE_VERSION%-windows-x86_64.msi `
+    `
+    # Install cmake
+    && msiexec /i %DOCKER_TEMP_DIR%\cmake-%CMAKE_VERSION%-windows-x86_64.msi /quiet /qn /norestart `
+    `
+    # Add Cmake to the path
+    && setx PATH "%PATH;C:\Program Files\CMake\bin" `
+    `
+    # Cleanup
+    && del /q %DOCKER_TEMP_DIR%\cmake-%CMAKE_VERSION%-windows-x86_64.msi
+
+# Install 7zip
+ARG 7ZIP_VERSION=2107
+RUN echo Installing 7zip `
+    # Download the installer
+    && curl -SL --output %DOCKER_TEMP_DIR%\7z%7ZIP_VERSION%-x64.msi https://www.7-zip.org/a/7z%7ZIP_VERSION%-x64.msi `
+    `
+    # Run the installer
+    && msiexec /i %DOCKER_TEMP_DIR%\7z%7ZIP_VERSION%-x64.msi /quiet /qn /norestart `
+    `
+    # Add 7zip the the path
+    && setx PATH "%PATH%;C:\Program Files\7-Zip" `
+    `
+    # Cleanup
+    && del /q %DOCKER_TEMP_DIR%\7z%7ZIP_VERSION%-x64.msi
+
+# Install Git
+ARG GIT_VERSION=2.36.0
+RUN echo Installing Git `
+    # Download the installer
+    && curl -SL --output %DOCKER_TEMP_DIR%\Git-%GIT_VERSION%-64-bit.exe https://github.com/git-for-windows/git/releases/download/v%GIT_VERSION%.windows.1/Git-%GIT_VERSION%-64-bit.exe `
+    `
+    # Install
+    && (start /w %DOCKER_TEMP_DIR%\Git-%GIT_VERSION%-64-bit.exe /VERYSILENT /DIR="C:\Program Files\Git") `
+    `
+    # Add Windows to the path
+    && setx PATH "%PATH%;C:\Program Files\Git\bin" `
+    `
+    # Cleanup
+    && del /q %DOCKER_TEMP_DIR%\Git-%GIT_VERSION%-64-bit.exe
+
+# Allow users to execute powershell scripts
+RUN powershell -Command "Set-ExecutionPolicy RemoteSigned"
+
+# Set the entrypoint to powershell
+ENTRYPOINT ["powershell"]

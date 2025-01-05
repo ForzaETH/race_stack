@@ -1,9 +1,10 @@
 <!-- -*- mode: XML -*- -->
 <launch>
-  <arg name="racecar_version" default="NUC2" description="'SIM' / 'NUCx'" />
+  <arg name="racecar_version" default="SIM" description="'SIM' / 'NUCx'" />
   <arg name="map_name" description="Map name in stack_master/maps" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
-  <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
+  <arg name="loc_algorithm" default="slam"
+    description="'slam' / 'synpf' to switch localisation algorithm" />
 
   <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
   <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />

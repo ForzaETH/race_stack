@@ -1,0 +1,10 @@
+#pragma once
+
+// Full version of the MIP SDK including a git commit hash if this build was not built on a tag
+#define MIP_SDK_VERSION_FULL "${MIP_GIT_VERSION}"
+
+// Semantic version information of the MIP SDK
+#define MIP_SDK_VERSION "${MIP_GIT_VERSION_CLEAN}"
+#define MIP_SDK_VERSION_MAJOR ${MIP_GIT_VERSION_MAJOR}
+#define MIP_SDK_VERSION_MINOR ${MIP_GIT_VERSION_MINOR}
+#define MIP_SDK_VERSION_PATCH ${MIP_GIT_VERSION_PATCH}

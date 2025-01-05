@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="cv5" params="name parent *origin">
+    <material name="cv5_material">
+      <color rgba="${80/255} ${81/255} ${85/255} 1" />
+    </material>
+
+    <link name="${name}_center">
+      <visual>
+        <origin xyz="-0.016256 0 0" rpy="0 0 3.14159" />
+        <geometry>
+          <mesh filename="package://microstrain_inertial_description/meshes/cv5.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+        <material name="cv5_material"/>
+      </visual>
+    </link>
+
+    <link name="${name}">
+    </link>
+
+    <!-- This joint handles the center of the CV7, but measurements will not be produced WRT to this, it is just easier to place on robots -->
+    <joint name="${name}_center_joint" type="fixed">
+      <parent link="${parent}" />
+      <child link="${name}_center" />
+      <xacro:insert_block name="origin" />
+    </joint>
+
+    <!-- This link contains the offset between the center of the CV7 and the actual sensor origin. Measurements will be reported relative to this -->
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${name}_center" />
+      <child link="${name}" />
+      <origin xyz="-0.011938 -0.00635 0.006604" rpy="0 0 0" />
+    </joint>
+  </xacro:macro>
+</robot>

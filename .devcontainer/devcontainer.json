@@ -1,9 +1,9 @@
 {
-    "name": "ForzaETH Race Stack Humble",
+    "name": "HMCAR Race Stack Humble",
     "privileged": true,
-    "remoteUser": "${localEnv:USER}",
-    "image": "jet_forzaeth_racestack_ros2:humble",
-    // "image": "hmcl_racestack:humble",
+    // "remoteUser": "${localEnv:USER}",
+    "image": "hcmar_nuc:humble",
+    // "image": "hcmar_jet:humble",
     "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
     "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/${localEnv:USER}/ws/src/race_stack,type=bind",
@@ -18,7 +18,7 @@
                 "aaron-bond.better-comments",
                 "eamodio.gitlens",
                 "ms-iot.vscode-ros",
-                "Github.copilot",
+                // "Github.copilot",
                 "redhat.vscode-xml",
                 "ms-python.autopep8",
                 "xaver.clang-format",
@@ -38,7 +38,7 @@
     },
     "runArgs": [
         "--name",
-        "hmcl_racestack_humble",
+        "hcmar",
         "--net",
         "host",
         "--privileged"
@@ -46,7 +46,7 @@
     "mounts": [
         "source=/home/${localEnv:USER}/.Xauthority,target=/tmp/.Xauthority,type=bind,consistency=cached",
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
-        "source=/dev,target=/dev,type=bind,consistency=cached",
+        "source=/dev,target=/dev,type=bind",
         "source=${localWorkspaceFolder}/../cache/humble/build,target=/home/${localEnv:USER}/ws/build,type=bind",
         "source=${localWorkspaceFolder}/../cache/humble/install,target=/home/${localEnv:USER}/ws/install,type=bind",
         "source=${localWorkspaceFolder}/../cache/humble/log,target=/home/${localEnv:USER}/ws/log,type=bind"

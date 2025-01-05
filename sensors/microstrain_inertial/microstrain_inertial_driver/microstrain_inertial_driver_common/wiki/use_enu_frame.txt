@@ -1,0 +1,117 @@
+<<TOC(4)>>
+
+= use_enu_frame =
+
+By default, the sensors that the [[microstrain_inertial_driver|microstrain_inertial_driver]] supports output data in the NED frame.
+The ROS standard is for position data to be in ENU. Additionally, the vehicle frame definition for microstrain sensors is different
+than the ROS definition. {{{use_enu_frame}}} will cause the driver to either publish data using ROS's standards, or microstrain standards.
+
+When {{{use_enu_frame: False}}}, the driver will output all globally referenced data in the NED frame.
+Additionally, any local frame data will be output in the microstrain vehicle frame. See [[#different_frames|Different Frames]]
+for more information.
+
+When {{{use_enu_frame: True}}}, the driver will output all globally referenced data in the ENU frame.
+Additionally, any local frame data will be output in the ROS vehicle frame. See [[#different_frames|Different Frames]]
+for more information.
+
+== Behavior ==
+
+The list below breaks down how different components of the driver will behave depending on the value of use_enu_frame.
+
+=== Publishers ===
+
+  * '''{{{/imu/data}}}''':
+    * {{{orientation}}}: Reported in device body frame with respect to the NED/ENU frame.
+    * {{{angular_velocity}}}: Reported in the microstrain/ROS vehicle frame.
+    * {{{linear_acceleration}}}: Reported in the microstrain/ROS vehicle frame.
+  * '''{{{/imu/mag}}}''':
+    * {{{magnetic_field}}}: Reported in the microstrain/ROS vehicle frame.
+  * '''{{{/gnss_1/velocity}}}''':
+    * {{{twist}}}: Reported in the NED/ENU frame.
+  * '''{{{/gnss_2/velocity}}}''':
+    * {{{twist}}}: Reported in the NED/ENU frame.
+  * '''{{{/ekf/imu/data}}}''':
+    * {{{orientation}}}: Reported in device body frame with respect to the NED/ENU frame.
+    * {{{orientation_covariance}}}: Reported in the NED/ENU frame.
+    * {{{angular_velocity}}}: Reported in the microstrain/ROS vehicle frame.
+    * {{{linear_acceleration}}}: Reported in the microstrain/ROS vehicle frame.
+  * '''{{{/ekf/llh_position}}}''':
+    * {{{position_covariance}}}: Reported in the NED/ENU frame.
+  * '''{{{/ekf/velocity}}}''':
+    * {{{twist}}}: Reported in the NED/ENU frame.
+  * '''{{{/ekf/odomtery_map}}}''':
+    * {{{twist}}}: Reported in the microstrain/ROS vehicle frame.
+    * {{{pose}}}: Reported in the NED/ENU frame.
+  * '''{{{/ekf/dual_antenna_heading}}}''':
+    * {{{pose}}}: Reported in device body frame with respect to the NED/ENU frame.
+
+=== Transforms ===
+
+'''NOTE''': See [[microstrain_inertial_driver/transforms#frame_ids|Frame IDs]] for more information on what these Frame IDs represent.
+
+  * '''{{{frame_id -> gnss1_frame_id}}}''':
+    * Will be published in the microstrain/ROS vehicle frame.
+  * '''{{{frame_id -> gnss2_frame_id}}}''':
+    * Will be published in the microstrain/ROS vehicle frame.
+  * '''{{{frame_id -> odometer_frame_id}}}''':
+    * Will be published in the microstrain/ROS vehicle frame.
+  * '''{{{earth_frame_id -> map_frame_id}}}''':
+    * Will be interpreted or published in the NED/ENU frame.
+
+=== Subscribers ===
+
+The following topics accept external aiding measurements. If {{{use_enu_frame: True}}}, they will expect that the frame_id of the message
+is in the ROS vehicle frame. If {{{use_enu_frame: False}}}, they will expect that the frame_id of the message is in the microstrain vehicle frame.
+
+  * '''{{{ext/llh_position}}}'''
+  * '''{{{ext/velocity_ned}}}'''
+  * '''{{{ext/velocity_enu}}}'''
+  * '''{{{ext/velocity_ecef}}}'''
+  * '''{{{ext/velocity_body}}}'''
+  * '''{{{ext/heading_ned}}}'''
+  * '''{{{ext/heading_enu}}}'''
+
+<<Anchor(different_frames)>>
+== Different Frames ==
+
+=== NED Frame ===
+
+The NED frame is outlined in the [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/user_manual_content/coordinate_frames/NED%20Frame.htm|NED Frame]]
+page of the microstrain documentation, and is described as:
+
+  * X North
+  * Y East
+  * Z Down
+
+=== ENU Frame ===
+
+The ENU frame is outlined in [[https://www.ros.org/reps/rep-0103.html#axis-orientation|REP 103]], and is described as:
+
+  * X East
+  * Y North
+  * Z Up
+
+=== MicroStrain Vehicle Frame ===
+
+The microstrain vehicle frame is outlined in the [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/user_manual_content/coordinate_frames/Vehicle%20Frame.htm|Vehicle Frame]]
+page of the microstrain documentation. It is described as:
+
+  * X Forward
+  * Y Right
+  * Z Down
+
+And can be visualized as:
+
+{{attachment:MicroStrain_Vehicle.png|MicroStrain Vehicle frame visualization|width=300,height=300}}
+
+=== ROS Vehicle Frame ===
+
+The ROS vehicle frame is outlined in [[https://www.ros.org/reps/rep-0103.html#axis-orientation|REP 103]]. It is described as:
+
+  * X Forward
+  * Y Left
+  * Z up
+
+And can be visualized as:
+
+{{attachment:ROS_Vehicle.png|ROS Vehicle frame visualization|width=300,height=300}}

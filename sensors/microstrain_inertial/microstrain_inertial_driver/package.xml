@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>microstrain_inertial_driver</name>
+  <version>4.5.0</version>
+  <description>The ros_mscl package provides a driver for the LORD/Microstrain inertial products.</description>
+  <author>Brian Bingham</author>
+  <author>Parker Hannifin Corp</author>
+  <maintainer email="rob.fisher@parker.com">Rob Fisher</maintainer>
+  <maintainer email="melissa.gill@parker.com">Melissa Gill</maintainer>
+  <license>MIT</license>
+  <url type="website">https://github.com/LORD-MicroStrain/microstrain_inertial</url>
+
+  <buildtool_depend>git</buildtool_depend>
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
+  <!-- Used to determine which ROS version is available at build time -->
+  <build_depend>ros_environment</build_depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <exec_depend>rclcpp_lifecycle</exec_depend>
+  <exec_depend>diagnostic_aggregator</exec_depend>
+  
+  <depend>diagnostic_updater</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>nmea_msgs</depend>
+  <depend>rtcm_msgs</depend>
+  <depend>microstrain_inertial_msgs</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>lifecycle_msgs</depend>
+
+  <!-- Static or header only library deps -->
+  <build_depend>eigen</build_depend>
+  <build_depend>geographiclib</build_depend>
+  
+  <build_depend>rclcpp_lifecycle</build_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <!-- Dependencies needed to install MSCL from the CMake file  -->
+  <build_depend>jq</build_depend>
+  <build_depend>curl</build_depend>
+
+  <!-- Test Dependencies -->
+  <test_depend>ament_cpplint</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

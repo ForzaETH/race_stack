@@ -1,0 +1,96 @@
+<<TOC(4)>>
+
+= Transforms =
+
+In order to integrate more easily with other ROS tools, the [[microstrain_inertial_driver|microstrain_inertial_driver]] supports publishing several different transforms.
+
+<<Anchor(frame_ids)>>
+== Frame IDs ==
+
+When publishing transforms, we will use a configurable set of frame ids.
+The table below lists the frame IDs, their defaults, and what they should represent.
+Each of these names can be found in the [[https://github.com/LORD-MicroStrain/microstrain_inertial_driver_common/blob/main/config/params.yml|params.yml]] and can be modified by the user.
+
+||                         ||                           ||<tablestyle="width: 80%">                                                                                                                                                     ||
+||'''Frame ID'''           ||'''Default'''              ||'''Description'''                                                                                                                                                             ||
+|| {{{frame_id}}}          || {{{imu_link}}}            || Represents the location of the sensor itself. All sensor and filter measurements will be published in this frame ID                                                          ||
+|| {{{mount_frame_id}}}    || {{{base_link}}}           || Represents the frame that the sensor is mounted on. We will never publish messages in this frame. It's main purpose it in conjunction with {{{mount_to_frame_id_transform}}} ||
+|| {{{map_frame_id}}}      || {{{map}}}                 || For more information, see the [[https://www.ros.org/reps/rep-0105.html#map|map section of REP 105]]                                                                          ||
+|| {{{earth_frame_id}}}    || {{{earth}}}               || For more information, see the [[https://www.ros.org/reps/rep-0105.html#earth|earth section of REP 105]]                                                                      ||
+|| {{{gnss1_frame_id}}}    || {{{gnss_1_antenna_link}}} || Represents the location of antenna 1. All GNSS measurements from antenna 1 will be reported in this frame ID                                                             ||
+|| {{{gnss2_frame_id}}}    || {{{gnss_2_antenna_link}}} || Represents the location of antenna 2. All GNSS measurements from antenna 2 will be reported in this frame ID                                                             ||
+|| {{{odometer_frame_id}}} || {{{odometer_link}}}       || Represents the location of the odometer attached to the device (GQ7 only right now). All measurements from the odometer will be reported in this frame ID                    ||
+|| {{{target_frame_id}}}   || {{{base_link}}}           || Should be set to whatever Frame ID you want to publish a transform to. For more information see [[#tf_mode_global|Global]] and [[#tf_mode_relative|Relative]]                ||
+
+== Transform Mode ==
+
+The transforms we publish or do not publish is controlled by the {{{tf_mode}}} parameter. Below are the different options.
+
+=== Off ===
+
+The driver will operate in this mode when {{{tf_mode: 0}}}.
+
+In this mode, the driver will not publish any dynamic transforms.
+What this means is that transforms containing global or relative position information will not be published.
+However, see [[#independently_controlled_transforms|Independently Controlled Transforms]] for a list of transforms
+that may still be published in this mode.
+
+<<Anchor(tf_mode_global)>>
+=== Global ===
+
+The driver will operate in this mode when {{{tf_mode: 1}}}
+
+In this mode, the driver will publish the following transforms:
+
+  * '''{{{earth_frame_id -> target_frame_id}}}'''
+    * '''Description''':
+      * This transform will be the transform of {{{target_frame_id}}} with respect to the ECEF frame.
+      * The rate at which this transform is published is controlled by the {{{filter_odometry_earth_data_rate}}} configuration option
+
+This mode has been added for those who want to operate in an entirely global context.
+Most standard ROS tools do not play nicely with this, and it is recommended to instead use relative mode
+if you wish to use tools such as rviz, nav2, move_base, etc.
+
+<<Anchor(tf_mode_relative)>>
+=== Relative ===
+
+The driver will operate in this mode when {{{tf_mode: 2}}}
+
+In this mode, the driver will publish the following transforms:
+
+  * '''{{{earth_frame_id -> map_frame_id}}}'''
+    * '''Description''':
+      * This transform will be the location of the local tangent plane in ECEF.
+      * This transform requires that the user has also configured relative position. See [[microstrain_inertial_driver/relative_position_configuration|Relative Position Configuration]] for more information on how to do that.
+  * '''{{{map_frame_id -> target_frame_id}}}'''
+    * '''Description''':
+      * This transform will be the location of {{{target_frame_id}}} with respect to the local tangent plane.
+      * The rate at which this transform is published is controlled by the {{{filter_odometry_map_data_rate}}} configuration option
+
+This mode has been added to allow for easy integration with tools such as rviz, nav2, move_base etc.
+
+<<Anchor(independently_controlled_transforms)>>
+=== Independently Controlled Transforms ===
+
+The following frames may be published regardless of {{{tf_mode}}}.
+See the list below for more information on the parameters to use to configure them and what they represent.
+
+  * '''{{{frame_id -> gnss1_frame_id}}}'''
+    * '''Configured With Parameter''': {{{gnss1_antenna_offset}}}
+    * '''Description''':
+      * This transform will be published if the device has at least 1 GNSS antenna, and will be the transform from the device to GNSS antenna 1.
+      * If the device supports streaming [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_multi_antenna_offset_correction.htm|Multi Antenna Offset Correction]], setting {{{mip_filter_multi_antenna_offset_correction_data_rate}}} to a non-zero value will cause this transform to be updated at that rate with corrections from the device
+  * '''{{{frame_id -> gnss2_frame_id}}}'''
+    * '''Configured With Parameter''': {{{gnss2_antenna_offset}}}
+    * '''Description''':
+      * This transform will be published if the device has at least 2 GNSS antennas, and will be the transform from the device to GNSS antenna 2.
+      * If the device supports streaming [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_multi_antenna_offset_correction.htm|Multi Antenna Offset Correction]], setting {{{mip_filter_multi_antenna_offset_correction_data_rate}}} to a non-zero value will cause this transform to be updated at that rate with corrections from the device
+  * '''{{{frame_id -> odometer_frame_id}}}'''
+    * '''Configured With Parameter''': {{{filter_speed_lever_arm_offset}}}
+    * '''Description''':
+      * This transform will be published if the device supports an external odometer, and will be the transform from the device to the odometer
+  * '''{{{mount_frame_id -> frame_id}}}'''
+    * '''Configured With Parameter''': {{{mount_to_frame_id_transform}}}
+    * '''Description''':
+      * This transform will be published if {{{publish_mount_to_frame_id_transform}}} is true and represents the transform between the sensor and wherever it is mounted.
+      * In many cases this should be disabled as this transform will be published by something else, but it has been added as a convenience feature when first integrating.

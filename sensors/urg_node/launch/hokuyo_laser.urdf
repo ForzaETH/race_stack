@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+
+<robot name="hokuyo_laser">
+
+  <link name="world"/>
+
+  <joint name="world_to_laser_fixed" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="world"/>
+    <child link="laser"/>
+  </joint>
+
+  <link name="laser">
+  <visual>
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <geometry>
+      <box size="0.1 0.1 0.1"/>
+    </geometry>
+  </visual>
+  </link>
+
+</robot>

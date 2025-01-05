@@ -1,0 +1,11 @@
+<<TOC(4)>>
+
+= Examples =
+
+== Device Examples ==
+
+The {{{microstrain_inertial_examples}}} package is published for both [[https://github.com/LORD-MicroStrain/microstrain_inertial/tree/ros/microstrain_inertial_examples|ROS]]
+and [[https://github.com/LORD-MicroStrain/microstrain_inertial/tree/ros2/microstrain_inertial_examples|ROS 2]] and contains
+simple device examples useful for users who want to start using a device in ROS. Each example should work out of the box with little configuration.
+
+It is suggested that users start with these examples, copy the example they used into their own package, and then tweak it for their application.

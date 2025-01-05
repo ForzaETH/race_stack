@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>microstrain_inertial_examples</name>
+  <version>4.5.0</version>
+  <description>Simple examples using the microstrain_inertial_driver for MicroStrain sensors.</description>
+  <maintainer email="rob.fisher@parker.com">Rob Fisher</maintainer>
+  <maintainer email="melissa.gill@parker.com">Melissa Gill</maintainer>
+  <license>MIT</license>
+
+  <url type="website">https://github.com/LORD-MicroStrain/microstrain_inertial</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>microstrain_inertial_driver</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>rviz_imu_plugin</exec_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

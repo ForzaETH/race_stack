@@ -1,0 +1,3 @@
+[submodule "src/mip_sdk"]
+	path = mip_sdk
+	url = https://github.com/LORD-MicroStrain/mip_sdk.git

@@ -1,0 +1,9 @@
+
+@PACKAGE_INIT@
+
+set_and_check(MIP_INCLUDE_DIRS "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+include(@PACKAGE_CONFIG_EXPORT_DIR@/mip-targets.cmake)
+
+set(MIP_LIBRARIES "@EXPORT_TARGETS@")
+
+check_required_components(@EXPORT_TARGETS@)

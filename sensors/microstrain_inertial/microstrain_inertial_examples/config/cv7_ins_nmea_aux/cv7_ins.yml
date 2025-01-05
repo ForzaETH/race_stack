@@ -1,0 +1,63 @@
+microstrain_inertial_driver:
+  ros__parameters:
+    # You should change this section of config to match your setup
+    port : '/dev/microstrain_main'
+    baudrate : 115200
+    set_baud : True
+
+    # This will cause the node to convert any NED measurements to ENU
+    # This will also cause the node to convert any vehicle frame measurements to the ROS definition of a vehicle frame
+    use_enu_frame : True
+
+    # Configure some frame IDs
+    frame_id        : 'cv7_ins_link'  # Frame ID of all of the filter messages. Represents the location of the CV7-INS in the tf tree
+    map_frame_id    : "map"           # Frame ID of the local tangent plane.
+    earth_frame_id  : "earth"         # Frame ID of the global frame
+    target_frame_id : "base_link"     # Frame ID that we will publish a transform to.
+
+    # Disable the transform from the mount to frame id transform as it will be handled in the launch file
+    publish_mount_to_frame_id_transform : False
+
+    # We will use relative transform mode, meaning that we will publish the following transforms from this node
+    #   earth_frame_id -> map_frame_id
+    #   map_frame_id -> target_frame_id
+    # This helps ROS standard tools consume and display position information produced by the device
+    tf_mode: 2
+
+    # We will use auto relative position configuration for this example. This configuration does a couple things:
+    #   We will setup a local tangent plane at the first location we receive after the device enters full navigation mode
+    #   We will publish this location as the transform from the earth_frame_id to map_frame_id frame
+    filter_relative_position_config : True
+    filter_relative_position_source : 2
+
+    # Set the antenna offset.
+    # Note: This should be changed for you setup, otherwise you will experience poor filter performance
+    gnss1_antenna_offset : [0.0, -0.7, -1.0]
+
+    # This will set the initial heading alignment to use GNSS Kinematic Alignment
+    # Note that if you have any form of external heading, it is probably better to set this to 8 in order to use that
+    filter_auto_heading_alignment_selector : 2
+
+    # Setup some aiding options.
+    filter_enable_gnss_pos_vel_aiding : True
+    filter_enable_gnss_heading_aiding : False
+
+    # This example uses the PPS from the F9P connected to this device via GPIO
+    filter_pps_source : 3
+
+    # Change this baudrate to whatever baudrate the F9P is configured to communicate at
+    aux_baudrate : 115200
+
+    # Configure the GPIO pins
+    gpio_config : True
+
+    # GPIO 1 (pin 7) will be the pin where we receive NMEA
+    gpio1_feature  : 5     # UART feature
+    gpio1_behavior : 0x22  # UART Port 2 RX behavior
+
+    # GPIO 3 (pin 6) will be the pin where we receive PPS
+    gpio3_feature  : 2  # PPS feature
+    gpio3_behavior : 1  # Input behavior (PPS is being input to the device)
+
+    # Disable the filter declination source. This is required to get the node to start, and isn't doing anything special
+    filter_declination_source : 1

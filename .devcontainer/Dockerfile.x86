@@ -35,9 +35,7 @@ RUN pip3 install -r /tmp/.install_utils/python_req.txt &&\
 USER $USERNAME
 
 ADD .install_utils/bashrc/ /tmp/.install_utils/
-RUN echo "export USERNAME=$USERNAME" >> /home/$USERNAME/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_git >> /home/$USERNAME/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_forzaeth >> /home/$USERNAME/.bashrc
+RUN echo "export USERNAME=$USERNAME" >> /home/$USERNAME/.bashrc
 
 USER root
 # Clean up

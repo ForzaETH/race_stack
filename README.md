@@ -4,6 +4,46 @@
     <img src="https://img.shields.io/badge/arXiv.org-2403.11784-b31b1b" alt="arXiv e-print Badge">
 </a>
 
+```bash
+mkdir f1tenth && cd f1tenth
+
+git clone --recurse-submodules https://github.com/jsryu118/race_stack.git
+
+cd race_stack
+```
+
+```bash
+## For collaborators
+cd race_stack
+git flow init
+
+# Set ros2-humble branch as Main branch
+git flow feature start <featureBranchName>
+# Develop code (git commits)
+
+git flow feature publish <featureBranchName>
+# or
+git push origin <featureBranchName>
+```
+
+
+```bash
+export UID=$(id -u)
+export GID=$(id -g)
+
+docker compose build nuc
+# or
+docker compose build jet
+
+mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
+
+source .devcontainer/xauth_setup.sh
+```
+
+Then Ctrl+Shift+p
+Type Rebuild and ~~
+
+
 ForzaETH Race Stack by the [D-ITET Center for Project Based Learning (PBL)](https://pbl.ee.ethz.ch/) at ETH Zurich. 
 
 Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware* is available on [Journal of Field Robotics](https://onlinelibrary.wiley.com/doi/pdf/10.1002/rob.22429), detailing the system's architecture, algorithms, and performance benchmarks.

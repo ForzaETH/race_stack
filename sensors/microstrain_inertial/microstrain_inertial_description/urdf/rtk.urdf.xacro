@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="rtk" params="name parent *origin">
+    <material name="rtk_material">
+      <color rgba="${80/255} ${81/255} ${85/255} 1" />
+    </material>
+
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0.00606 0" rpy="1.5708 0 1.5708" />
+        <geometry>
+          <mesh filename="package://microstrain_inertial_description/meshes/rtk.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+        <material name="rtk_material"/>
+      </visual>
+    </link>
+
+    <!-- Just place the center of the RTK dongle wherever we were requested to put it -->
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}" />
+      <child link="${name}" />
+      <xacro:insert_block name="origin" />
+    </joint>
+  </xacro:macro>
+</robot>

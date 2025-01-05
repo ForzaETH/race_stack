@@ -1,0 +1,42 @@
+ARG ARCH="amd64"
+ARG UBUNTU_VERSION="20.04"
+FROM ${ARCH}/ubuntu:${UBUNTU_VERSION}
+
+# Add some CA certificates
+COPY .devcontainer/extra_cas /usr/local/share/ca-certificates
+RUN set -ex \
+    && apt-get update && apt-get install -y \
+        ca-certificates \
+    && update-ca-certificates
+
+# Install some general tools not installed by rosdep
+ENV DEBIAN_FRONTEND="noninteractive"
+RUN set -ex \
+    && apt-get update && apt-get install -y \
+        gdb \
+        git \
+        vim \
+        curl \
+        make \
+        cmake \
+        zlib1g-dev \
+        subversion \
+        build-essential \
+        bash-completion
+
+# Add a user that will be used when shelling into this container and allow them to use devices
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN set -ex \
+    && apt-get update && apt-get install -y \
+        sudo \
+    && groupadd -g ${USER_ID} microstrain \
+    && useradd \
+        -N \
+        -m \
+        -u ${USER_ID} \
+        -g ${GROUP_ID} \
+        -G "dialout" \
+        -s "/bin/bash" \
+        microstrain \
+    && echo 'microstrain ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers

@@ -5,6 +5,7 @@
 sudo chown -R $USERNAME /home/$USERNAME/ws/
 
 # Install dependencies
+source /opt/ros/humble/setup.bash
 rosdep update &&
     rosdep install --from-paths /home/$USERNAME/ws/src --ignore-src -y
 
@@ -21,3 +22,11 @@ cd ~/ws &&
     colcon build --packages-up-to f110_gym --base-paths ~/ws \
         --cmake-args "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
         -Wall -Wextra -Wpedantic --cmake-clean-cache
+
+echo "source ~/ws/src/race_stack/.install_utils/bashrc/.bashrc_git" >>/home/$USERNAME/.bashrc &&
+    echo "source ~/ws/src/race_stack/.install_utils/bashrc/.bashrc_hmcar" >>/home/$USERNAME/.bashrc
+
+cd ~/ws &&
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+# colcon build --symlink-install
+# colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release

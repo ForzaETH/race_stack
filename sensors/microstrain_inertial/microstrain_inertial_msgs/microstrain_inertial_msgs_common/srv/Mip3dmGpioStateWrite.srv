@@ -1,0 +1,9 @@
+# Service definition for the MIP command https://files.microstrain.com/GQ7+User+Manual/external_content/dcp/Commands/0x0c/data/0x42.htm
+
+# GPIO pin number counting from 1. Cannot be 0.
+uint8 pin
+
+# The pin state
+bool state
+
+---

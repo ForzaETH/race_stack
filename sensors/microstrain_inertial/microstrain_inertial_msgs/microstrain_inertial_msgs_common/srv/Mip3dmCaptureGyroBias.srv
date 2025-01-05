@@ -1,0 +1,4 @@
+# Service definition for the MIP command https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Commands/3dm_command/data/mip_cmd_3dm_capture_gyro_bias.htm?Highlight=capture%20gyro%20bias
+
+---
+float32[3] bias

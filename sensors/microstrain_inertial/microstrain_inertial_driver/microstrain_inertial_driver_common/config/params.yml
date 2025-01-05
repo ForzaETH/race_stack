@@ -1,0 +1,601 @@
+# Standalone example params file for GX3, GX4, GX/CX5, RQ1 and GQ7 series devices
+# Note: Feature support is device-dependent and some of the following settings may have no affect on your device.
+# Please consult your device's documentation for supported features
+
+# ****************************************************************** 
+# NOTE: This file is formatted to work with ROS and will not work if specified as the params_file argument in ROS2.
+#       If you want to override parameters for ROS2, start with https://github.com/LORD-MicroStrain/microstrain_inertial/blob/ros2/microstrain_inertial_driver/config/empty.yml
+# ****************************************************************** 
+
+# ******************************************************************
+# General Settings
+# ******************************************************************
+
+# port is the main port that the device will communicate over. For all devices except the GQ7, this is the only available port.
+# aux_port is only available for the GQ7 and is only needed when streaming RTCM corrections to the device from ROS, or if you want to publish NMEA sentences from this node
+port         : "/dev/ttyACM1"
+baudrate     : 115200
+aux_port     : "/dev/ttyACM0"
+aux_baudrate : 115200
+debug        : False
+
+# If set to true, this will configure the requested baudrate on the device for the main port and aux port if possible.
+# Note that this will be set on both USB and serial, but will only actually affect the baudrate of a serial connection.
+set_baud : False
+
+# Waits for a configurable amount of time until the device exists
+# If poll_max_tries is set to -1 we will poll forever until the device exists
+poll_port      : False
+poll_rate_hz   : 1.0
+poll_max_tries : 60
+
+# Number of times to attempt to reconnect to the device if it disconnects while running
+# If configure_after_reconnect is true, we will also reconfigure the device after we reconnect
+#
+# Note: It is strongly recommended to configure after reconnect unless device_setup is set to false
+#       as the device will likely initialize in a different state otherwise
+reconnect_attempts : 0
+configure_after_reconnect : True
+
+# Controls if the driver-defined setup is sent to the device
+#     false - The driver will ignore the settings below and use the device's current settings
+#     true  - Overwrite the current device settings with those listed below
+device_setup : True
+
+# Controls if the driver-defined settings are saved
+#     false - Do not save the settings
+#     true  - Save the settings in the device's non-volatile memory
+save_settings : False
+
+# Controls if the driver creates a raw binary file
+#     false - Do not create the file
+#     true  - Create the file
+#
+# Note: The filename will have the following format -
+#       model_number "_" serial_number "_" datetime (year_month_day_hour_minute_sec) ".bin"
+#           example: "3DM-GX5-45_6251.00001_20_12_01_01_01_01.bin"
+# Note: This file is useful for getting support from the manufacturer
+raw_file_enable : False
+
+# (GQ7/CV7 only) Controls if the driver requests additional factory support data to be included in the raw data file
+#     false - Do not request the additional data
+#     true  - Request the additional channels (please see notes below!)
+#
+# Note: We recommend only enabling this feature when specifically requested by Microstrain.
+#       Including this feature increases communication bandwidth requirements significantly...
+#       for serial data connections please ensure the baudrate is sufficient for the added data channels.     
+raw_file_include_support_data : True
+
+# The directory to store the raw data file
+raw_file_directory : "/home/your_name"
+
+# Timestamp configuration
+#     0 - ROS time that the packet was received. This is the simplest, but also least accurate timestamp solution
+#     1 - GPS time. This will stamp the messages with the exact timestamps produced by the device.
+#         This is the most accurate solution, but will also produce timestamps starting at GPS time 0 until a valid GPS time is received,
+#         at which point the time will jump to the current UTC time. Useful for those doing their own timestamp processing
+#     2 - Hybrid. This will combine the two above methods to produce valid UTC times where the dt is very close to the device time dt.
+#         This is the easiest and most accurate solution for users looking to consume messages with no additional processing.
+timestamp_source : 2
+
+# ****************************************************************** 
+# Frame ID Settings 
+# ****************************************************************** 
+
+# The mode in which we will publish transforms to the below frame IDs
+#     0 - No transforms will be published between any of the non static frame ids. (if publish_mount_to_frame_id_transform is true, it will still be published, and so will the antenna and odometer transforms)
+#     1 - Global mode:
+#             Transform will be published from earth_frame_id to target_frame_id containing global position
+#     2 - Relative mode:
+#             Note: In order to use relative mode, you must configure filter_relative_position
+#             Transform will be published from earth_frame_id to map_frame_id using relative position configuration
+#             Transform between map_frame_id and target_frame_id will be published using position information reported by the device
+# for more information, see: https://wiki.ros.org/microstrain_inertial_driver/transforms
+tf_mode : 0
+
+# Frame ID that most header.frame_id fields will be populated with.
+frame_id: "imu_link"
+
+# Frame IDs determining the transforms published by this node to aid in navigation. See https://www.ros.org/reps/rep-0105.html
+# Note: If use_enu_frame is false, these frames (with the exception of earth_frame_id) will automatically have "_ned" appended to them.
+mount_frame_id     : "base_link"  # Frame ID that the device is mounted on.
+map_frame_id       : "map"
+earth_frame_id     : "earth"
+gnss1_frame_id     : "gnss_1_antenna_link"
+gnss2_frame_id     : "gnss_2_antenna_link"
+odometer_frame_id  : "odometer_link"
+
+# Target frame ID to publish transform to. Note that there needs to be some path of transforms between this and frame_id
+#     If tf_mode is set to 1, a transform between earth_frame_id and target_frame_id will be published
+#     If tf_mode is set to 2, a transform between map_frame_id and target_frame_id will be published
+target_frame_id : "base_link"
+
+# Static transform between mount_frame_id and frame_id.
+# Note: It is recommended to define this in a urdf file if you are building a robot, or are able to modify the robot's description.
+publish_mount_to_frame_id_transform  : True
+mount_to_frame_id_transform          : [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] # [ x, y, z, qi, qj, qk, qw ]
+
+# Controls if the driver outputs data with-respect-to ENU frame
+#     false - position, velocity, and orientation are WRT the NED frame (native device frame)
+#     true  - position, velocity, and orientation are WRT the ENU frame
+#
+# Note: It is strongly recommended to leave this as True if you plan to integrate with other ROS tools
+# Note: If this is set to false, all "*_frame_id" variables will have "_ned" appended to them by the driver.
+# For more information, see: https://wiki.ros.org/microstrain_inertial_driver/use_enu_frame
+use_enu_frame : True
+
+
+# ****************************************************************** 
+# GNSS Settings (only applicable for devices with GNSS) 
+# ****************************************************************** 
+
+# Antenna #1 lever arm offset source
+#     0 - Disabled:  We will not configure the antenna offset, or publish it as a transform
+#     1 - Manual:    We will use the provided vector to configure the device, and publish it as the transform between frame_id and gnss1_frame_id
+#     2 - Transform: We will lookup the transform between frame_id and gnss1_frame_id and use it to configure the device. We will ignore gns1_antenna_offset
+# Antenna #1 lever arm offset vector
+#     For GQ7 - in the vehicle frame wrt IMU origin (meters)
+#     For all other models - in the IMU frame wrt IMU origin (meters)
+# Note: Make this as accurate as possible for good performance
+gnss1_antenna_offset_source : 1
+gnss1_antenna_offset        : [0.0, -0.7, -1.0]
+
+
+# ****************************************************************** 
+# GNSS2 Settings (only applicable for multi-GNSS systems (e.g. GQ7) )
+# ****************************************************************** 
+
+# Antenna #2 lever arm offset source
+#     0 - Disabled:  We will not configure the antenna offset, or publish it as a transform
+#     1 - Manual:    We will use the provided vector to configure the device, and publish it as the transform between frame_id and gnss2_frame_id
+#     2 - Transform: We will lookup the transform between frame_id and gnss2_frame_id and use it to configure the device. We will ignore gns2_antenna_offset
+# Antenna #2 lever arm offset vector
+#     For GQ7 - in the vehicle frame wrt IMU origin (meters)
+#     For all other models - in the IMU frame wrt IMU origin (meters)
+# Note: Make this as accurate as possible for good performance
+gnss2_antenna_offset_source : 1
+gnss2_antenna_offset        : [0.0, 0.7, -1.0]
+
+# GNSS signal configuration
+gnss_glonass_enable : True
+gnss_galileo_enable : True
+gnss_beidou_enable  : True
+
+
+# ****************************************************************** 
+# RTK Settings (only applicable for devices with RTK support (e.g. GQ7) )
+# ****************************************************************** 
+
+# (GQ7 Only) Enable RTK dongle interface. This is required when using a 3DM-RTK
+# Note: Enabling this will cause the node to publish mip/gnss_corrections/rtk_corrections_status
+rtk_dongle_enable : True
+
+# (GQ7 Only) Allow the node to receive RTCM messages on the /rtcm topic and publish NMEA sentences from the aux port on /nmea.
+#            It is suggested to use https://github.com/LORD-MicroStrain/ntrip_client with this interface
+# Note: This will require the aux_port configuration to be valid and pointing to a valid aux port
+ntrip_interface_enable : False
+
+# ****************************************************************** 
+# Kalman Filter Settings (only applicable for devices with a Kalman Filter) 
+# ****************************************************************** 
+
+# (GQ7/CV7 only) Aiding measurement control 
+filter_enable_gnss_pos_vel_aiding     : True
+filter_enable_gnss_heading_aiding     : True
+filter_enable_altimeter_aiding        : False
+filter_enable_odometer_aiding         : False
+filter_enable_magnetometer_aiding     : False
+filter_enable_external_heading_aiding : False
+
+# (GQ7 only) Filter Initialization control
+#     Init Condition source =
+#         0 - auto pos, vel, attitude (default)
+#         1 - auto pos, vel, roll, pitch, manual heading
+#         2 - auto pos, vel, manual attitude
+#         3 - manual pos, vel, attitude
+#
+#     Auto-Heading alignment selector (note this is a bitfield, you can use more than 1 source) =
+#         Bit 0 - Dual-antenna GNSS
+#         Bit 1 - GNSS kinematic (requires motion, e.g. a GNSS velocity)
+#         Bit 2 - Magnetometer
+#         Bit 3 - External Heading (first valid external heading will be used to initialize the filter)
+#
+#     Reference frame =
+#         1 - WGS84 Earth-fixed, earth centered (ECEF) position, velocity, attitude
+#         2 - WGS84 Latitude, Longitude, height above ellipsoid position, NED velocity and attitude
+filter_init_condition_src              : 0
+filter_auto_heading_alignment_selector : 1
+filter_init_reference_frame            : 2
+filter_init_position : [0.0, 0.0, 0.0]
+filter_init_velocity : [0.0, 0.0, 0.0]
+filter_init_attitude : [0.0, 0.0, 0.0]
+
+# (GQ7 only) Relative Position Configuration
+#     Reference frame =
+#         1 - Relative ECEF position
+#         2 - Relative LLH position
+#
+#     Source =
+#         0 - Position will be reported relative to the base station. filter_relative_position_ref will be ignored
+#         1 - Position will be reported relative to filter_relative_position_ref
+#         2 - Position will be reported relative to the first position reported by the device after it enters full nav. filter_relative_position_ref will be ignored
+#         3 - We will wait for a transform to be made available between earth_frame_id and map_frame_id and use that as the relative position reference. filter_relative_position_ref will be ignored
+#
+#     Reference position - Units provided by reference frame (ECEF - meters, LLH - deg, deg, meters)
+# Note: The source selected here will determine the transform published between earth_frame_id and map_frame_id when running in relative transform mode
+# For more information, see: https://wiki.ros.org/microstrain_inertial_driver/relative_position_configuration
+filter_relative_position_config : False
+filter_relative_position_frame  : 2
+filter_relative_position_source : 2
+filter_relative_position_ref    : [0.0, 0.0, 0.01]
+
+# (GQ7 Only) Reference point lever arm offset control.
+# Note: This offset will affect the position and velocity measurements in the following topics: nav/odometry, nav/relative_pos/odometry
+# Note: This offset is in the vehicle reference frame.
+# Note: This can cause strange behavior when also using the ROS transform tree.
+#       It is recommended to not use this if you want to use the ROS transform tree unless you really know what you are doing
+filter_lever_arm_offset: [0.0, 0.0, 0.0]
+
+# (GQ7 only) Wheeled Vehicle Constraint Control
+# Note: When enabled, the filter uses the assumption that velocity is constrained to the primary vehicle axis.
+#       By convention, the primary vehicle axis is the vehicle X-axis
+filter_enable_wheeled_vehicle_constraint : False
+
+# (GQ7 only) Vertical Gyro Constraint Control
+# Note: When enabled and no valid GNSS measurements are available, the filter uses the accelerometers to track
+#       pitch and roll under the assumption that the sensor platform is not undergoing linear acceleration.
+#       This constraint is useful to maintain accurate pitch and roll during GNSS signal outages.
+filter_enable_vertical_gyro_constraint : False
+
+# (GQ7 only) GNSS Antenna Calibration Control
+# When enabled, the filter will enable lever arm error tracking, up to the maximum offset specified in meters.
+# This allows the filter to compensate for antenna offsets when they are incorrect.
+filter_enable_gnss_antenna_cal     : True
+filter_gnss_antenna_cal_max_offset : 0.1
+
+# (GQ7/CV7 only) PPS Source
+#     PPS Source =
+#         0 - Disabled
+#         1 - Reciever 1 (default)
+#         2 - Reciever 2
+#         3 - GPIO (provided by external source if supported). Use the GPIO config above to further configure
+#         4 - Generated from system oscillator
+filter_pps_source : 1
+
+# Sensor2vehicle frame transformation selector
+#     0 = None
+#     1 = Euler Angles
+#     2 = matrix
+#     3 = quaternion
+# Note: These are different ways of setting the same parameter in the device.
+#       The different options are provided as a convenience.
+#       Support for matrix and quaternion options is firmware version dependent (GQ7 supports Quaternion as of firmware 1.0.07)
+#       Quaternion order is [i, j, k, w]
+# Note: This can cause strange behavior when also using the ROS transform tree.
+#       It is recommended to not use this if you want to use the ROS transform tree unless you really know what you are doing
+filter_sensor2vehicle_frame_selector : 1
+filter_sensor2vehicle_frame_transformation_euler      : [0.0, 0.0, 0.0]
+filter_sensor2vehicle_frame_transformation_matrix     : [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+filter_sensor2vehicle_frame_transformation_quaternion : [0.0, 0.0, 0.0, 1.0]
+
+# Controls if the Kalman filter will auto-init or requires manual initialization
+filter_auto_init : True
+
+# Controls if the Kalman filter is reset after the settings are configured
+filter_reset_after_config : True
+
+# (All, except -10, and -15 products) Declination Source 1 = None, 2 = magnetic model, 3 = manual 
+# Note: When using a CV7, this MUST be changed to either 1, or 3 or the node will not start
+filter_declination_source : 2
+filter_declination        : 0.23
+
+# Controls what kind of linear acceleration data is used in the Filter IMU message.
+#     If this is set to true, the acceleration will not factor out gravity, if set to false gravity will be filtered out of the linear acceleration.
+filter_use_compensated_accel : True
+
+# (GQ7/CV7 full support, GX5-45 limited support) Adaptive filter settings
+#     Adaptive level: 0 - off, 1 - Conservative, 2 = Moderate (default), 3 = agressive
+#     Time limit: Max duration of measurement rejection prior to recovery, in milliseconds - default = 15000 
+filter_adaptive_level         : 2
+filter_adaptive_time_limit_ms : 15000
+
+# External GPS Time Update Control
+# Note: filter_external_gps_time_topic should publish at no more than 1 Hz.
+# Note: gps_leap_seconds should be updated to reflect the current number of leap seconds.
+filter_enable_external_gps_time_update : False
+filter_external_gps_time_topic         : "/external_gps_time"
+gps_leap_seconds                       : 18.0
+
+# (GQ7 only) Speed Lever Arm Configuration
+#   Lever Arm - In vehicle reference frame (meters)
+# Speed lever arm offset source
+#     0 - Disabled:  We will not configure the speed lever arm offset, or publish it as a transform
+#     1 - Manual:    We will use the provided vector to configure the device, and publish it as the transform between frame_id and odometer_frame_id
+#     2 - Transform: We will lookup the transform between frame_id and odometer_frame_id and use it to configure the device. We will ignore filter_speed_lever_arm
+# Speed lever arm offset vector in the vehicle frame wrt IMU origin (meters)
+filter_speed_lever_arm_source : 0
+filter_speed_lever_arm : [0.0, 0.5, -1.0]
+
+# (All, except GQ7, CV7, -10, and -15 products) Heading Source 0 = None, 1 = magnetic, 2 = GNSS velocity (note: see manual for limitations)  
+# Note: For the GQ7, this setting has no effect. See filter_auto_heading_alignment_selector
+# Note: When using a -10/-AR product. This MUST be set to 0 or the node will not start
+filter_heading_source : 1
+
+# (GX5 and previous,-45 models only) Dynamics Mode 1 = Portable (default), 2 = Automotive, 3 = Airborne (<2Gs), 4 = Airborne High G (<4Gs)
+filter_dynamics_mode : 1
+
+# (GQ7 only) GNSS Aiding Source Control
+# 1 = All internal receivers
+# 2 = External GNSS messages provided by user
+# 3 = Internal GNSS Receiver 1 only
+# 4 = Internal GNSS Receiver 2 only
+filter_gnss_aiding_source_control: 1
+
+# ****************************************************************** 
+# IMU Settings 
+# ****************************************************************** 
+
+# Static IMU message covariance values (the device does not generate these) 
+imu_orientation_cov   : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+imu_linear_cov        : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+imu_angular_cov       : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+imu_mag_cov           : [0.01, 0.0, 0.0, 0.0, 0.01, 0.0, 0.0, 0.0, 0.01]
+imu_pressure_variance : 0.01
+
+# ****************************************************************** 
+# Other Device Settings
+# ****************************************************************** 
+
+# (GQ7 Only) Hardware Odometer Control
+enable_hardware_odometer : False
+odometer_scaling         : 0.0
+odometer_uncertainty     : 0.0
+
+# (GQ7/CV7 only) GPIO Configuration
+#
+# For information on possible configurations and specific pin options refer to the MSCL MipNodeFeatures command, supportedGpioConfigurations.
+#
+#     GQ7 GPIO Pins =
+#         1 - GPIO1 (primary port pin 7) - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 3 - Encoder
+#         2 - GPIO2 (primary port pin 9) - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 3 - Encoder
+#         3 - GPIO3 (aux port pin 7)     - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 3 - Encoder
+#         4 - GPIO4 (aux port pin 9)     - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 3 - Encoder
+#
+#     CV7 GPIO Pins =
+#         1 - GPIO1 (pin 7)  - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 5 - UART
+#         2 - GPIO2 (pin 9)  - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 5 - UART
+#         3 - GPIO3 (pin 6)  - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 5 - UART
+#         4 - GPIO4 (pin 10) - Features = 0 - Unused, 1 - GPIO, 2 - PPS, 5 - UART
+#
+#     GPIO Behavior =
+#         0 - Unused
+#         1 - Input
+#         2 - Output Low
+#         3 - Output High
+#
+#     PPS Behavior =
+#         0 - Unused
+#         1 - Input
+#         2 - Output
+#
+#     Encoder Behavior =
+#         0 - Unused
+#         1 - Encoder A
+#         2 - Encoder B
+#
+#     UART Behavior = 
+#         0x21 - UART port 2 transmit (only valid for GPIO 1 and 2)
+#         0x22 - UART port 2 receive (only valid for GPIO 1 and 2)
+#         0x31 - UART port 3 transmit (only valid for GPIO 3 and 4)
+#         0x32 - UART port 3 receive (only valid for GPIO 3 and 4)
+#
+#     Pin Mode Bitfield =
+#         1 - open drain
+#         2 - pulldown
+#         4 - pullup
+gpio_config    : False
+
+gpio1_feature  : 0
+gpio1_behavior : 0
+gpio1_pin_mode : 0
+
+gpio2_feature  : 0
+gpio2_behavior : 0
+gpio2_pin_mode : 0
+
+gpio3_feature  : 0
+gpio3_behavior : 0
+gpio3_pin_mode : 0
+
+gpio4_feature  : 0
+gpio4_behavior : 0
+gpio4_pin_mode : 0
+
+# (GQ7 only) SBAS options
+sbas_enable: True
+sbas_enable_ranging: False
+sbas_enable_corrections: True
+sbas_apply_integrity: False
+
+# (GQ7 only) SBAS included PRNs
+#  Note: ROS2 can't handle empty arrays in a yml file, so uncomment this line and fill it in if you want to specify PRNs
+#sbas_included_prns: []
+
+# Low pass filter configuration.
+# Note: The device may fail if one of these is enabled, and the device does not support the relevant measurement
+#   accel_* will affect data in /imu/data_raw if enabled
+#   gyro_* will affect data in /imu/data_raw if enabled
+#   mag_* will affect data in /imu/mag if enabled
+#   pressure_* will affect data in /imu/pressure if enabled
+low_pass_filter_config : True
+
+accel_low_pass_filter_enable    : False
+accel_low_pass_filter_auto      : False
+accel_low_pass_filter_frequency : 1
+
+gyro_low_pass_filter_enable    : False
+gyro_low_pass_filter_auto      : False
+gyro_low_pass_filter_frequency : 1
+
+mag_low_pass_filter_enable    : False
+mag_low_pass_filter_auto      : False
+mag_low_pass_filter_frequency : 1
+
+pressure_low_pass_filter_enable    : False
+pressure_low_pass_filter_auto      : False
+pressure_low_pass_filter_frequency : 1
+
+# ****************************************************************** 
+# Publisher Settings
+# ****************************************************************** 
+#
+#  Note: If set to 0, the data will not be stremaed from the device, and the publisher will not be created
+
+# The speed at which the individual IMU publishers will publish at.
+imu_data_raw_rate         : 1    # Rate of imu/data_raw topic
+imu_data_rate             : 100  # Rate of imu/data topic
+imu_mag_data_rate         : 0    # Rate of imu/mag topic
+imu_pressure_data_rate    : 0    # Rate of imu/pressure topic
+imu_wheel_speed_data_rate : 0    # Rate of imu/wheel_Speed topic
+
+# The speed at which the individual GNSS1 publishers will publish at.
+gnss1_llh_position_data_rate   : 2  # Rate of gnss_1/llh_position topic
+gnss1_velocity_data_rate       : 2  # Rate of gnss_1/velocity topic
+gnss1_velocity_ecef_data_rate  : 0  # Rate of gnss_1/velocity_ecef topic
+                                    # Note: gnss1_odometry_earth_data_rate depends on the contents of this message.
+                                    #       If it is set to a higher value, this message will be published at that rate.
+gnss1_odometry_earth_data_rate : 0  # Rate of gnss_1/odometry_earth topic
+gnss1_time_data_rate           : 0  # Rate of gnss_1/time topic
+
+# The speed at which the individual GNSS2 publishers will publish at.
+gnss2_llh_position_data_rate   : 2  # Rate of gnss_2/llh_position topic
+gnss2_velocity_data_rate       : 2  # Rate of gnss_2/velocity topic
+gnss2_velocity_ecef_data_rate  : 0  # Rate of gnss_2/velocity_ecef topic
+                                    # Note: gnss2_odometry_earth_data_rate depends on the contents of this message.
+                                    #       If it is set to a higher value, this message will be published at that rate.
+gnss2_odometry_earth_data_rate : 0  # Rate of gnss_2/odometry_earth topic
+gnss2_time_data_rate           : 0  # Rate of gnss_2/time topic
+
+# The speed at which the individual Filter publishers will publish at.
+filter_human_readable_status_data_rate : 1  # Rate of ekf/status
+filter_imu_data_rate                   : 0  # Rate of ekf/imu/data topic
+                                            # Note: Both filter_odometry_earth_data_rate and filter_odometry_map_data_rate depend on the contents of this message.
+                                            #       If either are set to a higher value, this message will be published at that rate.
+filter_llh_position_data_rate          : 0  # Rate of ekf/llh_position topic
+filter_velocity_data_rate              : 0  # Rate of ekf/velocity topic
+                                            # Note: filter_odometry_map_data_rate depends on the contents of this message.
+                                            #       If either are set to a higher value, this message will be published at that rate.
+filter_velocity_ecef_data_rate         : 0  # Rate of ekf/velocity_ecef topic
+                                            # Note: filter_odometry_earth_data_rate depends on the contents of this message.
+                                            #       If either are set to a higher value, this message will be published at that rate.
+filter_odometry_earth_data_rate        : 25 # Rate of ekf/odometry_earth topic
+filter_odometry_map_data_rate          : 25 # Rate of ekf/odometry_map topic
+filter_dual_antenna_heading_data_rate  : 0  # Rate of ekf/dual_antenna_heading topic
+                                            # Note: mip_filter_gnss_position_aiding_status_data_rate depends on the contents of this message.
+                                            #       If either are set to a higher value, this message will be published at that rate.
+
+# The speed at which the individual MIP publishers will publish at.
+mip_sensor_overrange_status_data_rate       : 0  # Rate of mip/sensor/overrange_status topic
+mip_sensor_temperature_statistics_data_rate : 0  # Rate of mip/sensor/temperature_statistics topic
+
+mip_gnss1_fix_info_data_rate           : 0  # Rate of mip/gnss_1/fix_info topic
+mip_gnss1_sbas_info_data_rate          : 0  # Rate of mip/gnss_1/sbas_info topic
+mip_gnss1_rf_error_detection_data_rate : 0  # Rate of mip/gnss_1/rf_error_detection
+
+mip_gnss2_fix_info_data_rate           : 0  # Rate of mip/gnss_1/fix_info topic
+mip_gnss2_sbas_info_data_rate          : 0  # Rate of mip/gnss_2/sbas_info topic
+mip_gnss2_rf_error_detection_data_rate : 0  # Rate of mip/gnss_2/rf_error_detection
+
+mip_filter_status_data_rate                          : 0  # Rate of mip/filter/status topic
+mip_filter_gnss_position_aiding_status_data_rate     : 0  # Rate of mip/filter/gnss_aiding_status
+                                                          # Note: filter_llh_position_data_rate depends on the contents of this message.
+                                                          #       If it is set to a higher value, this message will be published at that rate.
+mip_filter_multi_antenna_offset_correction_data_rate : 0  # Rate of mip/filter/multi_antenna_offset_correction
+                                                          # Note: This message will also affect the frequency that the transform between frame_id and gnss_1/2_frame_id are published
+mip_filter_gnss_dual_antenna_status_data_rate        : 0  # Rate of mip/filter/gnss_dual_antenna_status
+                                                          # Note: filter_dual_antenna_heading_data_rate depends on the contents of this message.
+                                                          #       If either are set to a higher value, this message will be published at that rate.
+mip_filter_aiding_measurement_summary_data_rate      : 0  # Rate of mip/filter/aiding_measurement_summary topic
+
+
+# ****************************************************************** 
+# NMEA streaming settings
+# ****************************************************************** 
+
+# (GQ7 only) NMEA message format. If set to false, all NMEA message configuration will not have any affect
+nmea_message_config: False
+
+# Allow NMEA messages with the same talker IDs on different data sources (descriptor sets)
+# In most cases, this should be set to False, as multiple messages of the same type with the same talker ID from a different descriptor set could cause confusion when parsing.
+nmea_message_allow_duplicate_talker_ids: False
+
+# NMEA messages in the sensor (IMU) descriptor set
+# In order to enable a message, set nmea_message_config to true, and then change the 'data_rate' of the sentences you want to the desired rate in hertz
+imu_nmea_prkr_data_rate: 0
+
+# NMEA messages in the GNSS1 descriptor set
+# In order to enable a message, set nmea_message_config to true, and then change the 'data_rate' of the sentences you want to the desired rate in hertz
+#
+# Note: gnss1_nmea_talker_id can be any of the follwing numeric values:
+#         1 - Sentences will start with GN
+#         2 - Sentences will start with GP
+#         3 - Sentences will start with GA
+#         4 - Sentences will start with GL
+#       The purpose of the talker ID is to differentiate when the same message_id comes from different data sources (descriptor sets)
+#       The gnss1_nmea_talker_id will be applied to all NMEA messages from the GNSS1 descriptor set
+gnss1_nmea_talker_id: 1
+gnss1_nmea_gga_data_rate: 0
+gnss1_nmea_gll_data_rate: 0
+gnss1_nmea_gsv_data_rate: 0  # Note that this message_id will not use the gnss1_talker_id since the talker ID will come from the actual constellation the message originates from
+gnss1_nmea_rmc_data_rate: 0
+gnss1_nmea_vtg_data_rate: 0
+gnss1_nmea_hdt_data_rate: 0
+gnss1_nmea_zda_data_rate: 0
+
+# NMEA messages in the GNSS2 descriptor set
+# In order to enable a message, set nmea_message_config to true, and then change the 'data_rate' of the sentences you want to the desired rate in hertz
+#
+# Note: gnss2_nmea_talker_id can be any of the follwing numeric values:
+#         1 - Sentences will start with GN
+#         2 - Sentences will start with GP
+#         3 - Sentences will start with GA
+#         4 - Sentences will start with GL
+#       The purpose of the talker ID is to differentiate when the same message_id comes from different data sources (descriptor sets)
+#       The gnss2_nmea_talker_id will be applied to all NMEA messages from the GNSS2 descriptor set
+gnss2_nmea_talker_id: 2
+gnss2_nmea_gga_data_rate: 0
+gnss2_nmea_gll_data_rate: 0
+gnss2_nmea_gsv_data_rate: 0  # Note that this message_id will not use the gnss1_talker_id since the talker ID will come from the actual constellation the message originates from
+gnss2_nmea_rmc_data_rate: 0
+gnss2_nmea_vtg_data_rate: 0
+gnss2_nmea_hdt_data_rate: 0
+gnss2_nmea_zda_data_rate: 0
+
+# NMEA messages in the filter descriptor set
+# In order to enable a message, set nmea_message_config to true, and then change the 'data_rate' of the sentences you want to the desired rate in hertz
+#
+# Note: filter_nmea_talker_id can be any of the follwing numeric values:
+#         1 - Sentences will start with GN
+#         2 - Sentences will start with GP
+#         3 - Sentences will start with GA
+#         4 - Sentences will start with GL
+#       The purpose of the talker ID is to differentiate when the same message_id comes from different data sources (descriptor sets)
+#       The filter_nmea_talker_id will be applied to all NMEA messages from the filter descriptor set
+filter_nmea_talker_id: 3
+filter_nmea_gga_data_rate: 0
+filter_nmea_gll_data_rate: 0
+filter_nmea_rmc_data_rate: 0
+filter_nmea_hdt_data_rate: 0
+filter_nmea_prka_data_rate: 0  # Note that this message_id will not have any talker ID on it since it is proprietary and can only come from the filter descriptor set
+
+# (CV7-INS only) External aiding measurement configuration
+subscribe_ext_time        : False
+subscribe_ext_fix         : False
+subscribe_ext_vel_ned     : False
+subscribe_ext_vel_enu     : False
+subscribe_ext_vel_ecef    : False
+subscribe_ext_vel_body    : False
+subscribe_ext_heading_ned : False
+subscribe_ext_heading_enu : False
+subscribe_ext_mag         : False
+subscribe_ext_pressure    : False

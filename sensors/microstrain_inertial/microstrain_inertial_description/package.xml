@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>microstrain_inertial_description</name>
+  <version>4.5.0</version>
+  <description>URDF and stl files for MicroStrain sensors.</description>
+  <maintainer email="rob.fisher@parker.com">Rob Fisher</maintainer>
+  <maintainer email="melissa.gill@parker.com">Melissa Gill</maintainer>
+  <license>MIT</license>
+
+  <url type="website">https://github.com/LORD-MicroStrain/microstrain_inertial</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>xacro</exec_depend>
+
+  <!-- The export tag contains other, unspecified, tags -->
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

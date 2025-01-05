@@ -1,24 +1,27 @@
 <launch>
-    <arg name="racecar_version" default="NUC2" /> <!--  SIM / NUC1 / NUC2 / NUC3 ... -->
+    <arg name="racecar_version" default="SIM" /> <!--  SIM / NUC1 / NUC2 / NUC3 ... -->
     <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="ctrl_algo" default="MAP" />
     <arg name="measure" default="False" />
 
     <!-- TODO feed this somewhere-->
-    <let name="param_file" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml"/>
+    <let name="param_file"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml" />
 
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
-        <arg name="mode" value="$(var ctrl_algo)"/>
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
-        <arg name="mapping" value="False"/>
+        <arg name="mode" value="$(var ctrl_algo)" />
+        <arg name="param_file"
+            value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
+        <arg name="mapping" value="False" />
     </include>
 
     <!-- launch state machine -->
     <include file="$(find-pkg-share state_machine)/launch/state_machine_launch.xml">
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
-        <arg name="mode" value="timetrials"/>
-        <arg name="overtake_mode" value="dummy"/>
+        <arg name="param_file"
+            value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
+        <arg name="mode" value="timetrials" />
+        <arg name="overtake_mode" value="dummy" />
     </include>
 
 </launch>

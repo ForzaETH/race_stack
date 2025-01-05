@@ -1,0 +1,67 @@
+ARG ARCH="amd64"
+ARG ROS_VERSION="galactic"
+FROM ${ARCH}/ros:${ROS_VERSION}-ros-base
+
+# Install MSCL (github deb install is kind of a pain)
+ENV DEBIAN_FRONTEND="noninteractive"
+RUN set -ex \
+    && apt-get update && apt-get install -y \
+        gdb \
+        git \
+        vim \
+        curl \
+        python3-pip \
+        bash-completion
+
+# Really sucks that we have to do this, but right now CMake is broken on ARM, but we can fix it if we compile it ourselves
+ARG ARCH
+RUN set -ex \
+    && [ ${ARCH} = "arm32v7" ] \
+        && /bin/bash -c ' \
+            set -ex && \
+            cmake_version=$(cmake --version | head -1 | cut -d" " -f3) && \
+            cmake_major_version=$(echo ${cmake_version} | cut -d"." -f-2) && \
+            curl -fsSLo /tmp/cmake-${cmake_version}.tar.gz https://cmake.org/files/v${cmake_major_version}/cmake-${cmake_version}.tar.gz && \
+            tar -C /tmp/ -xzf /tmp/cmake-${cmake_version}.tar.gz && \
+            cd /tmp/cmake-${cmake_version} && \
+            export CFLAGS="-D_FILE_OFFSET_BITS=64" && \
+            export CXXFLAGS="-D_FILE_OFFSET_BITS=64" && \
+            ./bootstrap \
+                --prefix="/usr" \
+                --parallel=$(nproc) \
+                -- \
+                -DCMAKE_INSTALL_PREFIX="/usr" \
+                -DCMAKE_BUILD_TYPE="RELEASE" \
+                -DCMAKE_USE_OPENSSL=OFF && \
+            make -j$(nproc) && \
+            make install \
+        ' \
+        || echo "Not arm32, no need to rebuild CMAKE"
+
+# Add a user that will be used when shelling into this container and allow them to use devices
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN set -ex \
+    && groupadd -g ${USER_ID} microstrain \
+    && useradd \
+        -N \
+        -m \
+        -u ${USER_ID} \
+        -g ${GROUP_ID} \
+        -G "dialout" \
+        -s "/bin/bash" \
+        microstrain \
+    && echo 'microstrain ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+# Make the directory where we will mount all the files into and build a single time
+USER microstrain
+RUN echo "source /opt/ros/\${ROS_DISTRO}/setup.bash" >> ${HOME}/.bashrc
+RUN echo "source /usr/share/bash-completion/bash_completion" >> ${HOME}/.bashrc
+RUN echo "source /etc/bash_completion" >> ${HOME}/.bashrc
+RUN mkdir -p "${HOME}/catkin_ws/src"
+RUN mkdir -p "${HOME}/catkin_ws/build"
+RUN mkdir -p "${HOME}/catkin_ws/install"
+RUN mkdir -p "${HOME}/catkin_ws/log"
+
+# Initialize rosdep
+RUN rosdep update --rosdistro "${ROS_DISTRO}"

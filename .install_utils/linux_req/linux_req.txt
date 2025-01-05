@@ -11,8 +11,8 @@ ros-humble-diagnostic-updater
 ros-humble-robot-localization
 ros-humble-tf-transformations
 ros-humble-cartographer-ros
-ros-humble-urg-node
 ros-humble-ackermann-msgs
+ros-humble-urg-node
 ros-humble-control-msgs
 ros-humble-rosbridge-server
 ros-humble-serial-driver
@@ -21,3 +21,4 @@ ros-humble-rqt
 ros-humble-xacro
 ros-humble-nav2-map-server
 ros-humble-nav2-lifecycle-manager
+ros-humble-rqt-tf-tree

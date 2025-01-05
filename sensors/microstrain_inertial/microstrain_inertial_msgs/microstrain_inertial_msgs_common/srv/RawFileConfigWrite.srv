@@ -1,0 +1,11 @@
+# Service to allow users to configure the raw file collection at runtime
+
+# Whether or not to enable raw file collection.
+# If this is set to true after being set to false, we will start recording in the requested file.
+# If this is set to false after being set to true, we will stop recording whatever file we were already recording
+bool enable
+
+# Full path to the file we should record the data to. If set to empty, we will read configuration from the raw_file_directory parameter
+string file_path
+
+---

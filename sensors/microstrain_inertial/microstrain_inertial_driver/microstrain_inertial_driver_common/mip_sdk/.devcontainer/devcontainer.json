@@ -1,0 +1,38 @@
+{
+    "build": {
+        "context": "..",
+        "dockerfile": "Dockerfile.ubuntu",
+        "args": {
+            "ARCH": "amd64",
+            "UBUNTU_VERSION": "20.04",
+            "CENTOS_VERSION": "7",
+            "USER_ID": "1000",
+            "GROUP_ID": "1000"
+        }
+    },
+    "extensions": [
+        "twxs.cmake",
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack"
+    ],
+    "containerUser": "root",
+    "remoteUser": "microstrain",
+    "runArgs": [
+        "--net=host",
+        "--privileged",
+    ],
+    "remoteEnv": {
+        "DISPLAY": "${localEnv:DISPLAY}"
+    },
+    "settings": {},
+    "mounts": [
+        "source=/dev,target=/dev,type=bind,consistency=cached",
+        "source=${localWorkspaceFolder},target=/home/microstrain/MSCL-embedded,type=bind,consistency=cached",
+        "source=${localWorkspaceFolder}/.devcontainer/.vscode-docker,target=/home/microstrain/MSCL/.vscode,type=bind,consistency=cached",
+        "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+    ],
+    "workspaceMount": "",
+    "workspaceFolder": "/home/microstrain/MSCL-embedded"
+}

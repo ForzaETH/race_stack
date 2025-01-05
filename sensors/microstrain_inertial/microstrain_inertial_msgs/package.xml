@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>microstrain_inertial_msgs</name>
+  <version>4.5.0</version>
+  <description>A package that contains ROS message corresponding to microstrain message types.</description>
+
+  <author>Dr. Kristopher Krasnosky</author>
+  <author>Parker Hannifin Corp</author>
+
+  <!-- One maintainer tag required, multiple allowed, one person per tag -->
+  <maintainer email="rob.fisher@parker.com">Rob Fisher</maintainer>
+  <maintainer email="melissa.gill@parker.com">Melissa Gill</maintainer>
+
+
+  <!-- One license tag required, multiple allowed, one license per tag -->
+  <!-- Commonly used license strings: -->
+  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
+  <license>MIT</license>
+
+  <url type="website">https://github.com/LORD-MicroStrain/microstrain_inertial</url>
+
+  <buildtool_depend>rosidl_default_generators</buildtool_depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

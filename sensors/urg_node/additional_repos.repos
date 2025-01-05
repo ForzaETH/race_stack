@@ -1,0 +1,13 @@
+repositories:
+  urg_node_msgs:
+    type: git
+    url: https://github.com/ros-drivers/urg_node_msgs.git
+    version: master
+  urg_c:
+    type: git
+    url: https://github.com/ros-drivers/urg_c.git
+    version: ros2-devel
+  laser_proc:
+    type: git
+    url: https://github.com/ros-perception/laser_proc.git
+    version: ros2-devel

@@ -1,0 +1,7 @@
+{
+    "python.autoComplete.extraPaths": [
+    ],
+    "python.analysis.extraPaths": [
+    ],
+    "editor.tabSize": 4
+}

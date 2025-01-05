@@ -1,0 +1,77 @@
+<<TOC(4)>>
+
+= Relative Position Configuration =
+
+The [[microstrain_inertial_driver|microstrain_inertial_driver]] has the ability to publish position
+relative to a local tangent plane when configured properly.
+
+This functionality was previously only available on the GQ7, but has now been added for all devices
+with the ability to output global position via either
+[[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_llh_pos.htm|LLH Position]] or
+[[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_pos.htm|ECEF Position]].
+
+== Relative Position Source ==
+
+In order to configure relative position, one must do the following:
+
+  1. Set {{{filter_relative_position_config}}} to {{{True}}}
+  2. Set {{{filter_relative_position_source}}} to the desired value
+  3. Set {{{filter_odometry_map_data_rate}}} to a non-zero value
+
+See below for more information on the different values for {{{filter_relative_position_source}}}
+and why one may want to use them.
+
+=== RTK BaseStation Source ===
+
+This source will be selected if {{{filter_relative_position_source: 0}}}
+
+This mode is only supported on devices that support RTK and more specifically only on devices that support streaming
+[[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_corrections/data/mip_field_gnss_base_station_info.htm|Base Station Info]].
+
+When this mode is configured, the device will report position relative to be the location of the '''LATEST''' used RTK base station.
+It is important to note that depending on how the device is configured this may mean that the local tangent plane may change during operation.
+For example, if using a network mountpoint on a CORS server, the CORS server may automatically switch the user to a different base station depending
+on their reported location. This will cause the local tangent plane to move to the location of the new base station.
+
+This source is most useful when using a single mountpoint on a CORS server, or when using one's own base station.
+
+Note that if you have {{{tf_mode}}} set to 2, the driver will also publish the earth to map transform as the location of the base station in ECEF.
+For more information on {{{tf_mode}}}, see [[microstrain_inertial_driver/transforms#tf_mode_relative|Relative Transform Mode]].
+
+=== Manual Source ===
+
+This source will be selected if {{{filter_relative_position_source: 1}}}
+
+This mode requires two additional options to be set in order to function.
+
+  * {{{filter_relative_position_frame}}}:
+    * Set to 1 for {{{filter_relative_position_ref}}} to be interpreted as ECEF, set to 2 for {{{filter_relative_position_ref}}} to be interpreted as LLH
+  * {{{filter_relative_position_ref}}}:
+    * Set to the location that the local tangent plane should be placed
+
+The driver will publish position relative to the configured location.
+
+Note that if you have {{{tf_mode}}} set to 2, the driver will also publish the earth to map transform using the configured location.
+For more information on {{{tf_mode}}}, see [[microstrain_inertial_driver/transforms#tf_mode_relative|Relative Transform Mode]].
+
+=== Automatic Source ===
+
+This source will be selected if {{{filter_relative_position_source: 2}}}
+
+When this mode is configured, the device will report position relative to the first filtered location that we obtain after the device enters full navigation mode.
+
+This mode is most useful for users who just want to get started quickly without having to worry about setting a precise location for their tangent plane,
+or for users who do not need their tangent plane to be in the same spot and just want to be able to stream relative position.
+
+Note that if you have {{{tf_mode}}} set to 2, the driver will also publish the earth to map transform using the location received after entering full nav.
+For more information on {{{tf_mode}}}, see [[microstrain_inertial_driver/transforms#tf_mode_relative|Relative Transform Mode]].
+
+=== External Source ===
+
+This source will be selected if {{{filter_relative_position_source: 3}}}
+
+When this mode is configured, the device will look up the transform between {{{earth_frame_id}}} and {{{map_frame_id}}},
+use the location of {{{map_frame_id}}} in ECEF as the location of the tangent plane and then report position relative to that point.
+See [[microstrain_inertial_driver/transforms#frame_ids|Frame IDs]] for more information on how to configure Frame IDs in the driver.
+
+This mode is most useful for users who have another source for their local tangent plane and want the location from this driver to be relative to the same tangent plane.

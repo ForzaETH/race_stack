@@ -1,0 +1,221 @@
+<<TOC(4)>>
+
+== Overview ==
+
+ROS driver for all of Microstrain's current G and C series products.
+ 
+=== Supported Devices ===
+[[https://www.microstrain.com/inertial-sensors/3dm-gq7|3DM-GQ7]], [[https://www.microstrain.com/inertial-sensors/3dmcv7-ahrs|3DM-CV7]], [[https://www.microstrain.com/inertial-sensors/3dm-gx5-45|3DM-GX5-45]], [[https://www.microstrain.com/inertial-sensors/3dm-gx5-25|3DM-GX5-25]], [[https://www.microstrain.com/inertial-sensors/3dm-gx5-15|3DM-GX5-15]]
+
+== Installation ==
+
+==== Buildfarm ====
+This package is being built and distributed by the ROS build farm. If you do not need to modify the source, it is recommended to install directly from the buildfarm by running the following commands where {{{ROS_DISTRO}}} is the version of ROS you are using such as {{{noetic}}} or {{{humble}}}:
+
+'''Driver:'''
+
+{{{sudo apt-get update && sudo apt-get install ros-ROS_DISTRO-microstrain-inertial-driver}}}
+
+==== Docker ====
+The microstrain_inertial_driver is distributed as a docker image. More information on how to use the image can be found on [[https://hub.docker.com/r/microstrain/ros-microstrain_inertial_driver|DockerHub]].
+
+==== Source ====
+For more info on source code and how to build from source, visit the [[https://github.com/LORD-MicroStrain/microstrain_inertial#source|Source]] section of our README.md on our [[https://github.com/LORD-MicroStrain/microstrain_inertial|microstrain_inertial GitHub page]].
+
+For more information on the ROS distros and platforms we support, please see our [[https://index.ros.org/r/microstrain_inertial/github-LORD-MicroStrain-microstrain_inertial/#noetic|index.ros.org]] page.
+
+== Usage ==
+
+=== Configure Parameters ===
+This node uses a [[https://github.com/LORD-MicroStrain/microstrain_inertial_driver_common/blob/main/config/params.yml|params.yml]] file for ease of configuration. This file contains all available parameters for the node, so please refer to that file for more information on the available parameters and how to use them.
+
+==== Override Parameters for ROS ====
+1. Copy and paste the line(s) you desire to change from [[https://github.com/LORD-MicroStrain/microstrain_inertial_driver_common/blob/main/config/params.yml|params.yml]] into a new `.yml` file. We will call it `/home/user/my_params.yml` for this example. This new .yml file will override the default params.yml and if there are multiple lines of the same parameter, the last instance of the parameter will take precedence.
+
+2. Launch the driver and specify the new params file:
+{{{
+roslaunch microstrain_inertial_driver microstrain.launch params_file:=/home/user/my_params.yml
+}}}
+
+==== Override Parameters for ROS2 ====
+1. Copy the file [[https://github.com/LORD-MicroStrain/microstrain_inertial/blob/ros2/microstrain_inertial_driver/config/empty.yml|empty.yml]] to a new `.yml` file. For this example we will call the new file `/home/user/my_params.yml`. This new .yml file will override the default params.yml and if there are multiple lines of the same parameter, the last instance of the parameter will take precedence.
+
+2. Copy and paste the line(s) you desire to change from [[https://github.com/LORD-MicroStrain/microstrain_inertial_driver_common/blob/main/config/params.yml|params.yml]] into `/home/user/my_params.yml`.
+
+3. Launch the driver and specify the new params file:
+{{{
+ros2 launch microstrain_inertial_driver microstrain_launch.py params_file:=/home/user/my_params.yml
+}}}
+
+== Publishers ==
+See below for a mapping between the ROS topics and messages to the MIP messages that populate them
+
+=== Standard ROS Messages ===
+The following topics contain standard ROS messages often used by other nodes.
+Sensor data is often massaged or converted to be fit into what the ROS standards dictate.
+
+ * '''/imu/data_raw''' [[http://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/Imu.html|sensor_msgs/Imu]]
+   * {{{angular_velocity}}} -> [[https://files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/0x80/data/0x05.htm|Scaled Gyro(0x80, 0x05)]]
+   * {{{linear_acceleration}}} -> [[https://files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/0x80/data/0x04.htm|Scaled Accel (0x80, 0x04)]]
+     * The x,y,z values reported by the device are in Gs, but are converted to m/s^2 for ROS.
+ * '''/imu/data''' [[http://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/Imu.html|sensor_msgs/Imu]]
+   * {{{orientation}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_comp_quaternion.htm?Highlight=quaternion|Complementary Filter Quaternion (0x80, 0x0A)]]
+   * {{{angular_velocity}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_delta_theta.htm|Delta Theta (0x80, 0x07)]]
+     * This measurement is the delta theta, so it is divided by the time since it was last sampled
+   * {{{linear_acceleration}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_delta_velocity.htm|Delta Velocity(0x80, 0x08)]]
+     * The x,y,z values reported by the device are in Gs, but are converted to m/s^2 for ROS.
+     * This measurement is the delta velocity, so it is divided by the time since it was last sampled.
+ * '''/imu/mag''' [[http://docs.ros.org/en/api/sensor_msgs/html/msg/MagneticField.html|sensor_msgs/MagneticField]]
+   * {{{magnetic_field}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_scaled_mag.htm?Highlight=scaled%20mag|Scaled Mag (0x80, 0x06)]]
+ * '''/imu/pressure''' [[https://docs.ros.org/en/api/sensor_msgs/html/msg/FluidPressure.html|sensor_msgs/FluidPressure]]
+   * {{{fluid_pressure}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_scaled_pressure.htm|Scaled Pressure (0x80, 0x17)]]
+     * The device reports data in mBar, but the data is converted into Pascals for ROS.
+ * '''/imu/wheel_speed''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * {{{twist.twist.linear.x}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_odometer_data.htm|Odometer Data (0x80, 0x40)]]
+   * {{{twist.covariance[0]}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/sensor_data/data/mip_field_sensor_odometer_data.htm|Odometer Data (0x80, 0x40)]]
+ * '''/gnss_1/llh_position''' [[http://docs.ros.org/en/api/sensor_msgs/html/msg/NavSatFix.html|sensor_msgs/NavSatFix]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_1/data/mip_field_gnss_llh_pos.htm?Highlight=gnss%20llh|GNSS LLH Position (0x91, 0x03)]]
+ * '''/gnss_1/velocity''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_1/data/mip_field_gnss_ned_vel.htm|GNSS NED Velocity (0x91, 0x05)]]
+ * '''/gnss_1/velocity_ecef''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_1/data/mip_field_gnss_ecef_vel.htm|GNSS ECEF Velocity (0x91, 0x06)]]
+ * '''/gnss_1/odometry_earth''' [[http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html|nav_msgs/Odometry]]
+   * {{{pose}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_1/data/mip_field_gnss_ecef_pos.htm|GNSS ECEF Position (0x91, 0x04)]]
+   * {{{twist}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_1/data/mip_field_gnss_ecef_vel.htm|GNSS ECEF Velocity (0x91, 0x06)]]
+ * '''/gnss_1/time''' [[https://docs.ros.org/en/api/sensor_msgs/html/msg/TimeReference.html|sensor_msgs/TimeReference]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/shared_data/data/mip_field_shared_gps_timestamp.htm|GPS Timestamp (0x91, 0xD3)]]
+ * '''/gnss_2/llh_position''' [[http://docs.ros.org/en/api/sensor_msgs/html/msg/NavSatFix.html|sensor_msgs/NavSatFix]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_2/data/mip_field_gnss_llh_pos.htm?Highlight=gnss%20llh|GNSS LLH Position (0x92, 0x03)]]
+ * '''/gnss_2/velocity''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_2/data/mip_field_gnss_ned_vel.htm|GNSS NED Velocity (0x92, 0x05)]]
+ * '''/gnss_2/velocity_ecef''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_2/data/mip_field_gnss_ecef_vel.htm|GNSS ECEF Velocity (0x92, 0x06)]]
+ * '''/gnss_2/odometry_earth''' [[http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html|nav_msgs/Odometry]]
+   * {{{pose}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_2/data/mip_field_gnss_ecef_pos.htm|GNSS ECEF Position (0x92, 0x04)]]
+   * {{{twist}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/gnss_recv_2/data/mip_field_gnss_ecef_vel.htm|GNSS ECEF Velocity (0x92, 0x06)]]
+ * '''/gnss_2/time''' [[https://docs.ros.org/en/api/sensor_msgs/html/msg/TimeReference.html|sensor_msgs/TimeReference]] -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/shared_data/data/mip_field_shared_gps_timestamp.htm|GPS Timestamp (0x92, 0xD3)]]
+ * '''/ekf/imu/data''' [[http://docs.ros.org/en/api/sensor_msgs/html/msg/Imu.html|sensor_msgs/Imu]]
+   * {{{orientation}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_attitude_quaternion.htm?Highlight=quaternion|Attitude Quaternion (0x82, 0x03)]]
+   * {{{orientation_covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_euler_angles_uncertainty.htm?Highlight=euler|Euler Angles Uncertainty (0x82, 0x0A)]]
+   * {{{angular_velocity}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_comp_angular_rate.htm?Highlight=compensated%20angular|Compensated Angular Rate (0x82, 0x0E)]]
+   * {{{linear_acceleration}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_comp_accel.htm?Highlight=compensated%20accel|Compensated Acceleration (0x82, 0x1C)]]
+ * '''/ekf/llh_position''' [[http://docs.ros.org/en/api/sensor_msgs/html/msg/NavSatFix.html|sensor_msgs/NavSatFix]]
+   * {{{status}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_gnss_pos_aid_status.htm|GNSS Position Aiding Status (0x82, 0x43)]]
+   * {{{latitude}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_llh_pos.htm|LLH Position (0x82, 0x01)]]
+   * {{{longitude}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_llh_pos.htm|LLH Position (0x82, 0x01)]]
+   * {{{altitude}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_llh_pos.htm|LLH Position (0x82, 0x01)]]
+   * {{{position_covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_llh_pos_uncertainty.htm|LLH Position Uncertainty (0x82, 0x08)]]
+ * '''/ekf/velocity''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * {{{twist.covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ned_vel_uncertainty.htm|NED Velocity Uncertainty (0x82, 0x09)]]
+   * {{{twist.twist.linear}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ned_velocity.htm|NED Velocity (0x82, 0x02)]]
+   * {{{twist.twist.angular}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_comp_angular_rate.htm|Comp Angular Rate (0x82, 0x0E)]]
+ * '''/ekf/velocity_ecef''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * {{{twist.covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_vel_uncertainty.htm|ECEF Velocity Unvertainty (0x82, 0x37)]]
+   * {{{twist.twist.linear}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_vel.htm|ECEF Velocity (0x82, 0x41)]]
+   * {{{twist.twist.angular}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_comp_angular_rate.htm|Comp Angular Rate (0x82, 0x0E)]]
+ * '''/ekf/odometry_earth''' [[http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html|nav_msgs/Odometry]]
+   * {{{pose.covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_pos_uncertainty.htm|ECEF Position Uncertainty (0x82, 0x36)]] and [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_euler_angles_uncertainty.htm|Euler Angles Uncertainty (0x82, 0x0A)]]
+   * {{{pose.pose.position}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_pos.htm|ECEF Position (0x82, 0x40)]]
+   * {{{pose.pose.orientation}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_attitude_quaternion.htm|Attitude Quaternion (0x82, 0x03)]]
+   * {{{twist.covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_vel_uncertainty.htm|ECEF Velocity Unvertainty (0x82, 0x37)]]
+   * {{{twist.twist.linear}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_vel.htm|ECEF Velocity (0x82, 0x41)]]
+   * {{{twist.twist.angular}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_comp_angular_rate.htm|Comp Angular Rate (0x82, 0x0E)]]
+ * '''/ekf/odometry_map''' [[http://docs.ros.org/en/api/nav_msgs/html/msg/Odometry.html|nav_msgs/Odometry]]
+   * {{{pose.covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_llh_pos_uncertainty.htm|LLH Position Uncertainty (0x82, 0x08)]] and [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_euler_angles_uncertainty.htm|Euler Angles Uncertainty (0x82, 0x0A)]]
+   * {{{pose.pose.position}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ecef_pos.htm|ECEF Position (0x82, 0x40)]]
+     * The ECEF position is converted to a local position relative to the relative position configuration before populating this message
+   * {{{pose.pose.orientation}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_attitude_quaternion.htm|Attitude Quaternion (0x82, 0x03)]]
+   * {{{twist.covariance}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ned_vel_uncertainty.htm|NED Velocity Uncertainty (0x82, 0x09)]]
+   * {{{twist.twist.linear}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_ned_velocity.htm|NED Velocity (0x82, 0x02)]]
+   * {{{twist.twist.angular}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_comp_angular_rate.htm|Comp Angular Rate (0x82, 0x0E)]]
+ * '''/ekf/dual_antenna_heading''' -> [[http://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html|geometry_msgs/PoseWithCovarianceStamped]]
+   * {{{pose.pose.orientation}}} -> [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/external_content/dcp/Data/filter_data/data/mip_field_filter_gnss_dual_antenna_status.htm|GNSS Dual Antenna Status (0x82, 0x49)]]
+     * Only the rotation about the Z axis will be populated in the orientation.
+
+=== MIP Messages ===
+The following topics contain messages that are exact copies of their MIP counterparts.
+The topic format is {{{/mip/<descriptor_set_name>/<field_descriptor_name>}}}.
+For more information on what {{{descriptor_set_name}}} and {{{field_descriptor_name}}} mean, see the [[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/dcp_content/introduction/MIP%20Protocol.htm|MIP Protocol]] page.
+
+See the message definitions for links to their MIP fields as well as field documentation
+
+ * '''/mip/sensor/temperature_statistics''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipSensorTemperatureStatistics.html|microstrain_inertial_msgs/MipSensorTemperatureStatistics]]
+ * '''/mip/sensor/overrange_status''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipSensorOverrangeStatus.html|microstrain_inertial_msgs/MipSensorOverrangeStatus]]
+ * '''/mip/gnss_1/fix_info''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssFixInfo.html|microstrain_inertial_msgs/MipGnssFixInfo]]
+ * '''/mip/gnss_1/sbas_info''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssSbasInfo.html|microstrain_inertial_msgs/MipGnssSbasInfo]]
+ * '''/mip/gnss_1/rf_error_detection''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssRfErrorDetection.html|microstrain_inertial_msgs/MipGnssRfErrorDetection]]
+ * '''/mip/gnss_2/fix_info''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssFixInfo.html|microstrain_inertial_msgs/MipGnssFixInfo]]
+ * '''/mip/gnss_2/sbas_info''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssSbasInfo.html|microstrain_inertial_msgs/MipGnssSbasInfo]]
+ * '''/mip/gnss_2/rf_error_detection''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssRfErrorDetection.html|microstrain_inertial_msgs/MipGnssRfErrorDetection]]
+ * '''/mip/gnss_corrections/rtk_corrections_status''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipGnssCorrectionsRtkCorrectionsStatus.html|microstrain_inertial_msgs/MipGnssCorrectionsRtkCorrectionsStatus]]
+ * '''/mip/ekf/status''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipFilterStatus.html|microstrain_inertial_msgs/MipFilterStatus]]
+ * '''/mip/ekf/gnss_position_aiding_status''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipFilterGnssPositionAidingStatus.html|microstrain_inertial_msgs/MipFilterGnssPositionAidingStatus]]
+ * '''/mip/ekf/multi_antenna_offset_correction''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipFilterMultiAntennaOffsetCorrection.html|microstrain_inertial_msgs/MipFilterMultiAntennaOffsetCorrection]]
+ * '''/mip/ekf/gnss_dual_antenna_status''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipFilterGnssDualAntennaStatus.html|microstrain_inertial_msgs/MipFilterGnssDualAntennaStatus]]
+ * '''/mip/ekf/aiding_measurement_summary''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipFilterAidingMeasurementSummary.html|microstrain_inertial_msgs/MipFilterAidingMeasurementSummary]]
+ * '''/mip/system/built_in_test''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/MipSystemBuiltInTest.html|microstrain_inertial_msgs/MipSystemBuiltInTest]]
+
+=== Other Messages ===
+The following topics do not fall into any of the above categories and are likely addons to the device not specifically from the MIP protocol
+ * '''/ekf/status''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/msg/HumanReadableStatus.html|microstrain_inertial_msgs/HumanReadableStatus]]
+   * Human readable status of the device. This message will contain strings that should be easily readable, but '''SHOULD NOT''' be used in a production application
+ * '''/nmea''' [[https://docs.ros.org/en/api/nmea_msgs/html/msg/Sentence.html|nmea_msgs/Sentence]]
+   * GGA NMEA sentences may be published from the aux port of a GQ7 if it is connected and the following configuration is set:
+   {{{
+   aux_port: '/dev/ttyACM1'  # The serial port that the aux port is connected on
+   ntrip_interface_enable: True  # Enable the sending of NMEA messages
+   }}}
+   * Several types of NMEA sentences may be published from the main port of the GQ7 if [[https://github.com/LORD-MicroStrain/microstrain_inertial_driver_common/blob/main/config/params.yml#L420-L491|this section]] of config is configured to stream NMEA.
+
+== Subscriptions ==
+The following topics are subscribed to by the node. Most are controlled by individual booleans in the configuration and need to be enabled in order to be subscribed to
+ * '''/rtcm''' [[http://docs.ros.org/en/api/rtcm_msgs/html/msg/Message.html|rtcm_msgs/Message]]
+   * Will be enabled if {{{ntrip_interface_enable}}} is true and the device is a GQ7. Will subscribe to RTCM in order to pass to the aux port of the GQ7
+ * '''/ext/time''' [[https://docs.ros.org/en/api/sensor_msgs/html/msg/TimeReference.html|sensor_msgs/TimeReference]]
+   * Will be enabled if {{{subscribe_ext_time}}} is true and the device supports external GPS time updates. Will subscribe to external time updates and send them to the device.
+   * '''NOTE''': The time update command should be done once a second within the top 250 milliseconds of the second.
+ * '''/ext/llh_position''' [[https://docs.ros.org/en/api/sensor_msgs/html/msg/NavSatFix.html|sensor_msgs/NavSatFix]]
+   * Will be enabled if {{{subscribe_ext_fix}}} is true and the device supports the LLH position aiding command. Will subscribe to external LLH position and send it to the device.
+ * '''/ext/velocity_ned''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * Will be enabled if {{{subscribe_ext_vel_ned}}} is true and the device supports the NED velocity aiding command. Will subscribe to external NED velocity and send it to the device.
+ * '''/ext/velocity_enu''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * Will be enabled if {{{subscribe_ext_vel_enu}}} is true and the device supports the NED velocity aiding command. Will subscribe to external ENU velocity and send it to the device.
+ * '''/ext/velocity_ecef''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * Will be enabled if {{{subscribe_ext_vel_ecef}}} is true and the device supports the ECEF velocity aiding command. Will subscribe to external ECEF velocity and send it to the device.
+ * '''/ext/velocity_body''' [[http://docs.ros.org/en/api/geometry_msgs/html/msg/TwistWithCovarianceStamped.html|geometry_msgs/TwistWithCovarianceStamped]]
+   * Will be enabled if {{{subscribe_ext_vel_body}}} is true and the device supports the body velocity aiding command. Will subscribe to external body velocity and send it to the device.
+ * '''/ext/heading_ned''' [[http://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html|geometry_msgs/PoseWithCovarianceStamped]]
+   * Will be enabled if {{{subscribe_ext_heading_ned}}} is true and the device supports the true heading aiding command. Will subscribe to external heading in the NED frame and send it to the device.
+ * '''/ext/heading_enu''' [[http://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html|geometry_msgs/PoseWithCovarianceStamped]]
+   * Will be enabled if {{{subscribe_ext_heading_enu}}} is true and the device supports the true heading aiding command. Will subscribe to external heading in the ENU frame and send it to the device.
+ * '''/ext/mag''' [[http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/MagneticField.html|sensor_msgs/MagneticField]]
+   * Will be enabled if {{{subscribe_ext_mag}}} is true and the device supports the magnetic field aiding command. Will subscribe to external magnetic field data and send it to the device.
+ * '''/ext/pressure''' [[http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/FluidPressure.html|sensor_msgs/FluidPressure]]
+   * Will be enabled if {{{subscribe_ext_pressure}}} is true and the device supports the pressure aiding command. Will subscribe to external pressure data and send it to the device.
+
+== Services ==
+The following services are available on this node. All services that your device supports will be created when the node is activated.
+ * '''/raw_file_config/main/read''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/RawFileConfigRead.html|microstrain_inertial_msgs/RawFileConfigRead]]
+ * '''/raw_file_config/main/write''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/RawFileConfigWrite.html|microstrain_inertial_msgs/RawFileConfigWrite]]
+ * '''/raw_file_config/aux/read''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/RawFileConfigRead.html|microstrain_inertial_msgs/RawFileConfigRead]]
+ * '''/raw_file_config/aux/write''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/RawFileConfigWrite.html|microstrain_inertial_msgs/RawFileConfigWrite]]
+ * '''/mip/base/get_device_information''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/MipBaseGetDeviceInformation.html|microstrain_inertial_msgs/MipBaseGetDeviceInformation]]
+ * '''/mip/three_dm/capture_gyro_bias''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/Mip3dmCaptureGyroBias.html|microstrain_inertial_msgs/Mip3dmCaptureGyroBias]]
+ * '''/mip/three_dm/device_settings/save''' [[http://docs.ros.org/en/api/std_srvs/html/srv/Empty.html|std_srvs/Empty]]
+ * '''/mip/three_dm/device_settings/load''' [[http://docs.ros.org/en/api/std_srvs/html/srv/Empty.html|std_srvs/Empty]]
+ * '''/mip/three_dm/gpio_state/read''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/Mip3dmGpioStateRead.html|microstrain_inertial_msgs/Mip3dmGpioStateRead]]
+ * '''/mip/three_dm/gpio_state/write''' [[http://docs.ros.org/en/api/microstrain_inertial_msgs/html/srv/Mip3dmGpioStateWrite.html|microstrain_inertial_msgs/Mip3dmGpioStateWrite]]
+ * '''/mip/ekf/reset''' [[http://docs.ros.org/en/api/std_srvs/html/srv/Empty.html|std_srvs/Empty]]
+
+== More Resources ==
+
+=== Getting Started with GQ7 ===
+[[https://s3.amazonaws.com/files.microstrain.com/GQ7+User+Manual/user_manual_content/getting_started/Getting%20Started.htm|Getting Started with GQ7]]
+
+=== Transforms and Frame IDs ===
+The driver now supports publishing several different transforms.
+See [[microstrain_inertial_driver/transforms|Transforms]] for more information on the transforms and frame IDs used.
+
+=== Relative Position Configuration ===
+All devices with global postiion capabilities can now publish relative position. See
+[[microstrain_inertial_driver/relative_position_configuration|Relative Position Configuration]] for more detailed information.
+
+=== Frames and use_enu_frame ===
+The {{{use_enu_frame}}} parameter considerably changes the behavior of this application.
+See [[microstrain_inertial_driver/use_enu_frame|use_enu_frame]] for more information.
+
+=== Examples ===
+See [[microstrain_inertial_driver/examples|Examples]] for more information.

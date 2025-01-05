@@ -1,0 +1,15 @@
+microstrain_inertial_driver:
+  ros__parameters:
+    # You should change this section of config to match your setup
+    port : '/dev/microstrain_main'
+    baudrate : 115200
+
+    # This will cause the node to convert any NED measurements to ENU
+    # This will also cause the node to convert any vehicle frame measurements to the ROS definition of a vehicle frame
+    use_enu_frame : True
+
+    # Configure some frame IDs
+    frame_id : 'gx5_15_link'  # Frame ID of all of the filter messages. Represents the location of the CV7-INS in the tf tree
+
+    # Disable the transform from the mount to frame id transform as it will be handled in the launch file
+    publish_mount_to_frame_id_transform : False

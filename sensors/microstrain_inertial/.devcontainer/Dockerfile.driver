@@ -1,0 +1,94 @@
+# Expected to be configured at build time
+ARG DEV_IMAGE
+ARG ARCH="amd64"
+ARG ROS_VERSION="noetic"
+
+# Shared variables between stages, need to be declared up here
+ARG CATKIN_WS_DIR="/root/catkin_ws"
+
+FROM ${DEV_IMAGE} as builder
+
+# We will do everything from now on as root since we will be building and copying to global directories
+USER root
+
+# Build the driver and it's messages
+ARG ROS_VERSION
+ARG CATKIN_WS_DIR
+COPY microstrain_inertial_driver "${CATKIN_WS_DIR}/src/microstrain_inertial_driver"
+COPY microstrain_inertial_msgs "${CATKIN_WS_DIR}/src/microstrain_inertial_msgs"
+RUN set -ex\
+    && cd "${CATKIN_WS_DIR}" \
+    \
+    # Source the ROS setup shell script so we don't have to keep using the ros entrypoint
+    && . /opt/ros/${ROS_VERSION}/setup.sh \
+    \
+    # Install all rosdeps even buildtime ones
+    && rosdep update --rosdistro "${ROS_DISTRO}" \
+    && apt-get update \
+    && rosdep install --from-paths "${CATKIN_WS_DIR}/src" --ignore-src -r -y \
+    \
+    # Build and install the package to a local workspace
+    && colcon build --cmake-args " -DCMAKE_BUILD_TYPE=RELEASE"
+
+# Build a lighter runtime image from the core ros image which is smaller
+FROM ${ARCH}/ros:${ROS_VERSION}-ros-core
+
+# Copy the built artifacts from the dev image
+ARG ROS_VERSION
+ARG CATKIN_WS_DIR
+ENV DOCKER_ROS_VERSION "${ROS_VERSION}"
+COPY --from=builder ${CATKIN_WS_DIR}/install/microstrain_inertial_msgs/lib /opt/ros/${ROS_VERSION}/lib
+COPY --from=builder ${CATKIN_WS_DIR}/install/microstrain_inertial_msgs/share /opt/ros/${ROS_VERSION}/share
+COPY --from=builder ${CATKIN_WS_DIR}/install/microstrain_inertial_msgs/include /opt/ros/${ROS_VERSION}/include
+COPY --from=builder ${CATKIN_WS_DIR}/install/microstrain_inertial_driver/lib /opt/ros/${ROS_VERSION}/lib
+COPY --from=builder ${CATKIN_WS_DIR}/install/microstrain_inertial_driver/share /opt/ros/${ROS_VERSION}/share
+
+# Install only the runtime rosdeps we need
+COPY microstrain_inertial_driver/package.xml /tmp/catkin_ws/src/microstrain_inertial_driver/package.xml
+COPY microstrain_inertial_msgs/package.xml /tmp/catkin_ws/src/microstrain_inertial_msgs/package.xml
+RUN set -ex \
+    \
+    # Source the ROS setup shell script so we don't have to keep using the ros entrypoint
+    && . /opt/ros/${DOCKER_ROS_VERSION}/setup.sh \
+    \
+    # Install rosdep as it is not installed in the production image
+    && apt-get update \
+    && apt-get install -y python3-rosdep || apt-get install -y python-rosdep \
+    && rosdep init \
+    && rosdep update --rosdistro ${DOCKER_ROS_VERSION} \
+    \
+    # Fix a qemu error with this package on arm?
+    && apt-get install humanity-icon-theme -y \
+    \
+    # Remove any build time dependencies from the package.xml
+    && find /tmp/catkin_ws/src -name "package.xml" | xargs -I{} sed -i '/.*build.*_depend.*/d' {} \
+    \
+    # Finally install the dependencies
+    && rosdep install --from-paths /tmp/catkin_ws/src --ignore-src -r -y \
+    \
+    # Remove the packages we installed and clear the cache to free up as much space as possible
+    && export SUDO_FORCE_REMOVE=yes \
+    && apt-get purge -y python3-rosdep python-rosdep \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/catkin_ws
+
+# Add a user that will be used when running the driver
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN set -ex \
+    && groupadd -g ${USER_ID} microstrain \
+    && useradd \
+        -N \
+        -m \
+        -u ${USER_ID} \
+        -g ${GROUP_ID} \
+        -G "dialout" \
+        -s "/bin/bash" \
+        microstrain
+USER microstrain
+
+# Add the entrypoint file and use that as the entrypoint
+COPY .devcontainer/docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
