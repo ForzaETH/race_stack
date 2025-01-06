@@ -1,0 +1,7 @@
+/**:
+  vesc_to_odom_node:
+    ros__parameters:
+      odom_frame: "odom"
+      base_frame: "base_link"
+      use_servo_cmd_to_calc_angular_velocity: true
+      publish_tf: false

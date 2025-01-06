@@ -24,4 +24,5 @@
         120
     ],
     "editor.renderWhitespace": "trailing",
+    "cmake.sourceDirectory": "/home/nuc14/ws/src/race_stack/localization/cartographer_easystart",
 }

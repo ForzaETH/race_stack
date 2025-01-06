@@ -28,6 +28,7 @@
             -load_state_filename $(var map_path)/$(var map_name).pbstream
             --minloglevel 2">
             <remap from="odom" to="early_fusion/odom" />
+            <remap from="imu" to="gx5/imu/data" />
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
 

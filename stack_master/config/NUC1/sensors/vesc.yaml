@@ -1,0 +1,36 @@
+/**:
+  ros__parameters:
+    port: "/dev/ttyACM1"
+    brake_max: 200000.0
+    brake_min: -20000.0
+    current_max: 100.0
+    current_min: 0.0
+    duty_cycle_max: 0.0
+    duty_cycle_min: 0.0
+    position_max: 0.0
+    position_min: 0.0
+    servo_max: 0.80
+    servo_min: 0.27
+    speed_max: 23250.0
+    speed_min: -23250.0
+    speed_to_erpm_offset: 0.0
+    steering_angle_to_servo_gain: -1.2135
+    steering_angle_to_servo_offset: 0.55500
+    wheelbase: 0.3 # F1Tenth
+    invert_steering: false
+    speed_to_erpm_gain: 2401.79  # Wheel diameter: 0.11m (radius r = 0.055m)
+                                    # Speed (m/s) = r * ω (where r is the radius, ω is angular velocity)
+                                    # Angular velocity ω (rad/s) = (2 * pi / 60) * RPM
+                                    # Motor RPM = (60 / (2 * pi * r)) * speed (m/s)
+                                    # ERPM = Motor RPM * (Pole Count / 2)
+                                    # speed_to_erpm_gain considers gear ratio and motor pole count
+  vesc_to_odom_node:
+    ros__parameters:
+      odom_frame: "odom"
+      base_frame: "base_link"
+      use_servo_cmd_to_calc_angular_velocity: true
+      publish_tf: false
+  ackermann_manager_node:
+    ros__parameters:
+      max_speed: 10.0
+      max_steering_angle: 0.9

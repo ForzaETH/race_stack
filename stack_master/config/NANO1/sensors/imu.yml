@@ -1,0 +1,13 @@
+port : '/dev/ttyACM0'
+baudrate : 115200
+
+# This will cause the node to convert any NED measurements to ENU
+# This will also cause the node to convert any vehicle frame measurements to the ROS definition of a vehicle frame
+use_enu_frame : True
+
+# Configure some frame IDs
+
+frame_id : 'gx5_25_link'  # Frame ID of all of the filter messages. Represents the location of the CV7-INS in the tf tree
+mount_frame_id     : "base_link"  # Frame ID that the device is mounted on.
+publish_mount_to_frame_id_transform  : True
+mount_to_frame_id_transform          : [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0] # [ x, y, z, qi, qj, qk, qw ]

@@ -1,6 +1,6 @@
 <!-- -*- mode: XML -*- -->
 <launch>
-    <arg name="racecar_version" default="NUC2" /> <!-- NUCX -->
+    <arg name="racecar_version" default="NUC1" /> <!-- NUCX -->
     <arg name="map_name" description="Name of the map to be created" />
     <arg name="sim" default="False" />
     <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
@@ -31,6 +31,10 @@
             <arg name="sensors_config" value="$(var sensors_config)" />
             <arg name="mux_config" value="$(var mux_config)" />
         </include> -->
+
+        <!-- launch teleop -->
+        <include file="$(find-pkg-share stack_master)/launch/sensors.launch.py" />
+
 
         <!-- launch SE -->
         <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">

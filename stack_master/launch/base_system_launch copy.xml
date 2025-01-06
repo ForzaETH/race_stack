@@ -37,12 +37,6 @@
       <arg name="mux_config" value="$(var mux_config)" />
     </include> -->
 
-    <!-- launch teleop -->
-    <include file="$(find-pkg-share stack_master)/launch/sensors.launch.py">
-      <arg name="racecar_version" value="$(var racecar_version)" />
-    </include>
-
-
     <!-- launch SE -->
     <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
       <arg name="racecar_version" value="$(var racecar_version)" />

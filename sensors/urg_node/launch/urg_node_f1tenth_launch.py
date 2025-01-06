@@ -12,28 +12,15 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    # Launch argument to set car_name namespace
     launch_description = LaunchDescription([
         DeclareLaunchArgument(
-            'sensor_interface',
-            default_value='ethernet',
-            description='sensor_interface: supported: serial, ethernet'
+            'config_file',
+            description='Path to the configuration YAML file for urg_node.'
         ),
     ])
 
     urg_node_dir = get_package_share_directory('urg_node')
     car_name = os.getenv('F1TENTH_CAR_NAME_MA', '')
-
-    # Function to dynamically expand parameter file based on sensor_interface
-    def expand_param_file_name(context):
-        param_file = os.path.join(
-            urg_node_dir, 'launch',
-            'urg_node_' + context.launch_configurations['sensor_interface'] + '.yaml')
-        if os.path.exists(param_file):
-            return [SetLaunchConfiguration('param', param_file)]
-
-    param_file_path = OpaqueFunction(function=expand_param_file_name)
-    launch_description.add_action(param_file_path)
 
     # Namespace from launch argument
     base_link_frame = 'base_link'
@@ -47,7 +34,7 @@ def generate_launch_description():
         executable='urg_node_driver',
         output='screen',
         namespace=car_name,  # Apply namespace
-        parameters=[LaunchConfiguration('param'),
+        parameters=[LaunchConfiguration('config_file'),
                     {
                     'laser_frame_id': laser_frame,  # Append car_name to frame_id
                     }

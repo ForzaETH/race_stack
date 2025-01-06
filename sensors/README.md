@@ -6,7 +6,7 @@ To streamline the usage of ROS2 and manage multi-agent settings efficiently, app
 
 ```bash
 # Set F1TENTH Car Name
-export F1TENTH_CAR_NAME='hmcar1'
+export F1TENTH_CAR_NAME_MA='hmcar1'
 
 ############################ ROS2 ##############################
 # Aliases for building ROS2 packages

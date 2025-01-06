@@ -1,5 +1,5 @@
 <launch>
-    <arg name="racecar_version" default="SIM" /> <!--  SIM / NUC1 / NUC2 / NUC3 ... -->
+    <arg name="racecar_version" default="NUC2" /> <!--  SIM / NUC1 / NUC2 / NUC3 ... -->
     <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="ctrl_algo" default="MAP" />
     <arg name="measure" default="False" />

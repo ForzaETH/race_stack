@@ -2,7 +2,7 @@
     <arg name="racecar_version" default="NUC2" />
     <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="overtake_mode" default="spliner" /> <!--  spliner / graph_based -->
-    <arg name="ctrl_algo" default="MAP" /> <!-- MAP / PP -->
+    <arg name="ctrl_algo" default="PP" /> <!-- MAP / PP -->
     <arg name="measure" default="False" />
 
     <!-- launch controller manager -->

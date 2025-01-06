@@ -6,6 +6,7 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import re
 
+
 def ensure_permissions_and_path(file_path):
     """Ensure the file exists, has correct permissions, and can be accessed."""
     if not os.path.exists(file_path):
@@ -24,14 +25,13 @@ def generate_launch_description():
     cartographer_shared_dir = get_package_share_directory('cartographer_easystart')
     cartographer_config_dir = os.path.join(cartographer_shared_dir, 'config')
 
-
     multi_agent_dir = os.path.join(cartographer_config_dir, 'multi_agent')
 
     map_filename = 'rita1.pbstream'
     lua_file = 'localization_2d.lua'
     pbstream_file = os.path.join(cartographer_shared_dir, 'maps', map_filename)
 
-    car_name = os.getenv('F1TENTH_CAR_NAME', '')  # 기본값 설정
+    car_name = os.getenv('F1TENTH_CAR_NAME_MA', '')  # 기본값 설정
 
     if len(car_name) != 0:
         original_lua_file = os.path.join(cartographer_config_dir, lua_file)
@@ -44,7 +44,7 @@ def generate_launch_description():
             for line in src:
                 # 필요한 키 수정
                 # for key in ["map_frame", "tracking_frame", "published_frame", "odom_frame"]:
-                for key in [ "tracking_frame", "published_frame", "odom_frame"]:
+                for key in ["tracking_frame", "published_frame", "odom_frame"]:
                     if f"{key} =" in line:  # 키 이름 뒤에 " = " 형식이 있는지 확인
                         # " " 안의 문자열 추출 및 수정
                         start_idx = line.find('"') + 1  # 시작 인덱스 (첫 번째 " 다음)

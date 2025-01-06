@@ -1,0 +1,5 @@
+/**:
+  ackermann_manager_node:
+    ros__parameters:
+      max_speed: 10.0
+      max_steering_angle: 0.9
