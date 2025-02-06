@@ -22,8 +22,9 @@ roslibpy==1.6.0
 twisted==24.7.0rc2
 pyOpenSSL==23.3.0
 psutil
+setuptools>=61,<65 # to avoid reinstallation
 
-#gbo
-python-igraph==0.8.2
+# graph-based overtaking reqs
+python-igraph
 flake8==3.7.9
 pyzmq==18.1.1

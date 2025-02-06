@@ -13,6 +13,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req_car.txt 
 
 # install python packages
+RUN pip3 install "setuptools>=61,<65"
 RUN pip3 install -r /.install_utils/requirements.txt && \
         pip3 install numpy==1.18.1 --no-build-isolation && \
         pip3 install casadi
