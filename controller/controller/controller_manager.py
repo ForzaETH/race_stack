@@ -99,8 +99,6 @@ class Controller(Node):
         self.waypoint_pub = self.create_publisher(MarkerArray, 'my_waypoints', 10)
         self.l1_pub = self.create_publisher(Point, 'l1_distance', 10)
         self.gap_data = self.create_publisher(PidData, '/trailing/gap_data', 10)
-        # Publisher for steering and speed command
-        self.publish_topic = '/vesc/high_level/ackermann_cmd_mux/input/nav_1'
 
         self.track_length = None
         self.opponent = None
