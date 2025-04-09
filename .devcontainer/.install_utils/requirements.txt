@@ -23,6 +23,8 @@ twisted==24.7.0rc2
 pyOpenSSL==23.3.0
 psutil
 setuptools>=61,<65 # to avoid reinstallation
+pycoral==2.0.0
+tflite-runtime==2.5.0
 
 # graph-based overtaking reqs
 python-igraph
