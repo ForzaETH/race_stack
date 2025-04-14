@@ -34,3 +34,6 @@
 [submodule "f110_utils/libs/ccma"]
 	path = f110_utils/libs/ccma
 	url = https://github.com/ForzaETH/ccma.git
+[submodule "perception/TinyCenterSpeed"]
+	path = perception/TinyCenterSpeed
+	url = https://github.com/ForzaETH/TinyCenterSpeed.git

@@ -3,9 +3,11 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 
 class FrenetConverter:
-    def __init__(self, waypoints_x: np.array, waypoints_y: np.array):
+    def __init__(self, waypoints_x: np.array, waypoints_y: np.array, waypoints_psi: np.array = None):
         self.waypoints_x = waypoints_x
         self.waypoints_y = waypoints_y
+        #TODO: Adding psi to constructor with default None to not break existing calls, but it is not the nicest
+        self.waypoints_psi = waypoints_psi # Provide psi if you want to use frenet velocities
         self.waypoints_s = None
         self.spline_x = None
         self.spline_y = None
@@ -47,6 +49,28 @@ class FrenetConverter:
         dist_x = x - np.tile(self.waypoints_x, (lenx, 1)).T
         dist_y = y - np.tile(self.waypoints_y, (lenx, 1)).T
         return np.argmin(np.linalg.norm([dist_x.T, dist_y.T], axis=0), axis=1)*self.waypoints_distance_m
+
+    def get_frenet_velocities(self, vx: float, vy: float, theta: float, s: float) -> np.array:
+        """
+        Returns the Frenet velocities for the given Cartesian velocities.
+        
+        Args:
+            vx (float): x-velocity
+            vy (float): y-velocity
+            theta (float): orientation of the vehicle
+            s (float): s-coordinate of the point you want the velocity projected on
+            
+        Returns:
+            np.array: [s_dot, d_dot] Frenet velocities
+        """
+        if self.waypoints_psi is None:
+            raise ValueError("FRENET CONVERTER: waypoints_psi is None, provide psi to use frenet velocities when initializing the converter.")
+        s_idx = int(s/self.waypoints_distance_m)
+        delta_psi = theta - self.waypoints_psi[s_idx]
+        s_dot = vx * np.cos(delta_psi) - vy * np.sin(delta_psi)
+        d_dot = vx * np.sin(delta_psi) + vy * np.cos(delta_psi)
+        
+        return np.array([s_dot, d_dot])
 
     def get_frenet_coord(self, x, y, s, eps_m=0.01) -> float:
         """
@@ -123,7 +147,6 @@ class FrenetConverter:
         
         return der
     
-
     def get_cartesian(self, s: float, d: float) -> np.array:
         """
         Convert Frenet coordinates to Cartesian coordinates
@@ -143,6 +166,3 @@ class FrenetConverter:
         y += d * np.sin(psi + np.pi / 2)
         
         return np.array([x, y])
-    
-
-

@@ -12,6 +12,17 @@ ADD ./.devcontainer/.install_utils /.install_utils
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req_car.txt 
 
+# Add Coral APT repository
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | \
+    tee /etc/apt/sources.list.d/coral-edgetpu.list
+
+# Add GPG key
+RUN wget -qO - https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+# Update and install Edge TPU runtime
+RUN apt-get update && \
+    apt-get install -y libedgetpu1-std
+
 # install python packages
 RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r /.install_utils/requirements.txt && \
         pip3 install numpy casadi
