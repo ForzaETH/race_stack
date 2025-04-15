@@ -32,3 +32,4 @@ tflite-runtime==2.5.0.post1
 python-igraph
 flake8==3.7.9
 pyzmq==18.1.1
+pydantic>=2.7
