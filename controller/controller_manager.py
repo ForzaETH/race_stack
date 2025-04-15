@@ -184,6 +184,13 @@ class Controller_manager:
             logger_info=rospy.loginfo,
             logger_warn=rospy.logwarn
         )
+        
+        if self.ctrl_algo == "STMPC":
+            # TODO: init STMPC
+            pass
+        elif self.ctrl_algo == "KMPC":
+            # TODO: init KMPC
+            pass
 
 
         # Publishers to view data
@@ -515,6 +522,14 @@ class Controller_manager:
         ack_msg.drive.acceleration = acceleration
         return ack_msg
 
+    def stmpc_cycle(self):
+        # TODO: implement
+        pass
+    
+    def kmpc_cycle(self):
+        # TODO: implement
+        pass
+    
 ############################################MSG CREATION############################################
 # visualization utilities
     def visualize_steering(self, theta):
