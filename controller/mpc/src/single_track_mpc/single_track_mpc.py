@@ -180,17 +180,18 @@ class Single_track_MPC_Controller:
         self.acados_solver.set(0, "ubx", propagated_x)
 
         # dynamically change the target speed, weight parameters and constraints
-        print(self.state, )
-        if self.state == "TRAILING":  # Trailing controller
+        trailing = (self.state == "TRAILING" and self.opponent is not None)
+        if trailing:  # Trailing controller
             target_v_speed = self.trailing_controller(self.waypoint_array_in_map[0, 2])
         for i in range(self.stmpc_config.N + 1):
             # head to head racing
             # for the trailing, MPC just needs to change the reference speed (get from the trailing controller)
-            if self.state != "TRAILING":
+            if not trailing:
                 idx = np.abs(self.waypoint_array_in_map[:,4]  - self.mpc_sd[i,0]%self.spline.track_length).argmin()
                 target_v_speed=self.waypoint_array_in_map[idx,2]
                 self.overtake_d=0
                 # head to head overtaking
+                
                 if self.state == "OVERTAKE":
                     self.overtake_d = self.waypoint_array_in_map[idx, 3]
 

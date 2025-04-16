@@ -72,7 +72,6 @@ class Controller_manager:
         self.car_config: CarConfig = load_car_config_ros(self.racecar_version)
         self.LUT_name = rospy.get_param('controller_manager/LU_table') # name of lookup table
         self.ctrl_algo = rospy.get_param('controller_manager/ctrl_algo', 'MAP') # default controller
-        self.l1_params = rospy.get_param('L1_controller')
         self.use_sim = rospy.get_param('/sim')
         self.wheelbase = self.car_config.lr + self.car_config.lf
         rospy.loginfo(f"[{self.name}] Using {self.LUT_name}")
@@ -383,15 +382,15 @@ class Controller_manager:
         for waypoint in data.wpnts:
             waypoint_in_map = [waypoint.x_m, waypoint.y_m]
             speed = waypoint.vx_mps
-            if waypoint.d_right + waypoint.d_left != 0:
-                self.waypoint_list_in_map.append([waypoint_in_map[0],
-                                                  waypoint_in_map[1], 
-                                                  speed, 
-                                                  min(waypoint.d_left, waypoint.d_right)/(waypoint.d_right + waypoint.d_left), 
-                                                  waypoint.s_m, waypoint.kappa_radpm, waypoint.psi_rad, waypoint.ax_mps2]
-                                                )
-            else:
-                self.waypoint_list_in_map.append([waypoint_in_map[0], waypoint_in_map[1], speed, 0, waypoint.s_m, waypoint.kappa_radpm, waypoint.psi_rad, waypoint.ax_mps2])
+
+            self.waypoint_list_in_map.append([waypoint_in_map[0],
+                                              waypoint_in_map[1],
+                                              speed,
+                                              waypoint.d_m,
+                                              waypoint.s_m,
+                                              waypoint.kappa_radpm,
+                                              waypoint.psi_rad,
+                                              waypoint.ax_mps2])
         self.waypoint_array_in_map = np.array(self.waypoint_list_in_map)
         self.waypoint_safety_counter = 0
 
