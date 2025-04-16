@@ -17,10 +17,13 @@ class SteerPidConfig(BaseModel):
 
 
 def load_steer_pid_config(racecar_version: str) -> SteerPidConfig:
-    """Loads the pacejka_tire config from the yaml file
+    """Loads the steer_pid config from the yaml file
 
     Args:
         racecar_version (str): a car name
+    
+    Returns:
+        SteerPidConfig or None: The validated configuration object, or None if validation fails
     """
 
     relative_path = '/config/' + racecar_version + '/steer_pid.yaml'
