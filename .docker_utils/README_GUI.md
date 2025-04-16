@@ -3,6 +3,15 @@ GUI applications in remote containers are a bit of a pain in the neck. Which mak
 ## GUI applications in remote Docker containers
 If you want to launch a GUI application from a remote docker container, as for example during [mapping](https://git.ee.ethz.ch/pbl/research/f1tenth/race_stack/-/tree/master/base_system/pbl_f110_system?ref_type=heads#mapping), a couple of specific steps need to be taken. 
 
+## Using your fancy bashrc alias
+If you built your container, you should have an alias `dsshcar` in your bashrc from [here](../.devcontainer/.install_utils/bashrc_ext), which allows you to SSH into the car and the car's running `forzaeth_devcontainer` with the correct environment variables set. 
+```bash
+dsshcar <your_username_on_the_car>@<car_ip>
+```
+Thats it. Now you can run any GUI application from the container, and it will be displayed on your local machine. Try it out with `xeyes` which is a simple GUI application that displays a pair of eyes that follow your mouse cursor. 
+
+
+## [DEPRECATED] GUI applications in remote Docker containers
 1. Connect to a car via SSH, enabling X forwarding with the `-X` flag: 
 ```bash
 ssh -X <username>@<car_ip>

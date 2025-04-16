@@ -25,7 +25,7 @@
 3. Launch time trials:  
 
   ```bash
-  roslaunch stack_master time_trials.launch racecar_version:=<VERSION> LU_table:=<LU_table_name>
+  roslaunch stack_master time_trials.launch ctrl_algo:=<PP/MAP/STMPC/KMPC> LU_table:=<LU_table_name (only for MAP)>
   ```
 4. [MisisonControl] Check if localization is good. If needed, correct the position either telling the [Pilot] to localize or with the pose estimation button in RViz.
 5. When all MissionControl parameters are OK, [Localization_MissionControl] gives a thumbs-up. When [Pilot] sees this, start autonomous driving.

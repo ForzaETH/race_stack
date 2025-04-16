@@ -1,4 +1,4 @@
-# Checklist for System Identification
+# [DEPRECATED] Checklist for System Identification
 
 ## Setting Up ID Analyser
 
