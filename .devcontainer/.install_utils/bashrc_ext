@@ -18,3 +18,39 @@ if [ -z "$ROS_HOSTNAME" ]; then
     export ROS_HOSTNAME=localhost
 fi
 export ROS_MASTER_URI="http://${ROS_HOSTNAME}:11311"
+
+connect() {
+    local mode=$1
+    local ip=$2
+
+    if [[ -z "$ip" ]]; then
+        echo "Usage: connect {ssh|dssh} <ip_address>"
+        return 1
+    fi
+
+    case "$mode" in
+        ssh)
+            ssh -XC "$ip"
+            ;;
+        dssh)
+            ssh -t -XC "$ip" " \
+display_remote=\$DISPLAY; \
+new_display=\$(echo \$DISPLAY | sed 's/\\.0\$//'); \
+cookie=\$(xauth list \$DISPLAY | head -n1 | awk '{print \$3}'); \
+echo \"Using display \$new_display with cookie \$cookie\"; \
+docker exec -e DISPLAY=\$new_display -e NEW_DISPLAY=\$new_display -e COOKIE=\$cookie -it forzaeth_devcontainer /bin/bash -c ' \
+    cp /tmp/.Xauthority /tmp/.Xauthority-local && \
+    export XAUTHORITY=/tmp/.Xauthority-local && \
+    xauth add \$NEW_DISPLAY MIT-MAGIC-COOKIE-1 \$COOKIE 2>/dev/null && \
+    exec bash'"
+            ;;
+        *)
+            echo "Usage: connect {ssh|dssh} <ip_address_of_the_car>"
+            return 1
+            ;;
+    esac
+}
+
+alias sshcar='connect ssh'
+alias dsshcar='connect dssh'
+
