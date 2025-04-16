@@ -54,7 +54,7 @@ For more information consult the launchfile [here](./launch/base_system.launch).
 
 This could be moved to the base-system launchfile (unless I'm missing something?)
 
-### Different Controllers Available
+#### Different Controllers Available
 You can pass the `ctrl_algo` argument to the launch files to select the controller you want to use. The available controllers are:
 - `PP`: Pure Pursuit
 - `MAP`: Model-and Acceleration-based Pursuit based on this paper [here](https://arxiv.org/abs/2209.04346). For this controller the `LU_table` must be specified as well.
@@ -68,9 +68,16 @@ roslaunch stack_master time_trials.launch ctrl_algo:=MAP LU_table:=NUCX_hangar_p
 
 In a Time-Trials part of competition, or if you know you don't need to deal with dynamic obstacles, launch this.
 
+#### Different Overtaking Planners Available
+You can pass the `planner` argument to the headtohead launch files to select the overtaking planner you want to use. The available planners are:
+- `frenet`: Frenet-based overtaking planner
+- `graph_based`: An overtaking algorithm based on graph search. As in this paper [here](https://arxiv.org/abs/2005.08664).
+- `spliner`: Spliner-based overtaking planner
+- `predictive_spliner`: Spatiotemporal spliner-based overtaking planner as in this paper [here](https://arxiv.org/abs/2410.04868).
+
 ### Head to Head
 ```shell
-roslaunch stack_master headtohead.launch ctrl_algo:=MAP LU_table:=NUCX_hangar_pacejka overtake_mode:=<frenet/spliner>
+roslaunch stack_master headtohead.launch ctrl_algo:=MAP LU_table:=NUCX_hangar_pacejka planner:=<spliner>
 ```
 
 When there are dynamic obstacles, run this.
