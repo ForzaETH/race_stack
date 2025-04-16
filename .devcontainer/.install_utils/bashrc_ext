@@ -45,7 +45,7 @@ docker exec -e DISPLAY=\$new_display -e NEW_DISPLAY=\$new_display -e COOKIE=\$co
     exec bash'"
             ;;
         *)
-            echo "Usage: connect {ssh|dssh} <ip_address_of_the_car>"
+            echo "Usage: connect {ssh|dssh} <user@ip_address_of_the_car>"
             return 1
             ;;
     esac

@@ -41,8 +41,5 @@ ddelta_max: !!float 0.2 # maximum change rate of steering angle [rad/s]
 a_min: !!float -10  # minimum velocity change rate
 a_max: !!float 10  # maximum velocity change rate
 
-v_min: !!float 2 # minimum velocity [m/s]
-v_max: !!float 12 # maximum velocity [m/s]
-
 # nonlinear constraint
 alat_max: !!float 10  # maximum lateral force [m/s^2]
