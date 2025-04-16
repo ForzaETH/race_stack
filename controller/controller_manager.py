@@ -21,6 +21,7 @@ from map.src.MAP_Controller import MAP_Controller
 from pp.src.PP_Controller import PP_Controller
 from ftg.ftg import FTG
 from single_track_mpc import Single_track_MPC_Controller
+from kinematic_mpc import Kinematic_MPC_Controller
 from pbl_config import (CarConfig, KMPCConfig, PacejkaTireConfig, STMPCConfig,
                         load_car_config_ros, load_KMPC_config_ros,
                         load_pacejka_tire_config_ros, load_STMPC_config_ros,
@@ -81,11 +82,10 @@ class Controller_manager:
         self.state_machine_rate = rospy.get_param('state_machine/rate') #rate in hertz
         self.position_in_map = [] # current position in map frame
         self.position_in_map_frenet = [] # current position in frenet coordinates
-        self.alpha = 0 # current yaw angle with respect to the race line
         self.waypoint_list_in_map = [] # waypoints starting at car's position in map frame
         self.speed_now = 0 # current speed
-        self.alpha = 0
-        self.yaw_rate = 0
+        self.alpha = 0 # current yaw angle with respect to the race line
+        self.yaw_rate = 0 # current yaw rate
         self.acc_now = np.zeros(5) # last 5 accleration values
         self.waypoint_safety_counter = 0
 
@@ -219,8 +219,11 @@ class Controller_manager:
                                                                 using_gokart=False)
             self.mpc_dyn_rec_client = Client("/mpc_param_tuner", config_callback=self.stmpc_config_cb)
         elif self.ctrl_algo == "KMPC":
-            # TODO: init KMPC
-            pass
+            self.kmpc_config: KMPCConfig = load_KMPC_config_ros(self.racecar_version)
+            # dyn reconfigure client
+            self.kmpc_controller = Kinematic_MPC_Controller(self.racecar_version, self.kmpc_config, self.car_config, self.trailing_config)
+            self.mpc_dyn_rec_client = Client("/mpc_param_tuner", config_callback=self.kmpc_config_cb)
+            self.compute_time = 0  # init mpc compute time
 
 
         # Publishers to view data
@@ -407,6 +410,17 @@ class Controller_manager:
 
         self.stmpc_controller.stmpc_config = self.stmpc_config
 
+    def kmpc_config_cb(self, params: Config):
+        """
+        Here the mpc parameters are updated if changed with rqt (dyn reconfigure)
+        Values from .yaml file are set in mpc_online_params_server
+        """
+        for k, v in params.items():
+            if k != "groups":
+                setattr(self.kmpc_config, k, v)
+
+        self.kmpc_controller.kmpc_config = self.kmpc_config
+    
     ############################################MAIN LOOP############################################
 
     def control_loop(self):
@@ -464,6 +478,8 @@ class Controller_manager:
                 elif self.ctrl_algo == "STMPC":
                     speed, acceleration, jerk, steering_angle = self.stmpc_cycle()
 
+                elif self.ctrl_algo == "KMPC":
+                    speed, acceleration, jerk, steering_angle = self.kmpc_cycle()
                 else:
                     rospy.logwarn(f"[{self.name}] No valid controller selected")
                 
@@ -472,6 +488,7 @@ class Controller_manager:
                 self.measure_pub.publish(end-start)
             ack_msg = self.create_ack_msg(speed, acceleration, jerk, steering_angle)
             self.drive_pub.publish(ack_msg)
+            self.visualize_steering(steering_angle)
             rate.sleep()
 
 
@@ -487,7 +504,6 @@ class Controller_manager:
                                                                                                                     self.track_length)
                 
         self.set_lookahead_marker(L1_point, 100)
-        self.visualize_steering(steering_angle)
         self.visualize_trailing_opponent()
         self.l1_pub.publish(Point(x=idx_nearest_waypoint, y=L1_distance))
         
@@ -522,7 +538,6 @@ class Controller_manager:
                                                                                                                     self.track_length)
                 
         self.set_lookahead_marker(L1_point, 100)
-        self.visualize_steering(steering_angle)
         self.visualize_trailing_opponent()
         self.l1_pub.publish(Point(x=idx_nearest_waypoint, y=L1_distance))
         
@@ -586,13 +601,12 @@ class Controller_manager:
             self.mpc_fre_pos,
             self.single_track_state,
             self.track_length,
-            0) # TODO check this out
+            0) # TODO currently compute time not used
         speed, acceleration, jerk, steering_angle, states, status= d
         if status != 0: #Solver failed
-            rospy.logerr(f"Solver failed, stopping")
+            rospy.logerr(f"[{self.name}] Solver failed with {status = }, stopping")
             return 0, 0, 0, 0
 
-        self.visualize_steering(steering_angle)
         self.waypoint_safety_counter += 1
         if self.waypoint_safety_counter >= self.loop_rate / self.state_machine_rate * 10:
             rospy.logerr_throttle(0.5, "[Controller] Received no local wpnts. STOPPING!!")
@@ -606,8 +620,30 @@ class Controller_manager:
         return speed, acceleration, jerk, steering_angle
     
     def kmpc_cycle(self):
-        # TODO: implement
-        pass
+        self.mpc_fre_pos = self.position_in_map_frenet
+        self.mpc_fre_pos[2] = self.alpha
+        d = self.kmpc_controller.main_loop(
+            self.state,
+            self.position_in_map,
+            self.waypoint_array_in_map,
+            self.speed_now,
+            self.opponent,
+            self.mpc_fre_pos,
+            self.acc_now,
+            self.track_length,
+            0.0) # TODO currently compute time not used
+        speed, acceleration, jerk, steering_angle, states = d
+
+        self.waypoint_safety_counter += 1
+        if self.waypoint_safety_counter >= self.loop_rate / self.state_machine_rate * 10:
+            rospy.logerr_throttle(0.5, "[Controller] Received no local wpnts. STOPPING!!")
+            speed = 0
+            steering_angle = 0
+
+        # publish mpc states to vizualize
+        if states is not None:
+            self.publish_mpc_states(states)
+        return speed, acceleration, jerk, steering_angle
     
 ############################################MSG CREATION############################################
 # visualization utilities

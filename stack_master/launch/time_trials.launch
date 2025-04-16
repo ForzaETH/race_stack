@@ -22,6 +22,11 @@
         <param name="mpc_version" value="STMPC"/>
         <node pkg="controller" type="single_track_mpc_viz.py" name="single_track_mpc_viz" output="screen"/>
     </group>
+    <group if="$(eval ctrl_algo == 'KMPC')">
+        <node pkg="controller" name="mpc_param_tuner" type="mpc_online_params_server.py" output="screen"/>
+        <param name="mpc_version" value="KMPC"/>
+        <node pkg="controller" type="kinematic_mpc_viz.py" name="kinematic_mpc_viz" output="screen"/>
+    </group>
 
     <!-- launch dynamic reconfigure for controller manager -->
     <node pkg="controller" name="l1_param_tuner" type="l1_params_server.py" output="screen" />
