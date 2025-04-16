@@ -31,7 +31,7 @@
     <arg name="safe_local_speed" default="0.5"/>
 
     <arg name="aggressive_local_speed" default="0.7"/>
-    <arg name="racecar_version" default="SIM"/> <!-- NUCX / SIM -->
+    <arg name="racecar_version" default="NUC2"/> <!-- NUCX / SIM -->
     <param name="racecar_version" value="$(arg racecar_version)"/>
 
     <!--  launch L1 controller -->

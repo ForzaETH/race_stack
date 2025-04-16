@@ -28,3 +28,6 @@ ros-noetic-realsense2-camera
 ros-noetic-tf2-sensor-msgs
 qt5-default
 libeigen3-dev
+pybind11-dev
+x11-apps
+sudo

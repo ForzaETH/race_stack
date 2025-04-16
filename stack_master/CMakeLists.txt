@@ -8,10 +8,12 @@ project(stack_master)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
+roscpp
+rospy
+std_msgs
 )
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -20,7 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+catkin_python_setup()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -103,10 +105,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES stack_master
+  INCLUDE_DIRS pbl_config/include/CppWrapper
 #  CATKIN_DEPENDS roscpp rospy std_msgs
-#  DEPENDS system_lib
+#  DEPENDS ${Python3_LIBRARIES}
+LIBRARIES stack_master
 )
 
 ###########
@@ -116,8 +118,9 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  pbl_config/include/CppWrapper
   ${catkin_INCLUDE_DIRS}
+  ${Python3_INCLUDE_DIRS}  # Include Python3 headers
 )
 
 ## Declare a C++ library
@@ -206,6 +209,19 @@ if(CATKIN_ENABLE_TESTING)
   add_rostest(test/time_trials.test)
   add_rostest(test/head_to_head_splini.test)
 endif()
+
+
+add_library(
+  stack_master
+  pbl_config/src/pbl_config/CppWrapper/CarConfig.cpp
+  pbl_config/src/pbl_config/CppWrapper/PacejkaTireConfig.cpp
+  pbl_config/src/pbl_config/CppWrapper/LinearTireConfig.cpp
+  )
+target_link_libraries(stack_master
+  ${catkin_LIBRARIES}
+  ${Python3_LIBRARIES}  # Manually link Python3 interpreter
+)
+
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

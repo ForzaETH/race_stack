@@ -5,7 +5,7 @@
     <arg name="LU_table" default="NUC2_pacejka"
         doc="Name of the lookup table. Possible values: NUCX_hangar_pacejka / SIM_linear -->" />
     <arg name="ctrl_algo" default="MAP"
-        doc="Control algorithm to use. Possible values: MAP/PP" />
+        doc="Control algorithm to use. Possible values: MAP/PP/STMPC/KMPC" />
     <arg name="measure" default="False"
         doc="Whether or not to measure latencies" />
 
@@ -16,6 +16,19 @@
         <param name="LU_table" value="$(arg LU_table)" />
         <param name="ctrl_algo" value="$(arg ctrl_algo)" />
     </node>
+
+    <group if="$(eval ctrl_algo == 'STMPC')">
+        <node pkg="controller" name="mpc_param_tuner" type="mpc_online_params_server.py" output="screen"/>
+        <param name="mpc_version" value="STMPC"/>
+        <node pkg="controller" type="single_track_mpc_viz.py" name="single_track_mpc_viz" output="screen"/>
+    </group>
+    
+    <group if="$(eval ctrl_algo == 'KMPC')">
+        <node pkg="controller" name="mpc_param_tuner" type="mpc_online_params_server.py" output="screen"/>
+        <param name="mpc_version" value="KMPC"/>
+        <node pkg="controller" type="kinematic_mpc_viz.py" name="kinematic_mpc_viz" output="screen"/>
+    </group>
+
     <!-- launch dynamic reconfigure for controller manager -->
     <node pkg="controller" name="l1_param_tuner" type="l1_params_server.py" output="screen" />
     <rosparam ns="L1_controller" command="load"

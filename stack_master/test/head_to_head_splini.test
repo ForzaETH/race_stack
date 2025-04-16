@@ -4,7 +4,7 @@
 
     <include file="$(find stack_master)/launch/base_system.launch">
         <arg name="map_name" value="test_map" />
-        <arg name="racecar_version" value="SIM" />
+        <arg name="racecar_version" value="NUC2" />
         <arg name="sim" value="true" />
     </include>
 

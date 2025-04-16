@@ -74,7 +74,7 @@ It is suggested to optimize l1 parameters and sector scalers seperately and not 
 Run time trials or head to head and press R1. After the car started to move you can run:
 
 ```
-roslaunch param_optimizer racecar_version:=SIM/NUCX param_optimizer.launch 
+roslaunch param_optimizer racecar_version:=JETx/NUCx param_optimizer.launch 
 ```
 
 If you want to optimize the l1 parameter add `opt_sector_scalers:=True` and if you want to optimize the sector scalers add `opt_l1params:=True`. By default it will optimize with 10 iteration and do 1 lap per iteration (also called laps per experiment). You can change that by adding e.g. 

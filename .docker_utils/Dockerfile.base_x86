@@ -38,6 +38,6 @@ RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -sc` main" 
 RUN . /.install_utils/cartographer_req.sh && . /.install_utils/install_abseil.sh
 
 # install particle filter
-RUN . /.install_utils/dev_pf_setup.sh 
+RUN . /.install_utils/dev_pf_setup.sh
 
 ENTRYPOINT [ "bash", "/.install_utils/ros_entrypoint.sh" ]

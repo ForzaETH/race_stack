@@ -36,3 +36,6 @@ ros-noetic-imu-filter-madgwick
 qt5-default
 libeigen3-dev
 ros-noetic-rqt-common-plugins
+pybind11-dev
+x11-apps
+sudo

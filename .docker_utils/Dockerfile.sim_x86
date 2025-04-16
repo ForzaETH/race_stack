@@ -19,14 +19,14 @@ RUN mkdir -p /home/${USER}/catkin_ws/src
 # initialize workspace and make sure no car packages are built
 RUN catkin init && . /opt/ros/noetic/setup.bash && . /.install_utils/catkin_skiplist_car.sh
 
-
+# add user to sudoers with no password
 USER root
-RUN apt-get install -y x11-apps
-RUN chown -R ${USER}:${USER} /home/${USER}\
-    && apt-get update \
-    && apt-get install -y sudo \
+RUN chown -R ${USER}:${USER} /home/${USER} \
     && echo $USER ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USER \
     && chmod 0440 /etc/sudoers.d/$USER
 USER $USER
+
+# install acados
+RUN . /.install_utils/install_acados.sh ~/acados
 
 ENTRYPOINT [ "bash", "/.install_utils/ros_entrypoint.sh" ]

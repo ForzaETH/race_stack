@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+ <tabbed_widget name="Main Window" parent="main_window">
+  <Tab tab_name="tab1" containers="1">
+   <Container>
+    <DockSplitter sizes="1" count="1" orientation="-">
+     <DockSplitter sizes="0.500375;0.499625" count="2" orientation="|">
+      <DockArea name="Map">
+       <plot style="Dots" flip_y="false" mode="XYPlot" flip_x="false">
+        <range left="-6.373370" bottom="-0.225659" top="17.552694" right="2.404951"/>
+        <limitY/>
+        <curve name="center_way" color="#1f77b4"/>
+        <curve name="global_way" color="#d62728"/>
+        <curve name="mpc_cur_pos" color="#161529"/>
+        <curve name="mpc_map_left_b" color="#ff7f0e"/>
+        <curve name="mpc_map_right_b" color="#f14cc1"/>
+        <curve name="mpc_pre_left_b" color="#9467bd"/>
+        <curve name="mpc_pre_pos" color="#17becf"/>
+        <curve name="mpc_pre_right_b" color="#bcbd22"/>
+       </plot>
+      </DockArea>
+      <DockSplitter sizes="0.250211;0.249366;0.251057;0.249366" count="4" orientation="-">
+       <DockArea name="Prediction Velocity">
+        <plot style="Lines" flip_y="false" mode="XYPlot" flip_x="false">
+         <range left="-1.000000" bottom="-50.834276" top="13.532543" right="41.000000"/>
+         <limitY/>
+         <curve name="fre_mpc_vx_pre" color="#16ec0f"/>
+         <curve name="mpc_vx_max_bound" color="#d62728"/>
+         <curve name="mpc_vx_min_bound" color="#d62728"/>
+        </plot>
+       </DockArea>
+       <DockArea name="Lateral Error">
+        <plot style="Lines" flip_y="false" mode="XYPlot" flip_x="false">
+         <range left="-0.226965" bottom="-0.308012" top="0.188781" right="17.561304"/>
+         <limitY/>
+         <curve name="￼mpc_cur_lateral_error" color="#1f77b4"/>
+        </plot>
+       </DockArea>
+       <DockSplitter sizes="0.500752;0.499248" count="2" orientation="|">
+        <DockArea name="Velocity">
+         <plot style="Lines" flip_y="false" mode="XYPlot" flip_x="false">
+          <range left="-0.853859" bottom="1.509917" top="10.068171" right="35.008219"/>
+          <limitY/>
+          <curve name="global_velocity" color="#e90229"/>
+          <curve name="￼fre_mpc_cur_vx" color="#1f77b4"/>
+          <curve name="glo_velocity_scal" color="#23d31b"/>
+         </plot>
+        </DockArea>
+        <DockArea name="Steering Angle">
+         <plot style="Lines" flip_y="false" mode="XYPlot" flip_x="false">
+          <range left="-0.226965" bottom="-0.216178" top="0.415029" right="17.561304"/>
+          <limitY/>
+          <curve name="mpc_cur_steer" color="#1f77b4"/>
+         </plot>
+        </DockArea>
+       </DockSplitter>
+       <DockSplitter sizes="0.500752;0.499248" count="2" orientation="|">
+        <DockArea name="Mpc Computation Time">
+         <plot style="LinesAndDots" flip_y="false" mode="XYPlot" flip_x="false">
+          <range left="-0.875000" bottom="0.023307" top="0.050651" right="35.875000"/>
+          <limitY/>
+          <curve name="mpc_comp_time" color="#1f77b4"/>
+          <curve name="mpc_control_limit" color="#f60f23"/>
+         </plot>
+        </DockArea>
+        <DockArea name="Lap Time">
+         <plot style="LinesAndDots" flip_y="false" mode="XYPlot" flip_x="false">
+          <range left="0.950000" bottom="12.868666" top="12.984157" right="3.050000"/>
+          <limitY/>
+          <curve name="mpc_lap_time" color="#1f77b4"/>
+         </plot>
+        </DockArea>
+       </DockSplitter>
+      </DockSplitter>
+     </DockSplitter>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <currentTabIndex index="0"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="0"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <!-- - - - - - - - - - - - - - - -->
+ <Plugins>
+  <plugin ID="DataLoad CSV">
+   <parameters delimiter="0" time_axis=""/>
+  </plugin>
+  <plugin ID="DataLoad MCAP"/>
+  <plugin ID="DataLoad ROS bags">
+   <use_header_stamp value="false"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+   <boolean_strings_to_number value="true"/>
+   <remove_suffix_from_strings value="true"/>
+   <selected_topics value=""/>
+  </plugin>
+  <plugin ID="DataLoad ULog"/>
+  <plugin ID="MQTT Subscriber (Mosquitto)"/>
+  <plugin ID="ROS Topic Subscriber">
+   <use_header_stamp value="false"/>
+   <discard_large_arrays value="false"/>
+   <max_array_size value="5000"/>
+   <boolean_strings_to_number value="true"/>
+   <remove_suffix_from_strings value="true"/>
+   <selected_topics value="/centerline_waypoints;/global_waypoints;/mpc_controller/comp_time;/mpc_controller/current_position;/mpc_controller/d_left;/mpc_controller/d_right;/mpc_controller/map_left_bound;/mpc_controller/map_right_bound;/mpc_controller/param;/mpc_controller/predicted_position;/mpc_controller/states;/drive;/global_waypoints_scaled"/>
+  </plugin>
+  <plugin ID="UDP Server"/>
+  <plugin ID="WebSocket Server"/>
+  <plugin ID="ZMQ Subscriber"/>
+  <plugin ID="Fast Fourier Transform"/>
+  <plugin ID="Quaternion to RPY"/>
+  <plugin ID="Reactive Script Editor">
+   <library code="--[[ Helper function to create a series from arrays&#xa;&#xa; new_series: a series previously created with ScatterXY.new(name)&#xa; prefix:     prefix of the timeseries, before the index of the array&#xa; suffix_X:   suffix to complete the name of the series containing the X value. If [nil], use the index of the array.&#xa; suffix_Y:   suffix to complete the name of the series containing the Y value&#xa; timestamp:   usually the tracker_time variable&#xa;              &#xa; Example:&#xa; &#xa; Assuming we have multiple series in the form:&#xa; &#xa;   /trajectory/node.{X}/position/x&#xa;   /trajectory/node.{X}/position/y&#xa;   &#xa; where {N} is the index of the array (integer). We can create a reactive series from the array with:&#xa; &#xa;   new_series = ScatterXY.new(&quot;my_trajectory&quot;) &#xa;   CreateSeriesFromArray( new_series, &quot;/trajectory/node&quot;, &quot;position/x&quot;, &quot;position/y&quot;, tracker_time );&#xa;--]]&#xa;&#xa;function CreateSeriesFromArray( new_series, prefix, suffix_X, suffix_Y, timestamp )&#xa;  &#xa;  --- clear previous values&#xa;  new_series:clear()&#xa;  &#xa;  --- Append points to new_series&#xa;  index = 0&#xa;  while(true) do&#xa;&#xa;    x = index;&#xa;    -- if not nil, get the X coordinate from a series&#xa;    if suffix_X ~= nil then &#xa;      series_x = TimeseriesView.find( string.format( &quot;%s.%d/%s&quot;, prefix, index, suffix_X) )&#xa;      if series_x == nil then break end&#xa;      x = series_x:atTime(timestamp)&#x9; &#xa;    end&#xa;    &#xa;    series_y = TimeseriesView.find( string.format( &quot;%s.%d/%s&quot;, prefix, index, suffix_Y) )&#xa;    if series_y == nil then break end &#xa;    y = series_y:atTime(timestamp)&#xa;    &#xa;    new_series:push_back(x,y)&#xa;    index = index+1&#xa;  end&#xa;end&#xa;&#xa;--[[ Similar to the built-in function GetSeriesNames(), but select only the names with a give prefix. --]]&#xa;&#xa;function GetSeriesNamesByPrefix(prefix)&#xa;  -- GetSeriesNames(9 is a built-in function&#xa;  all_names = GetSeriesNames()&#xa;  filtered_names = {}&#xa;  for i, name in ipairs(all_names)  do&#xa;    -- check the prefix&#xa;    if name:find(prefix, 1, #prefix) then&#xa;      table.insert(filtered_names, name);&#xa;    end&#xa;  end&#xa;  return filtered_names&#xa;end&#xa;&#xa;--[[ Modify an existing series, applying offsets to all their X and Y values&#xa;&#xa; series: an existing timeseries, obtained with TimeseriesView.find(name)&#xa; delta_x: offset to apply to each x value&#xa; delta_y: offset to apply to each y value &#xa;  &#xa;--]]&#xa;&#xa;function ApplyOffsetInPlace(series, delta_x, delta_y)&#xa;  -- use C++ indeces, not Lua indeces&#xa;  for index=0, series:size()-1 do&#xa;    x,y = series:at(index)&#xa;    series:set(index, x + delta_x, y + delta_y)&#xa;  end&#xa;end&#xa;"/>
+   <scripts>
+    <script function="new_series_center_way:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/centerline_waypoints/wpnts[%d]/x_m&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/centerline_waypoints/wpnts[%d]/y_m&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series_center_way:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="center_way" global="new_series_center_way = ScatterXY.new(&quot;center_way&quot;) "/>
+    <script function="new_series:clear()&#xa;pre_step=0&#xa;index=0&#xa;while(true) do&#xa;&#xa;str_N = string.format(&quot;/mpc_controller/param/N&quot;)&#xa;series_N = TimeseriesView.find( str_N )&#xa;&#xa;str_states= string.format(&quot;/mpc_controller/states/data[%d]&quot;,index)&#xa;series_states= TimeseriesView.find( str_states )&#xa;&#xa;if series_states == nil or series_N == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;states = series_states:atTime(tracker_time)&#xa;N = series_N:atTime(tracker_time)&#xa;&#xa;if index%5==3 then &#xa;&#xa;new_series:push_back(pre_step, states)&#xa;&#xa;pre_step=pre_step+1&#xa;&#xa;end &#xa;&#xa;if pre_step> N then&#xa;break&#xa;end&#xa;index=index+1&#xa;&#xa;end" name="fre_mpc_vx_pre" global="new_series = ScatterXY.new(&quot;fre_mpc_vx_pre&quot;) &#xa;"/>
+    <script function="new_series_global_velocity:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/global_waypoints/wpnts[%d]/s_m&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/global_waypoints/wpnts[%d]/vx_mps&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;new_series_global_velocity:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="glo_velocity" global="new_series_global_velocity = ScatterXY.new(&quot;global_velocity&quot;)"/>
+    <script function="new_series_global_velocity:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/global_waypoints_scaled/wpnts[%d]/s_m&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/global_waypoints_scaled/wpnts[%d]/vx_mps&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;new_series_global_velocity:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="glo_velocity_scal" global="new_series_global_velocity = ScatterXY.new(&quot;glo_velocity_scal&quot;)"/>
+    <script function="new_series_glo_way:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/global_waypoints/wpnts[%d]/x_m&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/global_waypoints/wpnts[%d]/y_m&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;new_series_glo_way:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="glo_way" global="new_series_glo_way = ScatterXY.new(&quot;global_way&quot;) "/>
+    <script function="while(true) do&#xa;&#xa;str_track_len= string.format(&quot;/mpc_controller/param/track_length&quot;)&#xa;series_track_len = TimeseriesView.find( str_track_len )&#xa;&#xa;&#xa;str_s = string.format(&quot;/mpc_controller/states/data[0]&quot;)&#xa;series_s = TimeseriesView.find( str_s )&#xa;&#xa;str_comp_time = string.format(&quot;/mpc_controller/comp_time/data&quot;)&#xa;series_comp_time = TimeseriesView.find( str_comp_time )&#xa;&#xa;if series_track_len == nil or series_s == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;x = series_s:atTime(tracker_time)&#xa;y = series_comp_time:atTime(tracker_time)&#xa;track_len = series_track_len:atTime(tracker_time)&#xa;new_series:push_back(x%track_len, y)&#xa;&#xa;if x%track_len&lt;0.2 and x//track_len~=index then&#xa;index=x//track_len&#xa;new_series:clear()&#xa;end&#xa;&#xa;&#xa;break&#xa;&#xa;end" name="mpc_comp_time" global="new_series = ScatterXY.new(&quot;mpc_comp_time&quot;) &#xa;index=0"/>
+    <script function="new_series:clear()&#xa;while(true) do&#xa;&#xa;str_track_len= string.format(&quot;/mpc_controller/param/track_length&quot;)&#xa;series_track_len = TimeseriesView.find( str_track_len )&#xa;&#xa;&#xa;str_s = string.format(&quot;/mpc_controller/param/control_period&quot;)&#xa;series_s = TimeseriesView.find( str_s )&#xa;&#xa;str_comp_time = string.format(&quot;/mpc_controller/comp_time/data&quot;)&#xa;series_comp_time = TimeseriesView.find( str_comp_time )&#xa;&#xa;if series_track_len == nil or series_s == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;control_period = series_s:atTime(tracker_time)&#xa;track_len = series_track_len:atTime(tracker_time)&#xa;new_series:push_back(index, control_period)&#xa;&#xa;if index> track_len then&#xa;index=0&#xa;break&#xa;end&#xa;&#xa;index=index+1&#xa;&#xa;&#xa;&#xa;end" name="mpc_control_period" global="new_series = ScatterXY.new(&quot;mpc_control_limit&quot;) &#xa;index=0"/>
+    <script function="while(true) do&#xa;&#xa;str_track_len= string.format(&quot;/mpc_controller/param/track_length&quot;)&#xa;series_track_len = TimeseriesView.find( str_track_len )&#xa;&#xa;&#xa;str_s = string.format(&quot;/mpc_controller/states/data[0]&quot;)&#xa;series_s = TimeseriesView.find( str_s )&#xa;&#xa;str_error = string.format(&quot;/mpc_controller/states/data[1]&quot;)&#xa;series_error = TimeseriesView.find( str_error )&#xa;&#xa;if series_track_len == nil or series_s == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;x = series_s:atTime(tracker_time)&#xa;y = series_error:atTime(tracker_time)&#xa;track_len = series_track_len:atTime(tracker_time)&#xa;new_series:push_back(x%track_len, y)&#xa;&#xa;if x%track_len&lt;0.2 and x//track_len~=index then&#xa;index=x//track_len&#xa;new_series:clear()&#xa;end&#xa;&#xa;&#xa;break&#xa;&#xa;end" name="mpc_cur_lat_error" global="new_series=ScatterXY.new(&quot;￼mpc_cur_lateral_error&quot;)&#xa;index=0&#xa;"/>
+    <script function="&#xa;new_series:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/current_position/pose/position/x&quot;)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/mpc_controller/current_position/pose/position/y&quot;)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series:push_back(x, y)&#xa;&#xa;&#xa;break&#xa;&#xa;end" name="mpc_cur_pos" global="new_series = ScatterXY.new(&quot;mpc_cur_pos&quot;) &#xa;"/>
+    <script function="while(true) do&#xa;&#xa;str_track_len= string.format(&quot;/mpc_controller/param/track_length&quot;)&#xa;series_track_len = TimeseriesView.find( str_track_len )&#xa;&#xa;&#xa;str_s = string.format(&quot;/mpc_controller/states/data[0]&quot;)&#xa;series_s = TimeseriesView.find( str_s )&#xa;&#xa;str_steer = string.format(&quot;/mpc_controller/states/data[4]&quot;)&#xa;series_steer = TimeseriesView.find( str_steer )&#xa;&#xa;if series_track_len == nil or series_s == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;x = series_s:atTime(tracker_time)&#xa;y = series_steer:atTime(tracker_time)&#xa;track_len = series_track_len:atTime(tracker_time)&#xa;new_series:push_back(x%track_len, y)&#xa;&#xa;if x%track_len&lt;0.2 and x//track_len~=index then&#xa;index=x//track_len&#xa;new_series:clear()&#xa;end&#xa;&#xa;&#xa;break&#xa;&#xa;end" name="mpc_cur_steer" global="new_series=ScatterXY.new(&quot;mpc_cur_steer&quot;)&#xa;index=0&#xa;"/>
+    <script function="while(true) do&#xa;&#xa;str_track_len= string.format(&quot;/mpc_controller/param/track_length&quot;)&#xa;series_track_len = TimeseriesView.find( str_track_len )&#xa;&#xa;&#xa;str_s = string.format(&quot;/mpc_controller/states/data[0]&quot;)&#xa;series_s = TimeseriesView.find( str_s )&#xa;&#xa;str_vx = string.format(&quot;/mpc_controller/states/data[3]&quot;)&#xa;series_vx = TimeseriesView.find( str_vx )&#xa;&#xa;if series_track_len == nil or series_s == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;x = series_s:atTime(tracker_time)&#xa;y = series_vx:atTime(tracker_time)&#xa;track_len = series_track_len:atTime(tracker_time)&#xa;new_series:push_back(x%track_len, y)&#xa;&#xa;if x%track_len&lt;0.2 and x//track_len~=index then&#xa;index=x//track_len&#xa;new_series:clear()&#xa;end&#xa;&#xa;&#xa;break&#xa;&#xa;end" name="mpc_cur_vx" global="new_series=ScatterXY.new(&quot;￼fre_mpc_cur_vx&quot;)&#xa;index=0&#xa;"/>
+    <script function="while(true) do&#xa;&#xa;str_track_len= string.format(&quot;/mpc_controller/param/track_length&quot;)&#xa;series_track_len = TimeseriesView.find( str_track_len )&#xa;&#xa;&#xa;str_s = string.format(&quot;/mpc_controller/states/data[0]&quot;)&#xa;series_s = TimeseriesView.find( str_s )&#xa;&#xa;&#xa;&#xa;if series_track_len == nil or series_s == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;x = series_s:atTime(tracker_time)&#xa;track_len = series_track_len:atTime(tracker_time)&#xa;&#xa;if x%track_len&lt;0.2 and x//track_len~=index then&#xa;index_1=tracker_time-time_start&#xa;if index_1>1  and index_1 &lt;1000 then&#xa;print(index_1)&#xa;new_series:push_back(index, index_1)&#xa;end&#xa;index=x//track_len&#xa;time_start=tracker_time&#xa;end&#xa;&#xa;&#xa;break&#xa;&#xa;end" name="mpc_lap_time" global="new_series = ScatterXY.new(&quot;mpc_lap_time&quot;)&#xa;index=0&#xa;time_start=0&#xa;-- index_1: lap time&#xa;index_1=0"/>
+    <script function="&#xa;new_series:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/map_left_bound/markers[%d]/pose/position/x&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/mpc_controller/map_left_bound/markers[%d]/pose/position/y&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="mpc_map_left_bound" global="new_series = ScatterXY.new(&quot;mpc_map_left_b&quot;) &#xa;"/>
+    <script function="&#xa;new_series:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/map_right_bound/markers[%d]/pose/position/x&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/mpc_controller/map_right_bound/markers[%d]/pose/position/y&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="mpc_map_right_bound" global="new_series = ScatterXY.new(&quot;mpc_map_right_b&quot;) &#xa;"/>
+    <script function="&#xa;new_series:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/d_left/markers[%d]/pose/position/x&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/mpc_controller/d_left/markers[%d]/pose/position/y&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="mpc_pre_left_bound" global="new_series = ScatterXY.new(&quot;mpc_pre_left_b&quot;) &#xa;"/>
+    <script function="&#xa;new_series:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/predicted_position/markers[%d]/pose/position/x&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/mpc_controller/predicted_position/markers[%d]/pose/position/y&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="mpc_pre_pos" global="new_series = ScatterXY.new(&quot;mpc_pre_pos&quot;) &#xa;"/>
+    <script function="&#xa;new_series:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/d_right/markers[%d]/pose/position/x&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#x9;&#xa;&#xa;str_y = string.format(&quot;/mpc_controller/d_right/markers[%d]/pose/position/y&quot;,index)&#xa;series_y = TimeseriesView.find( str_y )&#xa;&#xa; &#xa;&#xa;x = series_x:atTime(tracker_time)&#xa;y = series_y:atTime(tracker_time)&#xa;&#xa;new_series:push_back(x, y)&#xa;index=index+1&#xa;&#xa;end" name="mpc_pre_right_bound" global="new_series = ScatterXY.new(&quot;mpc_pre_right_b&quot;) &#xa;"/>
+    <script function="new_series_vx_max_b:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_vx = string.format(&quot;/mpc_controller/param/v_x_max&quot;)&#xa;str_N = string.format(&quot;/mpc_controller/param/N&quot;)&#xa;series_vx = TimeseriesView.find( str_vx )&#xa;series_N = TimeseriesView.find( str_N )&#xa;&#xa;if series_vx == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;vx = series_vx:atTime(tracker_time)&#xa;new_series_vx_max_b:push_back(index, vx)&#xa;&#xa;N = series_N:atTime(tracker_time)&#xa;&#xa;if index==N then&#xa;break&#xa;end&#xa;&#xa;index=index+1&#xa;&#xa;end&#xa;" name="￼mpc_vx_max_bound" global="new_series_vx_max_b = ScatterXY.new(&quot;mpc_vx_max_bound&quot;) "/>
+    <script function="new_series_vx_min_b:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_vx = string.format(&quot;/mpc_controller/param/v_x_min&quot;)&#xa;str_N = string.format(&quot;/mpc_controller/param/N&quot;)&#xa;series_vx = TimeseriesView.find( str_vx )&#xa;series_N = TimeseriesView.find( str_N )&#xa;&#xa;if series_vx == nil then&#xa;break&#xa;print(&quot;finish&quot;) &#xa;end&#xa;&#xa;vx = series_vx:atTime(tracker_time)&#xa;new_series_vx_min_b:push_back(index, vx)&#xa;&#xa;N = series_N:atTime(tracker_time)&#xa;&#xa;if index==N then&#xa;break&#xa;end&#xa;&#xa;index=index+1&#xa;&#xa;end&#xa;" name="￼mpc_vx_min_bound" global="new_series_vx_min_b = ScatterXY.new(&quot;mpc_vx_min_bound&quot;) "/>
+   </scripts>
+  </plugin>
+  <plugin ID="CSV Exporter"/>
+  <plugin ID="ROS /rosout Visualization"/>
+  <plugin ID="ROS Topic Re-Publisher"/>
+ </Plugins>
+ <!-- - - - - - - - - - - - - - - -->
+ <previouslyLoaded_Datafiles/>
+ <previouslyLoaded_Streamer name="ROS Topic Subscriber"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <customMathEquations/>
+ <snippets/>
+ <!-- - - - - - - - - - - - - - - -->
+</root>
+

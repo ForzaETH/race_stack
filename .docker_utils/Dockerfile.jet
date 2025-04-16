@@ -24,10 +24,11 @@ RUN . /.install_utils/cartographer_dep.sh
 
 USER root
 RUN chown -R ${USER}:${USER} /home/${USER}\
-    && apt-get update \
-    && apt-get install -y sudo \
     && echo $USER ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USER \
     && chmod 0440 /etc/sudoers.d/$USER
 USER $USER
+
+# install acados
+RUN . /.install_utils/install_acados.sh ~/acados
 
 ENTRYPOINT [ "bash", "/.install_utils/ros_entrypoint.sh" ]

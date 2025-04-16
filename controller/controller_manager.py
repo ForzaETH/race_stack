@@ -7,18 +7,26 @@ import numpy as np
 import rospy
 from ackermann_msgs.msg import AckermannDriveStamped
 from dynamic_reconfigure.msg import Config
+from dynamic_reconfigure.client import Client
 from f110_msgs.msg import ObstacleArray, PidData, WpntArray
 from sensor_msgs.msg import LaserScan
 from frenet_converter.frenet_converter import FrenetConverter
 from geometry_msgs.msg import Point, PoseStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
-from std_msgs.msg import Float64, String, Float32
+from std_msgs.msg import Float64, String, Float32, Float64MultiArray
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import Marker, MarkerArray
 from map.src.MAP_Controller import MAP_Controller
 from pp.src.PP_Controller import PP_Controller
 from ftg.ftg import FTG
+from single_track_mpc import Single_track_MPC_Controller
+from kinematic_mpc import Kinematic_MPC_Controller
+from pbl_config import (CarConfig, KMPCConfig, PacejkaTireConfig, STMPCConfig,
+                        load_car_config_ros, load_KMPC_config_ros,
+                        load_pacejka_tire_config_ros, load_STMPC_config_ros,
+                        load_trailing_config_ros, TrailingConfig)
+#TODO kmpc
 
 class Controller_manager:
     """This class is the main controller manager for the car. It is responsible for selecting the correct controller $
@@ -61,19 +69,22 @@ class Controller_manager:
 
     def init_controller(self):
         self.racecar_version = rospy.get_param('/racecar_version') # NUCX
+        self.car_config: CarConfig = load_car_config_ros(self.racecar_version)
         self.LUT_name = rospy.get_param('controller_manager/LU_table') # name of lookup table
         self.ctrl_algo = rospy.get_param('controller_manager/ctrl_algo', 'MAP') # default controller
-        self.l1_params = rospy.get_param('L1_controller')
         self.use_sim = rospy.get_param('/sim')
-        self.wheelbase = rospy.get_param('/model_params/l_wb', 0.35) # NUCX
+        self.wheelbase = self.car_config.lr + self.car_config.lf
         rospy.loginfo(f"[{self.name}] Using {self.LUT_name}")
         self.measuring = rospy.get_param('/measure', False)
+        self.trailing_config: TrailingConfig = load_trailing_config_ros(self.racecar_version)
         
         self.state_machine_rate = rospy.get_param('state_machine/rate') #rate in hertz
         self.position_in_map = [] # current position in map frame
         self.position_in_map_frenet = [] # current position in frenet coordinates
         self.waypoint_list_in_map = [] # waypoints starting at car's position in map frame
         self.speed_now = 0 # current speed
+        self.alpha = 0 # current yaw angle with respect to the race line
+        self.yaw_rate = 0 # current yaw rate
         self.acc_now = np.zeros(5) # last 5 accleration values
         self.waypoint_safety_counter = 0
 
@@ -112,7 +123,6 @@ class Controller_manager:
         # buffers for improved computation
         self.waypoint_array_buf = MarkerArray()
         self.markers_buf = [Marker() for _ in range(1000)]
-
 
         # Parameters
         for i in range(5):
@@ -184,14 +194,45 @@ class Controller_manager:
             logger_info=rospy.loginfo,
             logger_warn=rospy.logwarn
         )
+        
+        if self.ctrl_algo == "STMPC":
+            # configs
+            odom_msg = rospy.wait_for_message('/car_state/odom_frenet', Odometry) # TODO rethink init to avoid these things
+            self.car_state_frenet_cb(odom_msg)
+            
+            self.stmpc_config: STMPCConfig = load_STMPC_config_ros(self.racecar_version)
+            self.floor = "dubi"
+            self.tire_config: PacejkaTireConfig = load_pacejka_tire_config_ros(
+                self.racecar_version, self.floor)
+            # dyn reconfigure client
+            # state
+            pose_frenet = [self.position_in_map_frenet[0], self.position_in_map_frenet[1], self.alpha]
+            rospy.loginfo(f"[{self.name}] Initializing Single Track MPC Controller")
+            self.stmpc_controller = Single_track_MPC_Controller(pose_frenet=pose_frenet,
+                                                                racecar_version=self.racecar_version,
+                                                                stmpc_config=self.stmpc_config,
+                                                                car_config=self.car_config,
+                                                                tire_config=self.tire_config,
+                                                                trailing_config=self.trailing_config,
+                                                                controller_frequency=self.loop_rate,
+                                                                using_gokart=False)
+            self.mpc_dyn_rec_client = Client("/mpc_param_tuner", config_callback=self.stmpc_config_cb)
+        elif self.ctrl_algo == "KMPC":
+            self.kmpc_config: KMPCConfig = load_KMPC_config_ros(self.racecar_version)
+            # dyn reconfigure client
+            self.kmpc_controller = Kinematic_MPC_Controller(self.racecar_version, self.kmpc_config, self.car_config, self.trailing_config)
+            self.mpc_dyn_rec_client = Client("/mpc_param_tuner", config_callback=self.kmpc_config_cb)
+            self.compute_time = 0  # init mpc compute time
 
 
         # Publishers to view data
         self.lookahead_pub = rospy.Publisher('lookahead_point', Marker, queue_size=10)
         self.trailing_pub = rospy.Publisher('trailing_opponent_marker', Marker, queue_size=10)
         self.waypoint_pub = rospy.Publisher('my_waypoints', MarkerArray, queue_size=10)
-        self.l1_pub = rospy.Publisher('l1_distance', Point, queue_size=10)    
+        self.l1_pub = rospy.Publisher('l1_distance', Point, queue_size=10)
         self.gap_data = rospy.Publisher('/trailing/gap_data', PidData, queue_size=10)
+        self.mpc_states_pub = rospy.Publisher("/mpc_controller/states", Float64MultiArray, queue_size=10)
+
         # Publisher for steering and speed command
         self.publish_topic = '/vesc/high_level/ackermann_cmd_mux/input/nav_1'
         self.drive_pub = rospy.Publisher(self.publish_topic, AckermannDriveStamped, queue_size=10)
@@ -311,6 +352,8 @@ class Controller_manager:
         self.ftg_controller.set_vel(data.twist.twist.linear.x)
 
     def odom_cb(self, data: Odometry):
+        self.vel_y = data.twist.twist.linear.y
+        self.yaw_rate = data.twist.twist.angular.z
         self.speed_now = data.twist.twist.linear.x
         self.map_controller.speed_now = self.speed_now
         self.pp_controller.speed_now = self.speed_now
@@ -331,22 +374,23 @@ class Controller_manager:
         d = data.pose.pose.position.y
         vs = data.twist.twist.linear.x
         vd = data.twist.twist.linear.y
-        self.position_in_map_frenet = np.array([s,d,vs,vd]) 
+        self.position_in_map_frenet = np.array([s,d,vs,vd])
+        self.alpha = data.pose.pose.orientation.z
 
     def local_waypoint_cb(self, data: WpntArray):
         self.waypoint_list_in_map = []
         for waypoint in data.wpnts:
             waypoint_in_map = [waypoint.x_m, waypoint.y_m]
             speed = waypoint.vx_mps
-            if waypoint.d_right + waypoint.d_left != 0:
-                self.waypoint_list_in_map.append([waypoint_in_map[0],
-                                                  waypoint_in_map[1], 
-                                                  speed, 
-                                                  min(waypoint.d_left, waypoint.d_right)/(waypoint.d_right + waypoint.d_left), 
-                                                  waypoint.s_m, waypoint.kappa_radpm, waypoint.psi_rad, waypoint.ax_mps2]
-                                                )
-            else:
-                self.waypoint_list_in_map.append([waypoint_in_map[0], waypoint_in_map[1], speed, 0, waypoint.s_m, waypoint.kappa_radpm, waypoint.psi_rad, waypoint.ax_mps2])
+
+            self.waypoint_list_in_map.append([waypoint_in_map[0],
+                                              waypoint_in_map[1],
+                                              speed,
+                                              waypoint.d_m,
+                                              waypoint.s_m,
+                                              waypoint.kappa_radpm,
+                                              waypoint.psi_rad,
+                                              waypoint.ax_mps2])
         self.waypoint_array_in_map = np.array(self.waypoint_list_in_map)
         self.waypoint_safety_counter = 0
 
@@ -354,6 +398,28 @@ class Controller_manager:
         self.acc_now[1:] = self.acc_now[:-1]
         self.acc_now[0] = -data.linear_acceleration.y # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
 
+    def stmpc_config_cb(self, params: Config):
+        """
+        Here the mpc parameters are updated if changed with rqt (dyn reconfigure)
+        Values from .yaml file are set in mpc_online_params_server
+        """
+        for k, v in params.items():
+            if k != "groups":
+                setattr(self.stmpc_config, k, v)
+
+        self.stmpc_controller.stmpc_config = self.stmpc_config
+
+    def kmpc_config_cb(self, params: Config):
+        """
+        Here the mpc parameters are updated if changed with rqt (dyn reconfigure)
+        Values from .yaml file are set in mpc_online_params_server
+        """
+        for k, v in params.items():
+            if k != "groups":
+                setattr(self.kmpc_config, k, v)
+
+        self.kmpc_controller.kmpc_config = self.kmpc_config
+    
     ############################################MAIN LOOP############################################
 
     def control_loop(self):
@@ -398,25 +464,31 @@ class Controller_manager:
             speed, acceleration, jerk, steering_angle = 0, 0, 0, 0
 
             #Logic to select controller
-            if self.state != "FTGONLY" and self.ctrl_algo == "MAP":
-                speed, acceleration, jerk, steering_angle = self.map_cycle()
-
-            elif self.state != "FTGONLY" and self.ctrl_algo == "PP":
-                speed, acceleration, jerk, steering_angle = self.pp_cycle()
-                
-            elif self.state == "FTGONLY":
+            if self.state == "FTGONLY":
                 speed, steering_angle = self.ftg_cycle()
             
-            else:
-                rospy.logwarn(f"[{self.name}] No valid controller selected")
+            else: 
+                if self.ctrl_algo == "MAP":
+                    speed, acceleration, jerk, steering_angle = self.map_cycle()
+
+                elif self.ctrl_algo == "PP":
+                    speed, acceleration, jerk, steering_angle = self.pp_cycle()
+                    
+                elif self.ctrl_algo == "STMPC":
+                    speed, acceleration, jerk, steering_angle = self.stmpc_cycle()
+
+                elif self.ctrl_algo == "KMPC":
+                    speed, acceleration, jerk, steering_angle = self.kmpc_cycle()
+                else:
+                    rospy.logwarn(f"[{self.name}] No valid controller selected")
                 
             if self.measuring:
                 end = time.perf_counter()
                 self.measure_pub.publish(end-start)
             ack_msg = self.create_ack_msg(speed, acceleration, jerk, steering_angle)
             self.drive_pub.publish(ack_msg)
+            self.visualize_steering(steering_angle)
             rate.sleep()
-
 
 ############################################HELPERS############################################
     def map_cycle(self):
@@ -430,7 +502,6 @@ class Controller_manager:
                                                                                                                     self.track_length)
                 
         self.set_lookahead_marker(L1_point, 100)
-        self.visualize_steering(steering_angle)
         self.visualize_trailing_opponent()
         self.l1_pub.publish(Point(x=idx_nearest_waypoint, y=L1_distance))
         
@@ -465,7 +536,6 @@ class Controller_manager:
                                                                                                                     self.track_length)
                 
         self.set_lookahead_marker(L1_point, 100)
-        self.visualize_steering(steering_angle)
         self.visualize_trailing_opponent()
         self.l1_pub.publish(Point(x=idx_nearest_waypoint, y=L1_distance))
         
@@ -515,6 +585,64 @@ class Controller_manager:
         ack_msg.drive.acceleration = acceleration
         return ack_msg
 
+    def stmpc_cycle(self):
+        self.mpc_fre_pos = self.position_in_map_frenet
+        self.mpc_fre_pos[2] = self.alpha
+        self.single_track_state = np.array([self.vel_y, self.yaw_rate, self.acc_now[0], 0])
+        
+        d = self.stmpc_controller.main_loop(
+            self.state,
+            self.position_in_map,
+            self.waypoint_array_in_map,
+            self.speed_now,
+            self.opponent,
+            self.mpc_fre_pos,
+            self.single_track_state,
+            self.track_length,
+            0) # TODO currently compute time not used
+        speed, acceleration, jerk, steering_angle, states, status= d
+        if status != 0: #Solver failed
+            rospy.logerr(f"[{self.name}] Solver failed with {status = }, stopping")
+            return 0, 0, 0, 0
+
+        self.waypoint_safety_counter += 1
+        if self.waypoint_safety_counter >= self.loop_rate / self.state_machine_rate * 10:
+            rospy.logerr_throttle(0.5, "[Controller] Received no local wpnts. STOPPING!!")
+            speed = 0
+            steering_angle = 0
+
+        # publish mpc states to vizualize
+        if states is not None:
+            self.publish_mpc_states(states)
+
+        return speed, acceleration, jerk, steering_angle
+    
+    def kmpc_cycle(self):
+        self.mpc_fre_pos = self.position_in_map_frenet
+        self.mpc_fre_pos[2] = self.alpha
+        d = self.kmpc_controller.main_loop(
+            self.state,
+            self.position_in_map,
+            self.waypoint_array_in_map,
+            self.speed_now,
+            self.opponent,
+            self.mpc_fre_pos,
+            self.acc_now,
+            self.track_length,
+            0.0) # TODO currently compute time not used
+        speed, acceleration, jerk, steering_angle, states = d
+
+        self.waypoint_safety_counter += 1
+        if self.waypoint_safety_counter >= self.loop_rate / self.state_machine_rate * 10:
+            rospy.logerr_throttle(0.5, "[Controller] Received no local wpnts. STOPPING!!")
+            speed = 0
+            steering_angle = 0
+
+        # publish mpc states to vizualize
+        if states is not None:
+            self.publish_mpc_states(states)
+        return speed, acceleration, jerk, steering_angle
+    
 ############################################MSG CREATION############################################
 # visualization utilities
     def visualize_steering(self, theta):
@@ -622,9 +750,13 @@ class Controller_manager:
             opponent_marker.action = Marker.DELETE
         self.trailing_pub.publish(opponent_marker)
 
+    def publish_mpc_states(self, states: list) -> None:
+        """Publishes states into /mpc_controller/states"""
+        msg = Float64MultiArray()
+        msg.data = states
+        self.mpc_states_pub.publish(msg)
 
 if __name__ == "__main__":
     # client = dynamic_reconfigure.client.Client("MAP params", timeout=30, config_callback=callback)
     controller_manager = Controller_manager()
     controller_manager.control_loop()
- 

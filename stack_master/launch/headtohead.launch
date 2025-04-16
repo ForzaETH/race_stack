@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="racecar_version" default="NUC2" /> <!--  SIM / NUC2 ... -->
+    <arg name="racecar_version" default="NUC2" /> <!--  JETx / NUCx ... -->
     <arg name="MAP_mode" default="safe" /> <!--  safe / aggressive -->
     <arg name="LU_table" default="NUC2_pacejka" />
-    <arg name="ctrl_algo" default="MAP" /> <!--  MAP / PP -->
+    <arg name="ctrl_algo" default="MAP" /> <!--  MAP / PP / STMPC / KMPC-->
     <arg name="measure" default="False" />
     <arg name="perception" default="True" /> <!--  True / False. False to disable the perception module when using the dummy obstacle publisher -->
     <arg name="planner" default="spliner" /> <!--  spliner / predictive_spliner / graph_based / frenet -->
@@ -15,10 +15,25 @@
         <param name="LU_table" value="$(arg LU_table)" />
         <param name="ctrl_algo" value="$(arg ctrl_algo)" />
     </node>
-    <!-- launch dynamic reconfigure for controller manager -->
-    <node pkg="controller" name="l1_param_tuner" type="l1_params_server.py" output="screen" />
-    <rosparam ns="L1_controller" command="load"
-        file="$(find stack_master)/config/$(arg racecar_version)/l1_params.yaml" />
+
+    <!-- launch dynamic reconfigure servers -->
+    <group if="$(eval ctrl_algo == 'MAP' or ctrl_algo == 'PP')">
+        <node pkg="controller" name="l1_param_tuner" type="l1_params_server.py" output="screen" />
+        <rosparam ns="L1_controller" command="load"
+            file="$(find stack_master)/config/$(arg racecar_version)/l1_params.yaml" />
+    </group>
+
+    <group if="$(eval ctrl_algo == 'STMPC')">
+        <node pkg="controller" name="mpc_param_tuner" type="mpc_online_params_server.py" output="screen"/>
+        <param name="mpc_version" value="STMPC"/>
+        <node pkg="controller" type="single_track_mpc_viz.py" name="single_track_mpc_viz" output="screen"/>
+    </group>
+
+    <group if="$(eval ctrl_algo == 'KMPC')">
+        <node pkg="controller" name="mpc_param_tuner" type="mpc_online_params_server.py" output="screen"/>
+        <param name="mpc_version" value="KMPC"/>
+        <node pkg="controller" type="kinematic_mpc_viz.py" name="kinematic_mpc_viz" output="screen"/>
+    </group>
 
     <!-- ######################################################PLANNERS###################################################### -->
     <!-- PLANNER SPLINER-->

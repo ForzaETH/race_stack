@@ -1,0 +1,108 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+ <tabbed_widget name="Main Window" parent="main_window">
+  <Tab containers="1" tab_name="tab6">
+   <Container>
+    <DockSplitter orientation="-" sizes="0.667024;0.332976" count="2">
+     <DockSplitter orientation="-" sizes="0.5;0.5" count="2">
+      <DockArea name="v_x_dot constraints">
+       <plot style="Lines" flip_y="false" flip_x="false" mode="XYPlot">
+        <range left="-0.975000" right="39.975000" bottom="-10.500000" top="10.500000"/>
+        <limitY/>
+        <curve name="acceleration_x" color="#41235d"/>
+        <curve name="longitudinal_constraint_max" color="#9467bd"/>
+        <curve name="longitudinal_constraint_min" color="#9467bd"/>
+       </plot>
+      </DockArea>
+      <DockArea name="v_y_dot constraints">
+       <plot style="Lines" flip_y="false" flip_x="false" mode="XYPlot">
+        <range left="-0.975000" right="39.975000" bottom="-10.500000" top="10.500000"/>
+        <limitY/>
+        <curve name="acceleration_y" color="#10a029"/>
+        <curve name="lateral_constraint_min" color="#1ac938"/>
+        <curve name="lateral_constraint_max" color="#1ac938"/>
+       </plot>
+      </DockArea>
+     </DockSplitter>
+     <DockArea name="elliptical constraint">
+      <plot style="Lines" flip_y="false" flip_x="false" mode="XYPlot">
+       <range left="-0.975000" right="39.975000" bottom="-0.024145" top="1.024979"/>
+       <limitY/>
+       <curve name="ellipse_constraint" color="#ff7f0e"/>
+       <curve name="ellipse_constraint_max" color="#bcbd22"/>
+       <curve name="ellipse_constraint2" color="#1f77b4"/>
+      </plot>
+     </DockArea>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <Tab containers="1" tab_name="tab3">
+   <Container>
+    <DockSplitter orientation="-" sizes="1" count="1">
+     <DockArea name="...">
+      <plot style="LinesAndDots" flip_y="false" flip_x="false" mode="XYPlot">
+       <range left="-4.508839" right="3.944947" bottom="-12.000000" top="10.000000"/>
+       <limitY min="-12" max="10"/>
+       <curve name="gg_plot" color="#17becf"/>
+      </plot>
+     </DockArea>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <currentTabIndex index="0"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="0"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <!-- - - - - - - - - - - - - - - -->
+ <Plugins>
+  <plugin ID="DataLoad CSV">
+   <parameters time_axis="" delimiter="0"/>
+  </plugin>
+  <plugin ID="DataLoad MCAP"/>
+  <plugin ID="DataLoad ROS bags">
+   <use_header_stamp value="false"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+   <boolean_strings_to_number value="true"/>
+   <remove_suffix_from_strings value="true"/>
+   <selected_topics value=""/>
+  </plugin>
+  <plugin ID="DataLoad ULog"/>
+  <plugin ID="MQTT Subscriber (Mosquitto)"/>
+  <plugin ID="ROS Topic Subscriber">
+   <use_header_stamp value="false"/>
+   <discard_large_arrays value="false"/>
+   <max_array_size value="5000"/>
+   <boolean_strings_to_number value="true"/>
+   <remove_suffix_from_strings value="true"/>
+   <selected_topics value="/mpc_controller/acc_x;/mpc_controller/acc_y;/mpc_controller/ellipse;/mpc_controller/states;/mpc_param_tuner/parameter_updates"/>
+  </plugin>
+  <plugin ID="UDP Server"/>
+  <plugin ID="WebSocket Server"/>
+  <plugin ID="ZMQ Subscriber"/>
+  <plugin ID="Fast Fourier Transform"/>
+  <plugin ID="Quaternion to RPY"/>
+  <plugin ID="Reactive Script Editor">
+   <library code="--[[ Helper function to create a series from arrays&#xa;&#xa; new_series: a series previously created with ScatterXY.new(name)&#xa; prefix:     prefix of the timeseries, before the index of the array&#xa; suffix_X:   suffix to complete the name of the series containing the X value. If [nil], use the index of the array.&#xa; suffix_Y:   suffix to complete the name of the series containing the Y value&#xa; timestamp:   usually the tracker_time variable&#xa;              &#xa; Example:&#xa; &#xa; Assuming we have multiple series in the form:&#xa; &#xa;   /trajectory/node.{X}/position/x&#xa;   /trajectory/node.{X}/position/y&#xa;   &#xa; where {N} is the index of the array (integer). We can create a reactive series from the array with:&#xa; &#xa;   new_series = ScatterXY.new(&quot;my_trajectory&quot;) &#xa;   CreateSeriesFromArray( new_series, &quot;/trajectory/node&quot;, &quot;position/x&quot;, &quot;position/y&quot;, tracker_time );&#xa;--]]&#xa;&#xa;function CreateSeriesFromArray( new_series, prefix, suffix_X, suffix_Y, timestamp )&#xa;  &#xa;  --- clear previous values&#xa;  new_series:clear()&#xa;  &#xa;  --- Append points to new_series&#xa;  index = 0&#xa;  while(true) do&#xa;&#xa;    x = index;&#xa;    -- if not nil, get the X coordinate from a series&#xa;    if suffix_X ~= nil then &#xa;      series_x = TimeseriesView.find( string.format( &quot;%s.%d/%s&quot;, prefix, index, suffix_X) )&#xa;      if series_x == nil then break end&#xa;      x = series_x:atTime(timestamp)&#x9; &#xa;    end&#xa;    &#xa;    series_y = TimeseriesView.find( string.format( &quot;%s.%d/%s&quot;, prefix, index, suffix_Y) )&#xa;    if series_y == nil then break end &#xa;    y = series_y:atTime(timestamp)&#xa;    &#xa;    new_series:push_back(x,y)&#xa;    index = index+1&#xa;  end&#xa;end&#xa;&#xa;--[[ Similar to the built-in function GetSeriesNames(), but select only the names with a give prefix. --]]&#xa;&#xa;function GetSeriesNamesByPrefix(prefix)&#xa;  -- GetSeriesNames(9 is a built-in function&#xa;  all_names = GetSeriesNames()&#xa;  filtered_names = {}&#xa;  for i, name in ipairs(all_names)  do&#xa;    -- check the prefix&#xa;    if name:find(prefix, 1, #prefix) then&#xa;      table.insert(filtered_names, name);&#xa;    end&#xa;  end&#xa;  return filtered_names&#xa;end&#xa;&#xa;--[[ Modify an existing series, applying offsets to all their X and Y values&#xa;&#xa; series: an existing timeseries, obtained with TimeseriesView.find(name)&#xa; delta_x: offset to apply to each x value&#xa; delta_y: offset to apply to each y value &#xa;  &#xa;--]]&#xa;&#xa;function ApplyOffsetInPlace(series, delta_x, delta_y)&#xa;  -- use C++ indeces, not Lua indeces&#xa;  for index=0, series:size()-1 do&#xa;    x,y = series:at(index)&#xa;    series:set(index, x + delta_x, y + delta_y)&#xa;  end&#xa;end&#xa;"/>
+   <scripts>
+    <script name="acc_x" global="new_series_acceleration_x = ScatterXY.new(&quot;acceleration_x&quot;)" function="new_series_acceleration_x:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/acc_x/data[%d]&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;&#xa; &#xa;x = series_x:atTime(tracker_time)&#xa;new_series_acceleration_x:push_back(index, x)&#xa;index=index+1&#xa;&#xa;end"/>
+    <script name="acc_y_plot" global="new_series_acceleration_y = ScatterXY.new(&quot;acceleration_y&quot;)" function="new_series_acceleration_y:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/acc_y/data[%d]&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;&#xa; &#xa;x = series_x:atTime(tracker_time)&#xa;new_series_acceleration_y:push_back(index, x)&#xa;index=index+1&#xa;&#xa;end"/>
+    <script name="ellipse_plot" global="new_series_acceleration_ell = ScatterXY.new(&quot;ellipse_constraint&quot;)" function="new_series_acceleration_ell:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/ellipse/data[%d]&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;&#xa; &#xa;x = series_x:atTime(tracker_time)&#xa;new_series_acceleration_ell:push_back(index, x)&#xa;index=index+1&#xa;&#xa;end"/>
+    <script name="ellipse_plot_2" global="new_series_acceleration_ell = ScatterXY.new(&quot;ellipse_constraint2&quot;)" function="new_series_acceleration_ell:clear()&#xa;index = 0&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/ellipse/data[%d]&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;&#xa; &#xa;x = series_x:atTime(tracker_time)&#xa;new_series_acceleration_ell:push_back(index, x)&#xa;index=index+1&#xa;&#xa;end"/>
+    <script name="gg_plot" global="gg_scatter_plot = ScatterXY.new(&quot;gg_plot&quot;)" function="gg_scatter_plot:clear()&#xa;index = 0&#xa;while(true) do&#xa;    str_x = string.format(&quot;/mpc_controller/acc_x/data[%d]&quot;,index)&#xa;    series_x = TimeseriesView.find( str_x )&#xa;    str_y = string.format(&quot;/mpc_controller/acc_y/data[%d]&quot;,index)&#xa;    series_y = TimeseriesView.find( str_y )&#xa;&#xa;&#xa;    if series_x == nil then&#xa;        break&#xa;    end&#x9;&#xa;&#xa;&#xa; &#xa;    x = series_x:atTime(tracker_time)&#xa;    y = series_y:atTime(tracker_time)&#xa;    &#xa;    gg_scatter_plot:push_back(y, x)&#xa;    index=index+1&#xa;&#xa;end"/>
+    <script name="lateral_constraint" global="new_series_lat_acc_min = ScatterXY.new(&quot;lateral_constraint_min&quot;)&#xa;new_series_lat_acc_max = ScatterXY.new(&quot;lateral_constraint_max&quot;)&#xa;new_series_long_acc_min = ScatterXY.new(&quot;longitudinal_constraint_min&quot;)&#xa;new_series_long_acc_max = ScatterXY.new(&quot;longitudinal_constraint_max&quot;)&#xa;new_series_ellipse_max = ScatterXY.new(&quot;ellipse_constraint_max&quot;)&#xa;" function="new_series_lat_acc_min:clear()&#xa;new_series_lat_acc_max:clear()&#xa;new_series_long_acc_min:clear()&#xa;new_series_long_acc_max:clear()&#xa;new_series_ellipse_max:clear()&#xa;&#xa;index = 0&#xa;lat_acc_series =  TimeseriesView.find( &quot;/mpc_param_tuner/parameter_updates/doubles[6]/value&quot; )&#xa;long_acc_max_series =  TimeseriesView.find( &quot;/mpc_param_tuner/parameter_updates/doubles[8]/value&quot; )&#xa;long_acc_min_series =  TimeseriesView.find( &quot;/mpc_param_tuner/parameter_updates/doubles[7]/value&quot; )&#xa;&#xa;while(true) do&#xa;&#xa;str_x = string.format(&quot;/mpc_controller/ellipse/data[%d]&quot;,index)&#xa;series_x = TimeseriesView.find( str_x )&#xa;&#xa;if series_x == nil then&#xa;break&#xa;end&#x9;&#xa;&#xa;&#xa;lat_acc = lat_acc_series:atTime(tracker_time)&#xa;long_acc_min = long_acc_min_series:atTime(tracker_time)&#xa;long_acc_max = long_acc_max_series:atTime(tracker_time)&#xa;&#xa;new_series_lat_acc_min:push_back(index, -lat_acc)&#xa;new_series_lat_acc_max:push_back(index, lat_acc)&#xa;new_series_long_acc_min:push_back(index, long_acc_min)&#xa;new_series_long_acc_max:push_back(index, long_acc_max)&#xa;new_series_ellipse_max:push_back(index, 1)&#xa;&#xa;&#xa;index=index+1&#xa;&#xa;end"/>
+   </scripts>
+  </plugin>
+  <plugin ID="CSV Exporter"/>
+  <plugin ID="ROS /rosout Visualization"/>
+  <plugin ID="ROS Topic Re-Publisher"/>
+ </Plugins>
+ <!-- - - - - - - - - - - - - - - -->
+ <previouslyLoaded_Datafiles/>
+ <previouslyLoaded_Streamer name="ROS Topic Subscriber"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <customMathEquations/>
+ <snippets/>
+ <!-- - - - - - - - - - - - - - - -->
+</root>
+

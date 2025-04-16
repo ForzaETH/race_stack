@@ -1,0 +1,64 @@
+##########################
+# Controller settings    #
+##########################
+N: 40
+t_delay: 0.0025 #0.01
+steps_delay: 3
+MPC_freq: 20 #40
+
+track_safety_margin: 0.25 #0.25
+track_max_width: !!float 1e3 #1e3 [m]
+overtake_d: !!float 1
+
+##########################
+# Cost function settings #
+##########################
+qjerk: !!float 1e-2 #acceleration cost
+qddelta: !!float 5e-1 #ddelta cost
+qadv: !!float 0 #1e-5
+qn: 40 #40 # 4 for vy minimization
+qalpha: 0.1 #50 # NOTE: actually make the problem quite unstable! # 100 for vy minimization
+qv: !!float 10 #2e-2 #2e-1 velocity cost (linear, for velocity maximization)
+
+Zl: !!float 1000 #100 quadratic coefficient state slack variable
+Zu: !!float 1000 #100 quadratic coefficient input slack variable
+zl: !!float 1000 #100 linear coefficient state slack variable
+zu: !!float 1000 #100 linear coefficient input slack variable
+
+
+#####################
+# Model constraints #
+#####################
+#state bounds
+delta_min: !!float -0.4  #-0.4 minimum steering angle [rad]
+delta_max: !!float 0.4 #0.4 maximum steering angle [rad]
+v_min: !!float 0.0 # minimum velocity [m/s]
+v_max: !!float 12 #3 maximum velocity [m/s]$
+a_min: !!float -10 #-6  #-12 minimum velocity change rate
+a_max: !!float  10 #7 maximum velocity change rate
+
+
+# input bounds
+ddelta_min: !!float -3.2 #-5 minimum change rate of stering angle [rad/s]
+ddelta_max: !!float 3.2  #5 maximum change rate of steering angle [rad/s]
+jerk_min: !!float -50
+jerk_max: !!float 50
+
+# nonlinear constraint
+# numbers are too high because the approximation severely underestimates the actual values
+alat_max: !!float 10  #12 maximum lateral force [m/s^1]
+
+#####################
+# Cost Flags #
+#####################
+vy_minimization: true # If true, the cost function will minimize the lateral velocity
+adv_maximization: false
+
+#####################
+# constraints flags #
+#####################
+combined_constraints: "None" # ellipse/diamond/anything else for None
+
+# model flags #
+load_transfer: true
+correct_v_y_dot: true
