@@ -109,6 +109,7 @@ def load_STMPC_config_ros(racecar_version: str) -> Union[STMPCConfig, None]:
         cfg_dict = yaml.safe_load(file)
         try:
             config = STMPCConfig(**cfg_dict)
+            return config
         except ValidationError as e:
             for error in e.errors():
                 if error["type"] == "missing":
@@ -121,5 +122,3 @@ def load_STMPC_config_ros(racecar_version: str) -> Union[STMPCConfig, None]:
                     print(f"Error loading the {config_path} file. Please contact support (edo) with this traceback.")
                     raise e
             return None
-
-    return config
