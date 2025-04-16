@@ -1,0 +1,10 @@
+## Trailing Controller Parameters
+allow_accel_trailing: False
+trailing_mode: True #True = Distance, False = Time
+prioritize_dyn: True
+
+trailing_gap: 2.0 # Distance in meters or gap in seconds, depending on mode
+trailing_p_gain: 1.0
+trailing_i_gain: 0.0
+trailing_d_gain: 0.2
+blind_trailing_speed: 1.5

@@ -7,6 +7,7 @@ import numpy as np
 import rospy
 from ackermann_msgs.msg import AckermannDriveStamped
 from dynamic_reconfigure.msg import Config
+from dynamic_reconfigure.client import Client
 from f110_msgs.msg import ObstacleArray, PidData, WpntArray
 from sensor_msgs.msg import LaserScan
 from frenet_converter.frenet_converter import FrenetConverter
@@ -19,6 +20,12 @@ from visualization_msgs.msg import Marker, MarkerArray
 from map.src.MAP_Controller import MAP_Controller
 from pp.src.PP_Controller import PP_Controller
 from ftg.ftg import FTG
+from single_track_mpc import Single_track_MPC_Controller
+from pbl_config import (CarConfig, KMPCConfig, PacejkaTireConfig, STMPCConfig,
+                        load_car_config_ros, load_KMPC_config_ros,
+                        load_pacejka_tire_config_ros, load_STMPC_config_ros,
+                        load_trailing_config_ros, TrailingConfig)
+#TODO kmpc
 
 class Controller_manager:
     """This class is the main controller manager for the car. It is responsible for selecting the correct controller $
@@ -61,17 +68,20 @@ class Controller_manager:
 
     def init_controller(self):
         self.racecar_version = rospy.get_param('/racecar_version') # NUCX
+        self.car_config: CarConfig = load_car_config_ros(self.racecar_version)
         self.LUT_name = rospy.get_param('controller_manager/LU_table') # name of lookup table
         self.ctrl_algo = rospy.get_param('controller_manager/ctrl_algo', 'MAP') # default controller
         self.l1_params = rospy.get_param('L1_controller')
         self.use_sim = rospy.get_param('/sim')
-        self.wheelbase = rospy.get_param('/model_params/l_wb', 0.35) # NUCX
+        self.wheelbase = self.car_config.lr + self.car_config.lf
         rospy.loginfo(f"[{self.name}] Using {self.LUT_name}")
         self.measuring = rospy.get_param('/measure', False)
+        self.trailing_config: TrailingConfig = load_trailing_config_ros(self.racecar_version)
         
         self.state_machine_rate = rospy.get_param('state_machine/rate') #rate in hertz
         self.position_in_map = [] # current position in map frame
         self.position_in_map_frenet = [] # current position in frenet coordinates
+        self.alpha = 0 # current yaw angle with respect to the race line
         self.waypoint_list_in_map = [] # waypoints starting at car's position in map frame
         self.speed_now = 0 # current speed
         self.acc_now = np.zeros(5) # last 5 accleration values
@@ -112,7 +122,6 @@ class Controller_manager:
         # buffers for improved computation
         self.waypoint_array_buf = MarkerArray()
         self.markers_buf = [Marker() for _ in range(1000)]
-
 
         # Parameters
         for i in range(5):
@@ -186,8 +195,27 @@ class Controller_manager:
         )
         
         if self.ctrl_algo == "STMPC":
-            # TODO: init STMPC
-            pass
+            # configs
+            odom_msg = rospy.wait_for_message('/car_state/odom_frenet', Odometry) # TODO rethink init to avoid these things
+            self.car_state_frenet_cb(odom_msg)
+            
+            self.stmpc_config: STMPCConfig = load_STMPC_config_ros(self.racecar_version)
+            self.floor = "dubi"
+            self.tire_config: PacejkaTireConfig = load_pacejka_tire_config_ros(
+                self.racecar_version, self.floor)
+            # dyn reconfigure client
+            # state
+            pose_frenet = [self.position_in_map_frenet[0], self.position_in_map_frenet[1], self.alpha]
+            rospy.loginfo(f"[{self.name}] Initializing Single Track MPC Controller")
+            self.stmpc_controller = Single_track_MPC_Controller(pose_frenet=pose_frenet,
+                                                                racecar_version=self.racecar_version,
+                                                                stmpc_config=self.stmpc_config,
+                                                                car_config=self.car_config,
+                                                                tire_config=self.tire_config,
+                                                                trailing_config=self.trailing_config,
+                                                                controller_frequency=self.loop_rate,
+                                                                using_gokart=False)
+            self.mpc_dyn_rec_client = Client("/mpc_param_tuner", config_callback=self.stmpc_config_cb)
         elif self.ctrl_algo == "KMPC":
             # TODO: init KMPC
             pass
@@ -338,7 +366,8 @@ class Controller_manager:
         d = data.pose.pose.position.y
         vs = data.twist.twist.linear.x
         vd = data.twist.twist.linear.y
-        self.position_in_map_frenet = np.array([s,d,vs,vd]) 
+        self.position_in_map_frenet = np.array([s,d,vs,vd])
+        self.alpha = data.pose.pose.orientation.z
 
     def local_waypoint_cb(self, data: WpntArray):
         self.waypoint_list_in_map = []
@@ -360,6 +389,17 @@ class Controller_manager:
     def imu_cb(self, data):
         self.acc_now[1:] = self.acc_now[:-1]
         self.acc_now[0] = -data.linear_acceleration.y # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
+
+    def stmpc_config_cb(self, params: Config):
+        """
+        Here the mpc parameters are updated if changed with rqt (dyn reconfigure)
+        Values from .yaml file are set in mpc_online_params_server
+        """
+        for k, v in params.items():
+            if k != "groups":
+                setattr(self.stmpc_config, k, v)
+
+        self.stmpc_controller.stmpc_config = self.stmpc_config
 
     ############################################MAIN LOOP############################################
 
@@ -405,17 +445,21 @@ class Controller_manager:
             speed, acceleration, jerk, steering_angle = 0, 0, 0, 0
 
             #Logic to select controller
-            if self.state != "FTGONLY" and self.ctrl_algo == "MAP":
-                speed, acceleration, jerk, steering_angle = self.map_cycle()
-
-            elif self.state != "FTGONLY" and self.ctrl_algo == "PP":
-                speed, acceleration, jerk, steering_angle = self.pp_cycle()
-                
-            elif self.state == "FTGONLY":
+            if self.state == "FTGONLY":
                 speed, steering_angle = self.ftg_cycle()
             
-            else:
-                rospy.logwarn(f"[{self.name}] No valid controller selected")
+            else: 
+                if self.ctrl_algo == "MAP":
+                    speed, acceleration, jerk, steering_angle = self.map_cycle()
+
+                elif self.ctrl_algo == "PP":
+                    speed, acceleration, jerk, steering_angle = self.pp_cycle()
+                    
+                elif self.ctrl_algo == "STMPC":
+                    speed, acceleration, jerk, steering_angle = self.stmpc_cycle()
+
+                else:
+                    rospy.logwarn(f"[{self.name}] No valid controller selected")
                 
             if self.measuring:
                 end = time.perf_counter()

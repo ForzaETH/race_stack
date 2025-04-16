@@ -1,0 +1,48 @@
+##########################
+# Controller settings    #
+##########################
+N: 40
+steps_delay: 3
+t_delay: 0.125
+MPC_freq: 20
+overtake_d: 1
+
+track_safety_margin: 0.3
+track_max_width: !!float 1e3 # [m]
+
+##########################
+# Cost function settings #
+##########################
+qac: !!float 1e-2
+qddelta: !!float 1e-1
+qadv: !!float 0
+qn: 20
+qalpha: 7
+qv: !!float 10 # velocity cost (linear, for velocity maximization)
+
+zl: !!float 10 # linear coefficient state slack variable
+zu: !!float 10 # linear coefficient input slack variable
+Zl: !!float 100 # quadratic coefficient state slack variable
+Zu: !!float 100 # quadratic coefficient input slack variable
+
+#####################
+# Model constraints #
+#####################
+# steering constraints
+delta_min: !!float -0.40  # minimum steering angle [rad]
+delta_max: !!float 0.40  # maximum steering angle [rad]
+# Velocity constraint
+v_min: !!float 2 # minimum velocity [m/s]
+v_max: !!float 12 # maximum velocity [m/s]
+
+# input bounds
+ddelta_min: !!float -0.2 # minimum change rate of stering angle [rad/s]
+ddelta_max: !!float 0.2 # maximum change rate of steering angle [rad/s]
+a_min: !!float -10  # minimum velocity change rate
+a_max: !!float 10  # maximum velocity change rate
+
+v_min: !!float 2 # minimum velocity [m/s]
+v_max: !!float 12 # maximum velocity [m/s]
+
+# nonlinear constraint
+alat_max: !!float 10  # maximum lateral force [m/s^2]

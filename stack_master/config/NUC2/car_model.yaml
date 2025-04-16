@@ -1,0 +1,23 @@
+m: 3.54
+Iz: 0.05797
+lf: 0.162
+lr: 0.145
+wheelbase: 0.307
+h_cg: 0.014
+a_max: 3
+a_min: -3
+v_max: 10.0
+v_min: -5.0
+
+C_0d: 0.48
+C_d: -1.1
+C_acc: 8.29
+C_dec: 5.77
+C_R: 2.03
+C_0v: 100
+C_v: 20
+
+tau_steer: 0.15779476
+max_steering_angle: 0.4189
+max_steering_velocity: 3.2
+racecar_version: NUC2
