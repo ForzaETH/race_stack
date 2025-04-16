@@ -62,7 +62,7 @@ class tireNode:
     def _init_params(self,) -> None:
         dir_path = rospkg.RosPack().get_path("stack_master")
         self.racecar_version = rospy.get_param("/racecar_version")
-        self.floor = rospy.get_param("/floor")
+        self.floor = "dubi" # rospy.get_param("/floor") TODO fix
         self.stmpc_config = load_STMPC_config_ros(self.racecar_version)
         self.car_config = load_car_config_ros(self.racecar_version)
         self.tire_config = load_pacejka_tire_config_ros(self.racecar_version, self.floor)

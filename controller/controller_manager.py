@@ -14,7 +14,7 @@ from frenet_converter.frenet_converter import FrenetConverter
 from geometry_msgs.msg import Point, PoseStamped
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
-from std_msgs.msg import Float64, String, Float32
+from std_msgs.msg import Float64, String, Float32, Float64MultiArray
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from visualization_msgs.msg import Marker, MarkerArray
 from map.src.MAP_Controller import MAP_Controller
@@ -84,6 +84,8 @@ class Controller_manager:
         self.alpha = 0 # current yaw angle with respect to the race line
         self.waypoint_list_in_map = [] # waypoints starting at car's position in map frame
         self.speed_now = 0 # current speed
+        self.alpha = 0
+        self.yaw_rate = 0
         self.acc_now = np.zeros(5) # last 5 accleration values
         self.waypoint_safety_counter = 0
 
@@ -225,8 +227,10 @@ class Controller_manager:
         self.lookahead_pub = rospy.Publisher('lookahead_point', Marker, queue_size=10)
         self.trailing_pub = rospy.Publisher('trailing_opponent_marker', Marker, queue_size=10)
         self.waypoint_pub = rospy.Publisher('my_waypoints', MarkerArray, queue_size=10)
-        self.l1_pub = rospy.Publisher('l1_distance', Point, queue_size=10)    
+        self.l1_pub = rospy.Publisher('l1_distance', Point, queue_size=10)
         self.gap_data = rospy.Publisher('/trailing/gap_data', PidData, queue_size=10)
+        self.mpc_states_pub = rospy.Publisher("/mpc_controller/states", Float64MultiArray, queue_size=10)
+
         # Publisher for steering and speed command
         self.publish_topic = '/vesc/high_level/ackermann_cmd_mux/input/nav_1'
         self.drive_pub = rospy.Publisher(self.publish_topic, AckermannDriveStamped, queue_size=10)
@@ -346,6 +350,8 @@ class Controller_manager:
         self.ftg_controller.set_vel(data.twist.twist.linear.x)
 
     def odom_cb(self, data: Odometry):
+        self.vel_y = data.twist.twist.linear.y
+        self.yaw_rate = data.twist.twist.angular.z
         self.speed_now = data.twist.twist.linear.x
         self.map_controller.speed_now = self.speed_now
         self.pp_controller.speed_now = self.speed_now
@@ -567,8 +573,37 @@ class Controller_manager:
         return ack_msg
 
     def stmpc_cycle(self):
-        # TODO: implement
-        pass
+        self.mpc_fre_pos = self.position_in_map_frenet
+        self.mpc_fre_pos[2] = self.alpha
+        self.single_track_state = np.array([self.vel_y, self.yaw_rate, self.acc_now[0], 0])
+        
+        d = self.stmpc_controller.main_loop(
+            self.state,
+            self.position_in_map,
+            self.waypoint_array_in_map,
+            self.speed_now,
+            self.opponent,
+            self.mpc_fre_pos,
+            self.single_track_state,
+            self.track_length,
+            0) # TODO check this out
+        speed, acceleration, jerk, steering_angle, states, status= d
+        if status != 0: #Solver failed
+            rospy.logerr(f"Solver failed, stopping")
+            return 0, 0, 0, 0
+
+        self.visualize_steering(steering_angle)
+        self.waypoint_safety_counter += 1
+        if self.waypoint_safety_counter >= self.loop_rate / self.state_machine_rate * 10:
+            rospy.logerr_throttle(0.5, "[Controller] Received no local wpnts. STOPPING!!")
+            speed = 0
+            steering_angle = 0
+
+        # publish mpc states to vizualize
+        if states is not None:
+            self.publish_mpc_states(states)
+
+        return speed, acceleration, jerk, steering_angle
     
     def kmpc_cycle(self):
         # TODO: implement
@@ -681,6 +716,11 @@ class Controller_manager:
             opponent_marker.action = Marker.DELETE
         self.trailing_pub.publish(opponent_marker)
 
+    def publish_mpc_states(self, states: list) -> None:
+        """Publishes states into /mpc_controller/states"""
+        msg = Float64MultiArray()
+        msg.data = states
+        self.mpc_states_pub.publish(msg)
 
 if __name__ == "__main__":
     # client = dynamic_reconfigure.client.Client("MAP params", timeout=30, config_callback=callback)
