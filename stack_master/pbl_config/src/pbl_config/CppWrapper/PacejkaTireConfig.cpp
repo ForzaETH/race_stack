@@ -13,7 +13,7 @@ void PacejkaTireConfig::load_config(std::string racecar_version) {
     Bf = config_dict["Bf"].cast<double>();
     Cf = config_dict["Cf"].cast<double>();
     Df = config_dict["Df"].cast<double>();
-    Ef = config_dict["Er"].cast<double>();
+    Ef = config_dict["Ef"].cast<double>();
     Br = config_dict["Br"].cast<double>();
     Cr = config_dict["Cr"].cast<double>();
     Dr = config_dict["Dr"].cast<double>();
