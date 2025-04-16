@@ -491,7 +491,6 @@ class Controller_manager:
             self.visualize_steering(steering_angle)
             rate.sleep()
 
-
 ############################################HELPERS############################################
     def map_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.map_controller.main_loop(self.state, 
@@ -762,4 +761,3 @@ if __name__ == "__main__":
     # client = dynamic_reconfigure.client.Client("MAP params", timeout=30, config_callback=callback)
     controller_manager = Controller_manager()
     controller_manager.control_loop()
- 

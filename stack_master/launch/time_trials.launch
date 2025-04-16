@@ -5,7 +5,7 @@
     <arg name="LU_table" default="NUC2_pacejka"
         doc="Name of the lookup table. Possible values: NUCX_hangar_pacejka / SIM_linear -->" />
     <arg name="ctrl_algo" default="MAP"
-        doc="Control algorithm to use. Possible values: MAP/PP" />
+        doc="Control algorithm to use. Possible values: MAP/PP/STMPC/KMPC" />
     <arg name="measure" default="False"
         doc="Whether or not to measure latencies" />
 

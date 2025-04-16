@@ -5,7 +5,7 @@
 
     <arg name="save_LUT_name" default="NUCx_on_track_pacejka" />
     <arg name="plot_model" default="True" />
-    <arg name="racecar_version" default="SIM"/>
+    <arg name="racecar_version" default="NUC2"/>
 
     <node pkg="on_track_sys_id" name="on_track_sys_id" type="on_track_sys_id.py" output="screen">
         <param name="odom_topic" value="$(arg odom_topic)" />

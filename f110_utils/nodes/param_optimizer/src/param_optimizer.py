@@ -759,7 +759,7 @@ class BayesOptimizer:
         plt.savefig(path)
 
     def get_racecar_version(self):
-        racecar_version = rospy.get_param("/racecar_version")  # NUCX or SIM
+        racecar_version = rospy.get_param("/racecar_version")  # NUCX or JETx
         return racecar_version
 
 

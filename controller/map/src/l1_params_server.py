@@ -6,7 +6,7 @@ from dynamic_reconfigure.server import Server
 from controller.cfg import dyn_l1_params_tunerConfig
 
 def get_racecar_version():
-    racecar_version = rospy.get_param('/racecar_version') # NUCX or SIM
+    racecar_version = rospy.get_param('/racecar_version') # NUCX or JETx
     return racecar_version
 
 def get_yaml_values():

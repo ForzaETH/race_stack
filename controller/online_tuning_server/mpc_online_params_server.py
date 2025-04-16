@@ -29,7 +29,7 @@ class CallbackHandler:
 
 def get_default_dict(mpc_version: str) -> dict:
     # get full config from yaml
-    racecar_version = rospy.get_param('/racecar_version') # NUCX or SIM
+    racecar_version = rospy.get_param('/racecar_version') # NUCX or JETx
 
     if mpc_version == "KMPC":
         config: KMPCConfig = load_KMPC_config_ros(racecar_version)
