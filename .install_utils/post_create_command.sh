@@ -17,7 +17,7 @@ sudo chmod 666 /dev/input/js0
 sudo chmod 666 /dev/input/event*
 
 # setup f1tenth_gym
-cd ~/ws &&
-    colcon build --packages-up-to f110_gym --base-paths ~/ws \
-        --cmake-args "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
-        -Wall -Wextra -Wpedantic --cmake-clean-cache
+# cd ~/ws &&
+#     colcon build --packages-up-to f110_gym --base-paths ~/ws \
+#         --cmake-args "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
+#         -Wall -Wextra -Wpedantic --cmake-clean-cache
