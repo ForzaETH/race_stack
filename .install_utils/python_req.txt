@@ -13,7 +13,7 @@ transforms3d
 
 # Gym requirements
 gymnasium==0.29.1
-numpy>=1.18.0
+numpy==1.26.4
 Pillow>=9.0.1
 scipy>=1.7.3
 numba>=0.55.2
