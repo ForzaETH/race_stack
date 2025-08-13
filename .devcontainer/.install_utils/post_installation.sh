@@ -9,6 +9,7 @@ source /opt/ros/noetic/setup.bash && source /home/${USER}/catkin_ws/devel/setup.
 # install dependencies
 pip install ~/catkin_ws/src/race_stack/f110_utils/libs/ccma
 pip install ~/catkin_ws/src/race_stack/planner/graph_based_planner/src/GraphBasedPlanner
+pip install ~/catkin_ws/src/race_stack/perception/norfair_tracker/src/norfair
 
 # build 
 cd /home/${USER}/catkin_ws
