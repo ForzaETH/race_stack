@@ -29,7 +29,7 @@ pycoral==2.0.0
 tflite-runtime==2.5.0.post1
 
 # graph-based overtaking reqs
-python-igraph
+# python-igraph
 flake8==3.7.9
 pyzmq==18.1.1
 pydantic>=2.7

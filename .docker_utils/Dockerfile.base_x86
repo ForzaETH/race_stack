@@ -29,10 +29,10 @@ RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r /.install_utils/r
 
 
 # install catkin build tools
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu `lsb_release -sc` main" \
-        > /etc/apt/sources.list.d/ros-latest.list' && \
-        wget http://packages.ros.org/ros.key -O - | sudo apt-key add - && \
-        apt-get update && apt-get install -y python3-catkin-tools
+RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list' && \
+    curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | apt-key add - && \
+    apt-get update && apt-get install -y python3-catkin-tools
+
 
 # install cartographer
 RUN . /.install_utils/cartographer_req.sh && . /.install_utils/install_abseil.sh
