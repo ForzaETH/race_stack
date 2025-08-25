@@ -27,6 +27,7 @@ RUN chown -R ${USER}:${USER} /home/${USER} \
 USER $USER
 
 # install acados
-RUN . /.install_utils/install_acados.sh ~/acados
+COPY --chown=$UID:$GID .devcontainer/.install_utils/install_acados.sh /install_acados.sh
+RUN . /install_acados.sh ~/acados
 
 ENTRYPOINT [ "bash", "/.install_utils/ros_entrypoint.sh" ]
