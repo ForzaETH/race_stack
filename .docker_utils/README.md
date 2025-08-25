@@ -45,7 +45,7 @@ This should take much less time, less than 1 minute.
 It can be done with the following command:
 ```bash
 cd <race_stack folder>
-mkdir -p ../cache/noetic/build ../cache/noetic/devel ../cache/noetic/logs
+mkdir -p ../race_stack_cache/noetic/build ../race_stack_cache/noetic/devel ../race_stack_cache/noetic/logs
 ```
 
 **Note**: In case it is particularly problematic to create such a folder structure two parent directories up, it can also be created just one directoy up, but the cache mounting point must be changed in the devcontainer.json for the build, devel and log folder.  
@@ -86,7 +86,7 @@ docker compose build nuc
 It can be done with the following command:
 ```bash
 cd <race_stack folder>
-mkdir -p ../cache/noetic/build ../cache/noetic/devel ../cache/noetic/logs
+mkdir -p ../race_stack_cache/noetic/build ../race_stack_cache/noetic/devel ../race_stack_cache/noetic/logs
 ```
 
 **Note**: In case it is particularly problematic to create such a folder structure two parent directories up, it can also be created just one directoy up, but the cache mounting point must be changed in the devcontainer.json for the build, devel and log folder.  

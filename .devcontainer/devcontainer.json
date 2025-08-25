@@ -35,9 +35,9 @@
         "source=/home/${localEnv:USER}/.Xauthority,target=/tmp/.Xauthority,type=bind,consistency=cached",
         "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
         "source=/dev,target=/dev,type=bind,consistency=cached",
-        "source=${localWorkspaceFolder}/../cache/noetic/build,target=/home/${localEnv:USER}/catkin_ws/build,type=bind",
-        "source=${localWorkspaceFolder}/../cache/noetic/devel,target=/home/${localEnv:USER}/catkin_ws/devel,type=bind",
-        "source=${localWorkspaceFolder}/../cache/noetic/logs,target=/home/${localEnv:USER}/catkin_ws/logs,type=bind"
+        "source=${localWorkspaceFolder}/../race_stack_cache/noetic/build,target=/home/${localEnv:USER}/catkin_ws/build,type=bind",
+        "source=${localWorkspaceFolder}/../race_stack_cache/noetic/devel,target=/home/${localEnv:USER}/catkin_ws/devel,type=bind",
+        "source=${localWorkspaceFolder}/../race_stack_cache/noetic/logs,target=/home/${localEnv:USER}/catkin_ws/logs,type=bind"
     ],
     "postCreateCommand": "/bin/bash /home/${localEnv:USER}/catkin_ws/src/race_stack/.devcontainer/.install_utils/post_installation.sh"
 }

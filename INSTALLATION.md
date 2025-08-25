@@ -50,7 +50,7 @@ Then check that the following folder structure is existing:
 ```bash
 <race_stack directory>/../
 ...
-├── cache
+├── race_stack_cache
 │   └── noetic
 │       ├── build
 │       ├── devel
@@ -60,7 +60,7 @@ Then check that the following folder structure is existing:
 It can be created from the command line, for example:
 ```bash
 cd <race_stack folder>
-mkdir -p ../cache/noetic/build ../cache/noetic/devel ../cache/noetic/logs
+mkdir -p ../race_stack_cache/noetic/build ../race_stack_cache/noetic/devel ../race_stack_cache/noetic/logs
 ```
 Then launch the devcontainer from VS Code
 
