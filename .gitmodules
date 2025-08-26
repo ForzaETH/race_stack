@@ -37,3 +37,6 @@
 [submodule "perception/TinyCenterSpeed"]
 	path = perception/TinyCenterSpeed
 	url = https://github.com/ForzaETH/TinyCenterSpeed.git
+[submodule "perception/norfair_tracker"]
+	path = perception/norfair_tracker
+	url = https://github.com/ForzaETH/norfair_tracker
