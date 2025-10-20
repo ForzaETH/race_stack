@@ -6,7 +6,8 @@
     <arg name="ctrl_algo" default="MAP" /> <!--  MAP / PP / STMPC / KMPC-->
     <arg name="measure" default="False" />
     <arg name="perception" default="Norfair" /> <!-- ABD / Norfair / False. False to disable the perception module when using the dummy obstacle publisher -->
-    <arg name="planner" default="spliner" /> <!--  spliner / predictive_spliner / graph_based / frenet -->
+    <arg name="planner" default="spliner" /> <!--  spliner / predictive_spliner / graph_based / frenet / multiopp_pspliner -->
+    <arg name="num_opponents" default="1" /> <!-- only used if planner is multiopp_pspliner -->
     <param name="measure" value="$(arg measure)" />
 
     <!-- CONTROLLER -->
@@ -126,6 +127,37 @@
         <arg name="debug" value="False"/>
         <arg name="measure" value="$(arg measure)"/>
         </include>
+    </group>
+
+    <!-- PLANNER MULTIOPPONENT PREDICTIVE SPLINER-->
+    <group if="$(eval planner == 'multiopp_pspliner')">
+        <!-- launch dynamic reconfigure for tuning State Machine and State Machine itself -->
+        <node pkg="state_machine" type="dynamic_statemachine_server.py" name="dynamic_statemachine_server" output="screen"/>
+        <node pkg="state_machine" type="state_machine_node.py" name="state_machine" output="screen">
+                <rosparam file="$(find stack_master)/config/state_machine_params.yaml" />
+                <!--  tell state machine to pass entire logic -->
+                <param name="timetrials_only" value="False"/>
+                <!--  tell state machine which OT strategy we are using -->
+                <param name="ot_planner" value="predictive_spliner"/>
+        </node>
+
+        <!-- launch collision predictor and dynamic reconfigure -->
+        <node pkg="multiopp_pspliner" type="dynamic_collision_server.py" name="dynamic_collision_tuner_node" output="screen"/>
+        <node pkg="multiopp_pspliner" type="collision_prediction.py" name="collision_predictor" output="screen"/>
+
+        <!-- launch sqp node and dynamic sqp server -->
+        <node pkg="multiopp_pspliner" type="dynamic_sqp_server.py" name="dynamic_sqp_tuner_node" output="screen"/>
+        <node pkg="multiopp_pspliner" type="sqp_avoidance_node.py" name="planner_sqp" output="screen"/>
+
+        <!-- launch waypoint updater -->
+        <param name="maps_dir" type="string" value="$(find stack_master)/maps/" />
+        <node pkg="multiopp_pspliner" type="update_waypoints.py" name="waypoint_updater" output="screen"/>
+
+        <!-- launch GP_nodes if GP_trajectory is gp_predictive -->
+        <node pkg="multiopp_pspliner" type="gp_node_multiprocessing.py" name="trajectory_prediction" output="screen">
+            <param name="num_opponents" value="$(arg num_opponents)"/>
+        </node>
+
     </group>
     <!-- ######################################################PLANNERS###################################################### -->
 

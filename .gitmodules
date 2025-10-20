@@ -40,3 +40,6 @@
 [submodule "perception/norfair_tracker"]
 	path = perception/norfair_tracker
 	url = https://github.com/ForzaETH/norfair_tracker
+[submodule "planner/multiopponent-pspliner"]
+	path = planner/multiopponent-pspliner
+	url = https://github.com/ForzaETH/multiopponent-pspliner
