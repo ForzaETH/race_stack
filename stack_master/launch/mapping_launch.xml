@@ -73,7 +73,9 @@
         <param name="map_name" value="$(var map_name)" />
     </node>
 
-    <!-- Launch gb repub without arguments when mapping-->
-    <node name="global_republisher" pkg="global_planner" exec="global_trajectory_publisher" />
+    <!-- Launch global trajectory publisher via launch wrapper -->
+    <include file="$(find-pkg-share global_planner)/launch/global_trajectory_publisher_launch.xml">
+        <arg name="map_path" value="$(var map_src_path)/$(var map_name).yaml" />
+    </include>
 
 </launch>

@@ -55,10 +55,10 @@
     <param name="use_sim_time" value="$(var sim)" />
   </node>
 
-  <!-- launch global trajectory republisher -->
-  <node pkg="global_planner" name="global_republisher" exec="global_trajectory_publisher">
-    <param name="map_path" value="$(var map_path)" />
-  </node>
+  <!-- launch global trajectory republisher via included launch -->
+  <include file="$(find-pkg-share global_planner)/launch/global_trajectory_publisher_launch.xml">
+    <arg name="map_path" value="$(var map_path)" />
+  </include>
 
 
   <!-- launch sector tuner -->
