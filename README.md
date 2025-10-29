@@ -1,4 +1,8 @@
 # ForzaETH Race Stack at Center for Project Based Learning
+  
+[![ROS1 Noetic](https://img.shields.io/badge/ROS-Noetic-orange.svg?logo=ros)](http://wiki.ros.org/noetic) [![ROS2 Foxy](https://img.shields.io/badge/ROS2-Foxy-blue.svg?logo=ros2)](http://wiki.ros.org/foxy) [![ROS2 Humble](https://img.shields.io/badge/ROS2-Humble-green.svg?logo=ros2)](http://wiki.ros.org/humble) [![ROS2 Jazzy](https://img.shields.io/badge/ROS2-Jazzy-purple.svg?logo=ros2)](http://wiki.ros.org/jazzy)
+  
+A modular ROS1-based software stack for scaled autonomous head-to-head racing on 1/10th-scale vehicles, built on commercial off-the-shelf hardware.
 
 <a href="https://arxiv.org/abs/2403.11784">
     <img src="https://img.shields.io/badge/arXiv.org-2403.11784-b31b1b" alt="arXiv e-print Badge">
@@ -12,9 +16,31 @@ Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Auton
 
 **NOTE**: We have a **ROS2** version of this stack, check out the other branches of this repo! 
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Getting started](#getting-started)
+- [Contributing](#contributing)
+- [Acknowledgement](#acknowledgement)
+- [Citing ForzaETH Race Stack](#citing-forzaeth-race-stack)
+- [Additional Publications](#additional-publications)
+
 ## Installation
 
 We provide an installation guide [here](./INSTALLATION.md).
+
+## Quick Start
+
+To launch a quick end-to-end simulation and run time trials:
+
+```bash
+# Start the simulator with the base system
+roslaunch stack_master base_system.launch map_name:=<map> racecar_version:=NUC2 sim:=True
+
+# Run time trials with the default controller
+roslaunch stack_master time_trials.launch
+```
 
 ## Getting started
 
@@ -72,3 +98,7 @@ Please refer to the [`system_identification` README](https://github.com/ForzaETH
 
 ### Predictive Spliner: Data-Driven Overtaking in Autonomous Racing Using Opponent Trajectory Prediction
 Please refer to the [`predictive-spliner` README](https://github.com/ForzaETH/predictive-spliner).
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
