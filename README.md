@@ -1,14 +1,9 @@
 # ForzaETH Race Stack at Center for Project Based Learning
   
-[![ROS1 Noetic](https://img.shields.io/badge/ROS-Noetic-orange.svg?logo=ros)](http://wiki.ros.org/noetic) [![ROS2 Foxy](https://img.shields.io/badge/ROS2-Foxy-blue.svg?logo=ros2)](http://wiki.ros.org/foxy) [![ROS2 Humble](https://img.shields.io/badge/ROS2-Humble-green.svg?logo=ros2)](http://wiki.ros.org/humble) [![ROS2 Jazzy](https://img.shields.io/badge/ROS2-Jazzy-purple.svg?logo=ros2)](http://wiki.ros.org/jazzy)
-  
-A modular ROS1-based software stack for scaled autonomous head-to-head racing on 1/10th-scale vehicles, built on commercial off-the-shelf hardware.
+[![ROS1 Noetic](https://img.shields.io/badge/ROS-Noetic-orange.svg?logo=ros)](http://wiki.ros.org/noetic) [![ROS2 Foxy](https://img.shields.io/badge/ROS2-Foxy-blue.svg?logo=ros2)](http://wiki.ros.org/foxy) [![ROS2 Humble](https://img.shields.io/badge/ROS2-Humble-green.svg?logo=ros2)](http://wiki.ros.org/humble) [![ROS2 Jazzy](https://img.shields.io/badge/ROS2-Jazzy-purple.svg?logo=ros2)](http://wiki.ros.org/jazzy)[![arXiv.org-2403.11784](https://img.shields.io/badge/arXiv.org-2403.11784-b31b1b)](https://arxiv.org/abs/2403.11784)
 
-<a href="https://arxiv.org/abs/2403.11784">
-    <img src="https://img.shields.io/badge/arXiv.org-2403.11784-b31b1b" alt="arXiv e-print Badge">
-</a>
-
-ForzaETH Race Stack by the [D-ITET Center for Project Based Learning (PBL)](https://pbl.ee.ethz.ch/) at ETH Zurich. 
+A modular software stack for scaled autonomous head-to-head racing on 1/10th-scale vehicles, built on commercial off-the-shelf hardware.
+Used by [ForzaETH](https://forzaeth.ch/) and the [D-ITET Center for Project Based Learning (PBL)](https://pbl.ee.ethz.ch/) at ETH Zurich. 
 
 Accompanying this repository, a paper titled *ForzaETH Race Stack - Scaled Autonomous Head-to-Head Racing on Fully Commercial off-the-Shelf Hardware* is available on [Journal of Field Robotics](https://onlinelibrary.wiley.com/doi/pdf/10.1002/rob.22429), detailing the system's architecture, algorithms, and performance benchmarks.
 
