@@ -715,7 +715,17 @@ class StateMachine:
 
         # Handle wrapping
         if self.last_valid_avoidance_wpnts is not None:
-            if self.last_valid_avoidance_wpnts[-1].s_m > self.last_valid_avoidance_wpnts[0].s_m:
+            if len(self.last_valid_avoidance_wpnts) > len(splini_glob):
+                # avoidance over more than 1 lap
+                splini_idxs = [
+                    int(s % len(splini_glob))
+                    for s in range(
+                        int(self.last_valid_avoidance_wpnts[0].s_m / self.waypoints_dist + 0.5),
+                        int((self.max_s + self.last_valid_avoidance_wpnts[0].s_m) / self.waypoints_dist + 0.5),
+                    )
+                ]
+                    
+            elif self.last_valid_avoidance_wpnts[-1].s_m > self.last_valid_avoidance_wpnts[0].s_m:
                 splini_idxs = [
                     s
                     for s in range(
@@ -725,7 +735,7 @@ class StateMachine:
                 ]
             else:
                 splini_idxs = [
-                    int(s % (self.max_s / self.waypoints_dist) + 0.5)
+                    int(s % len(splini_glob))
                     for s in range(
                         int(self.last_valid_avoidance_wpnts[0].s_m / self.waypoints_dist + 0.5),
                         int((self.max_s + self.last_valid_avoidance_wpnts[-1].s_m) / self.waypoints_dist + 0.5),
