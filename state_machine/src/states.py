@@ -10,9 +10,12 @@ def GlobalTracking(state_machine: StateMachine) -> List[Wpnt]:
     s = int(state_machine.cur_s/state_machine.waypoints_dist + 0.5)
     return [state_machine.glb_wpnts[(s + i)%state_machine.num_glb_wpnts] for i in range(state_machine.n_loc_wpnts)]
 
-def Trailing(state_machine: StateMachine) -> List[Wpnt]:
-    # This allows us to trail on the last valid spline if necessary
-    if (state_machine.ot_planner == "spliner" or state_machine.ot_planner == "predictive_spliner") and state_machine.last_valid_avoidance_wpnts is not None:
+def Trailing(state_machine: StateMachine):
+    if state_machine._check_close_to_raceline():
+        s = int(state_machine.cur_s/state_machine.waypoints_dist + 0.5)
+        return [state_machine.glb_wpnts[(s + i)%state_machine.num_glb_wpnts] for i in range(state_machine.n_loc_wpnts)]
+    elif (state_machine.ot_planner == "spliner" or state_machine.ot_planner == "predictive_spliner") and state_machine.last_valid_avoidance_wpnts is not None:
+        # This allows us to trail on the last valid spline if necessary
         splini_wpts = state_machine.get_splini_wpts()
         s = int(state_machine.cur_s/state_machine.waypoints_dist + 0.5)
         return [splini_wpts[(s + i)%state_machine.num_glb_wpnts] for i in range(state_machine.n_loc_wpnts)]

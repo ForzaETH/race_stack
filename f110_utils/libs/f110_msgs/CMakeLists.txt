@@ -51,6 +51,7 @@ find_package(catkin REQUIRED COMPONENTS
     GapData.msg
     PidData.msg
     OpponentTrajectory.msg
+    OpponentTrajectories.msg
     OppWpnt.msg
     ProjOppPoint.msg
     ProjOppTraj.msg
