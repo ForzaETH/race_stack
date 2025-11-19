@@ -1,11 +1,23 @@
 # Stack Master
 Here is the `stack_master`, it is intended to be the main interface between the user and the PBL ForzaETH F110 system.
 
+### Building inside the Docker container on the real car
+Skip the `f110_gym` and `f1tenth_gym_ros` packages when building inside the Docker container on the real car, otherwise the build will fail:
+``` bash
+colcon build --packages-skip f110_gym f1tenth_gym_ros --symlink-install
+```
+
 ### Mapping (on the real car)
 Run the mapping launch file, specifying the map name and the NUCX version:
 ```shell
 ros2 launch stack_master mapping_launch.xml racecar_version:=<NUCX used> map_name:=<map name of choice>
 ```
+
+Currently, our car is reusing the NUC2 configuration folder:
+``` bash
+ros2 launch stack_master mapping_launch.xml racecar_version:=NUC2 map_name:='ING1'
+```
+
   - `<map name of choice>` can be any name with no white space. Conventionally we use the location name (eg, 'hangar', 'ETZ', 'icra') followed by the day of the month followed by an incremental version number. For instance, `hangar_12_v0`.
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car).
 
