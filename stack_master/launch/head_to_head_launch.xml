@@ -4,6 +4,7 @@
     <arg name="overtake_mode" default="spliner" /> <!--  spliner / graph_based -->
     <arg name="ctrl_algo" default="MAP"/> <!-- MAP / PP -->
     <arg name="measure" default="False" />
+    <arg name="use_od" default="True" />
 
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
@@ -23,8 +24,10 @@
     </group>
 
     <!-- PERCEPTION -->
-    <include file="$(find-pkg-share perception)/launch/perception_launch.xml">
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
-    </include> 
+    <group if="$(var use_od)">
+        <include file="$(find-pkg-share perception)/launch/perception_launch.xml">
+            <arg name="param_file" value="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
+        </include>
+    </group>
     
 </launch>
