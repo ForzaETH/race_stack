@@ -6,6 +6,7 @@ import yaml
 import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from typing import Tuple, Callable
 from matplotlib.widgets import Button
 from pathlib import Path

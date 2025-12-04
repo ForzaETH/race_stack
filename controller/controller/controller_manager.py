@@ -360,7 +360,7 @@ class Controller(Node):
             if future.done():
                 try:
                     res = future.result()
-                    return getattr(res.values[0], self.type_arr[res.values[0].type])
+                    return return_param_value(res.values[0])
                 except Exception as e:
                     self.get_logger().warn('Service call failed %r' % (e,))
                 break
