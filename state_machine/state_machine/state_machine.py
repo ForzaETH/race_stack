@@ -16,7 +16,7 @@ from f110_msgs.msg import WpntArray, OTWpntArray, ObstacleArray
 from visualization_msgs.msg import Marker, MarkerArray
 try:
     from vesc_msgs.msg import VescStateStamped
-except:
+except BaseException:
     pass
 
 from state_machine.transitions import dummy_transition, timetrials_transition, head_to_head_transition
@@ -25,8 +25,10 @@ from state_machine.states import DefaultStateLogic
 from stack_master.parameter_event_handler import ParameterEventHandler
 from state_machine.state_machine_params import StateMachineParams
 
+
 def time_to_float(time_instant: Time):
     return time_instant.sec + time_instant.nanosec * 1e-9
+
 
 class StateMachine(Node):
     def __init__(self):
@@ -35,12 +37,12 @@ class StateMachine(Node):
                          automatically_declare_parameters_from_overrides=True)
         # PARAMETER DECLARATION
         self.params = StateMachineParams(self)
-        
-        self.ftg_disabled = True # TODO fix with global prams?
+
+        self.ftg_disabled = False  # TODO fix with global prams?
 
         # update on parameter changes for rate
         self.add_on_set_parameters_callback(self.params.parameters_callback)
-        
+
         # SUBSCRIPTIONS
         if self.params.test_on_car:
             self.battery_sub = self.create_subscription(VescStateStamped, "/vesc/sensors/core", self.battery_cb, 10)
@@ -48,24 +50,26 @@ class StateMachine(Node):
             self.battery_level = self.params.volt_threshold + 1
         self.max_speed = None
         self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_cb, 10)
-        while self.max_speed is None: # equivalent of wait for message
+        while self.max_speed is None:  # equivalent of wait for message
             self.get_logger().info("Waiting for global waypoints message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
 
-        
         self.glb_wpnts = None
         self.num_glb_wpnts = 0
         self.track_length = 1
         self.gb_max_idx = 10
         self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, 10)
-        while self.glb_wpnts is None: # equivalent of wait for message
+        while self.glb_wpnts is None:  # equivalent of wait for message
             self.get_logger().info("Waiting for scaled global waypoints message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
 
-        
         self.cur_s = None
         self.cur_d = None
-        self.create_subscription(Odometry, '/car_state/frenet/odom',self.car_state_frenet_cb, 10) # car frenet coordinates
+        self.create_subscription(
+            Odometry,
+            '/car_state/frenet/odom',
+            self.car_state_frenet_cb,
+            10)  # car frenet coordinates
         while self.cur_s is None:
             self.get_logger().info("Waiting for car state frenet message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
@@ -77,7 +81,6 @@ class StateMachine(Node):
                 self.get_logger().info("Waiting for car state pose message", throttle_duration_sec=0.5)
                 rclpy.spin_once(self)
 
-
             self.last_valid_avoidance_wpnts = None
             self.splini_ttl_counter = 0
             self.avoidance_wpnts = None
@@ -85,14 +88,14 @@ class StateMachine(Node):
 
             self.obstacles = []
             self.create_subscription(ObstacleArray, "/perception/obstacles", self.obstacles_cb, 10)
-        
+
             # TODO setup things for sectors and overtaking sectors
             self.only_ftg_zones = []
             self.ftg_counter = 0
 
             self.overtake_zones = []
 
-        # INITIALIZATIONS        
+        # INITIALIZATIONS
         self.waypoints_dist = 0.1
         self.state = StateType(self.params.initial_state)
         self.local_waypoints = WpntArray()
@@ -109,18 +112,18 @@ class StateMachine(Node):
             self.state_transition = head_to_head_transition
         else:
             raise NotImplementedError(f"Mode {self.params.mode} not recognized")
-                
+
         # choose what to do in the different states
         self.state_logic = DefaultStateLogic
-            
+
         # PUBLICATIONS
         self.state_pub = self.create_publisher(String, 'state', 10)
         self.state_marker_pub = self.create_publisher(Marker, 'state_marker', 10)
         self.loc_wpnt_pub = self.create_publisher(WpntArray, 'local_waypoints', 10)
         self.vis_loc_wpnt_pub = self.create_publisher(MarkerArray, 'local_waypoints/markers', 10)
-        
+
         # main loop
-        self.main_loop = self.create_timer(1/self.params.rate_hz, self.main_loop_callback)
+        self.main_loop = self.create_timer(1 / self.params.rate_hz, self.main_loop_callback)
 
         # set up ot param reading
         self.init_ot_params()
@@ -160,7 +163,7 @@ class StateMachine(Node):
             self.splini_ttl_counter = int(self.params.splini_ttl * self.params.rate_hz)
             self.avoidance_wpnts = data
         else:
-        # If empty we don't overwrite the avoidance waypoints
+            # If empty we don't overwrite the avoidance waypoints
             pass
 
     def obstacles_cb(self, data):
@@ -168,25 +171,25 @@ class StateMachine(Node):
             self.obstacles = data.obstacles
         else:
             self.obstacles = []
-    
+
     def car_state_cb(self, data: PoseStamped):
         x = data.pose.position.x
         y = data.pose.position.y
-        rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y, 
-                                       data.pose.orientation.z, data.pose.orientation.w])
+        rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y,
+                                  data.pose.orientation.z, data.pose.orientation.w])
         rot_euler = rot.as_euler('xyz', degrees=False)
         theta = rot_euler[2]
 
         self.current_position = [x, y, theta]
-    
-    ### Properties to evaulate state transitions
+
+    # Properties to evaulate state transitions
     @property
-    def _low_bat(self)->bool:
+    def _low_bat(self) -> bool:
         if self.battery_level < self.params.volt_threshold:
             return True
         else:
             return False
-    
+
     @property
     def _check_only_ftg_zone(self) -> bool:
         ftg_only = False
@@ -207,7 +210,7 @@ class StateMachine(Node):
     def _check_ot_sector(self) -> bool:
         for sector in self.ot_sectors:
             if sector['ot_flag']:
-                if (sector['start'] <= self.cur_s / self.waypoints_dist <= (sector['end']+1)):
+                if (sector['start'] <= self.cur_s / self.waypoints_dist <= (sector['end'] + 1)):
                     return True
         return False
 
@@ -257,7 +260,7 @@ class StateMachine(Node):
                 # Get d wrt to mincurv from the overtaking line
                 if abs(obs_d) < self.params.lateral_width_gb_m:
                     gb_free = False
-                    #self.get_logger().info(f"GB_FREE False, obs dist to ot lane: {obs_d} m")
+                    # self.get_logger().info(f"GB_FREE False, obs dist to ot lane: {obs_d} m")
                     break
 
         return gb_free
@@ -282,7 +285,8 @@ class StateMachine(Node):
             abs(time_to_float(self.avoidance_wpnts.header.stamp) - time_to_float(self.avoidance_wpnts.last_switch_time))
             < self.params.splini_hyst_timer_sec
         ):
-            self.get_logger().debug(f"Still too fresh into the switch...{abs(time_to_float(self.avoidance_wpnts.last_switch_time) - time_to_float(self.get_clock().now().to_msg()))}")
+            self.get_logger().debug(
+                f"Still too fresh into the switch...{abs(time_to_float(self.avoidance_wpnts.last_switch_time) - time_to_float(self.get_clock().now().to_msg()))}")
             return False
         else:
             # If the splinis are valid update the last valid ones
@@ -312,13 +316,13 @@ class StateMachine(Node):
         # NOTE: unused flag, but could be useful
         emergency_break = False
         if self.obstacles != []:
-            horizon = self.emergency_break_horizon # Horizon in front of cur_s [m]
+            horizon = self.emergency_break_horizon  # Horizon in front of cur_s [m]
 
             for obs in self.obstacles:
                 # Wrapping madness to check if infront
                 dist_to_obj = (obs.s_center - self.cur_s) % self.track_length
                 if dist_to_obj < horizon:
-            
+
                     # Get d wrt to mincurv from the overtaking line
                     local_wpnt_idx = np.argmin(
                         np.array([abs(avoid_s.s_m - obs.s_center) for avoid_s in self.local_waypoints.wpnts])
@@ -334,6 +338,7 @@ class StateMachine(Node):
     ###########
     # HELPERS #
     ###########
+
     def get_splini_wpts(self) -> WpntArray:
         """Obtain the waypoints by fusing those obtained by spliner with the
         global ones.
@@ -380,15 +385,17 @@ class StateMachine(Node):
         self.n_ot_sectors = None
         self.ot_param_names = None
         self.ot_sectors = None
-        
+
         request = GetParameters.Request()
         request.names = ['n_sectors']
         future = self.parameter_client.call_async(request)
         rclpy.spin_until_future_complete(self, future)
 
-        # TODO structure of request is also very ugly dependent on the parameter structure on the other side, could be improved
+        # TODO structure of request is also very ugly dependent on the parameter
+        # structure on the other side, could be improved
         if future.result() is not None:
-            self.n_ot_sectors = future.result().values[0].integer_value # TODO careful with this types, TY util could be better
+            # TODO careful with this types, TY util could be better
+            self.n_ot_sectors = future.result().values[0].integer_value
             self.get_logger().info(f'Got {self.n_ot_sectors} sectors')
 
             starts = [f'Overtaking_sector{i}.start' for i in range(self.n_ot_sectors)]
@@ -404,16 +411,19 @@ class StateMachine(Node):
             rclpy.spin_until_future_complete(self, future)
             if future.result() is not None:
                 for i in range(self.n_ot_sectors):
-                    start = future.result().values[i].integer_value # TODO careful with this types, TY util could be better
-                    end = future.result().values[i + self.n_ot_sectors].integer_value # TODO careful with this types, TY util could be better
-                    ot_flag = future.result().values[i + 2 * self.n_ot_sectors].bool_value # TODO careful with this types, TY util could be better
+                    # TODO careful with this types, TY util could be better
+                    start = future.result().values[i].integer_value
+                    # TODO careful with this types, TY util could be better
+                    end = future.result().values[i + self.n_ot_sectors].integer_value
+                    # TODO careful with this types, TY util could be better
+                    ot_flag = future.result().values[i + 2 * self.n_ot_sectors].bool_value
                     self.ot_sectors.append({'start': start, 'end': end, 'ot_flag': ot_flag})
                 self.get_logger().info(f'OT sectors obtained: {self.ot_sectors}')
             else:
                 self.get_logger().error(f'Service call failed {future.exception()}')
         else:
             self.get_logger().error(f'Service call failed {future.exception()}')
-        
+
         # once initialization is finished, the event handler can be used
         self.handler = ParameterEventHandler(self)
 
@@ -426,8 +436,9 @@ class StateMachine(Node):
 
     def ot_flag_cb(self, p: Parameter):
         self.get_logger().info(f'OT flag changed: {p.name} {p.value.bool_value}')
-        changed_sector_int = int(p.name.split('.')[0][-1]) # TODO ultra hardcoded ugliness
-        self.ot_sectors[changed_sector_int]['ot_flag'] = p.value.bool_value # TODO careful with this types, TY util could be better
+        changed_sector_int = int(p.name.split('.')[0][-1])  # TODO ultra hardcoded ugliness
+        # TODO careful with this types, TY util could be better
+        self.ot_sectors[changed_sector_int]['ot_flag'] = p.value.bool_value
 
     def get_ot_params(self):
         # the first time we need to get the number of sectors
@@ -451,7 +462,7 @@ class StateMachine(Node):
     def _pub_local_waypoints(self, wpts: WpntArray):
         loc_markers = MarkerArray()
         loc_wpnts = wpts
-        # set stamp to now         
+        # set stamp to now
         loc_wpnts.header.stamp = self.get_clock().now().to_msg()
         loc_wpnts.header.frame_id = "map"
 
@@ -480,7 +491,7 @@ class StateMachine(Node):
             self.loc_wpnt_pub.publish(loc_wpnts)
 
         self.vis_loc_wpnt_pub.publish(loc_markers)
-    
+
     def visualize_state(self, state: StateType):
         """
         Function that visualizes the state of the car by displaying a colored cube in RVIZ.
@@ -538,7 +549,7 @@ class StateMachine(Node):
 
     #############
     # MAIN LOOP #
-    #############    
+    #############
     def main_loop_callback(self):
         self.get_logger().debug(f"Current state: {self.state}")
         # transition logic
@@ -554,7 +565,7 @@ class StateMachine(Node):
         self.local_waypoints.wpnts = self.state_logic(self)
         self._pub_local_waypoints(self.local_waypoints)
 
-        if self.params.mode=="head_to_head" and self.params.overtake_mode == "spliner":
+        if self.params.mode == "head_to_head" and self.params.overtake_mode == "spliner":
             self.splini_ttl_counter -= 1
             # Once ttl has reached 0 we overwrite the avoidance waypoints with the empty waypoints
             if self.splini_ttl_counter <= 0:
@@ -563,6 +574,8 @@ class StateMachine(Node):
                 self.splini_ttl_counter = -1
 
 # defined as entry point in setup.py:
+
+
 def main(args=None):
     rclpy.init(args=args)
 
@@ -572,6 +585,7 @@ def main(args=None):
 
     state_machine.destroy_node()
     rclpy.shutdown()
-    
+
+
 if __name__ == '__main__':
     main()
