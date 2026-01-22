@@ -4,12 +4,13 @@
 ## Clone Repo
 Be aware to clone the ROS 2 branch!
 ```bash
-git clone -b ros2-humble --recurse-submodules git@github.com:ForzaETH/race_stack.git 
-cd race_stack
+git clone -b ros2-humble --recurse-submodules https://github.com/Ingenuity-Labs-Racing/ForzaETH_Race_Stack.git 
 ```
 
 ## Structure
-The docker image is defined with the [Dockerfile](../.devcontainer/Dockerfile) and two very similar version can be built, for either `SIM` or `NUC` with the argument `SIM` to 1 or 0 respectively.
+The base docker image is defined with the [Dockerfile](../.devcontainer/Dockerfile). Two version exist for different architectures. 
+- [Dockerfile.x86](../.devcontainer/Dockerfile.x86) for x86 machines, such as most Intel machines
+- [Dockerfile.arm](../.devcontainer/Dockerfile.x86) for ARM machines, such as the Nvidia Jetson
 
 
 **NOTE**: it is suggested to set a static IP for the robot with the ROS_HOSTNAME environment variable, so that the IP of the robot is always the same, as from [networking structure](../stack_master/checklists/networking.md).
@@ -113,7 +114,10 @@ cd <race_stack folder>
 
 **Step 1/5: setup the X forwarding** 
 
-In case you want to use the VSCode devcontainer in a remote machine, and you want graphical application to be forwarded, you need to setup the xauth file for the container. This can be done by running the following command:
+In case you want to use the VSCode devcontainer in a remote machine, and you want graphical application to be forwarded, you need to setup the xauth file for the container. This is not necessary if only using the container locally, for example to run the simulator on the local machine. 
+
+This can be done by running the following command:
+
 ```bash
 cd <race_stack folder>
 source .devcontainer/xauth_setup.sh
@@ -133,7 +137,7 @@ localhost:10.0
 
 **Step 2/5: create the folder structure for caching colcon builds**
 
-If not present, further create a folder structure that resembles the following. Note that it is a folder up from the position of the `race_stack`.
+Create a folder structure that resembles the following. This is done so that `colcon build` artifacts are mounted onto the machine hosting the Docker container. Note that it is a folder up from the position of the `race_stack`.
 
 ```bash
 <race_stack directory>/../
@@ -154,6 +158,12 @@ mkdir -p ../cache/humble/build ../cache/humble/install ../cache/humble/log
 
 **Step 3/5: Build the container**
 
+Export environment variables before building the Docker container:
+```bash
+export UID=$(id -u)
+export GID=$(id -g)
+```
+
 In a terminal connected to the remote machine you want to use, move to the location of the racestack, and build the docker container with the compose command:
 **For x86 platforms**:
 ```bash
@@ -164,7 +174,12 @@ docker compose build nuc
 docker compose build jet
 ```
 
-Change the `image` attribute in the devcontainer file correspondingly, change ´nuc´ to ´jet´ in case of an arm platform:
+Make sure the `image` attribute in the [devcontainer.json](../.devcontainer/devcontainer.json) matches the architecture you require
+
+- `"image": "jet_forzaeth_racestack_ros2:humble",` for ARM 
+- `"image": "nuc_forzaeth_racestack_ros2:humble",` for x86
+
+For example, for x86, it should be:
 ```json5
 //<race_stack_directory>/.devcontainer/devcontainer.json
 ...
@@ -176,15 +191,20 @@ Change the `image` attribute in the devcontainer file correspondingly, change ´
 
 **Note** this step must be done strictly after the completion of step 1, as otherwise the permission file mounted in the devcontainer might be wrong.
 
-Open the devcontainer on the car, first by opening up VSCode, then connecting to the car with the remote connection button to the bottom left (Connect to Host...), then open the race stack folder, and reopen in the devcontainer.
-Once in the devcontainer, open a terminal and export the `DISPLAY` variable number. For example:
-```bash
-export DISPLAY=localhost:10.0
-```
-Note: the full <name>:<port> couple is needed as from step 1.
+1. **For use with display forwarding on a remote machine**:
 
+    Open the devcontainer on the car, first by opening up VSCode, then connecting to the car with the remote connection button to the bottom left (Connect to Host...), then open the race stack folder, and reopen in the devcontainer.
+    Once in the devcontainer, open a terminal and export the `DISPLAY` variable number. For example:
+    ```bash
+    export DISPLAY=localhost:10.0
+    ```
+    Note: the full <name>:<port> couple is needed as from step 1.
 
-You can now enjoy a terminal with GUI forwarding! If you need multiple GUI applications, make sure to export the `DISPLAY` variable in each terminal you want to use GUI applications in.
+    You can now enjoy a terminal with GUI forwarding! If you need multiple GUI applications, make sure to export the `DISPLAY` variable in each terminal you want to use GUI applications in.
+
+2. **For local use**:
+
+    Open the race stack folder in VSCode. Hit Ctrl+Shift+P to open the command palette, and select **Dev Containers: Reopen in Container**
 
 **Step 5/5: Open additional terminals** 
 You can also attach multiple terminals to the container with the secondary script, from outside VSCode:
@@ -200,6 +220,20 @@ To have more information on how to use GUI applications with remote containers, 
 
 ---
 [Go back to the main README](../README.md)
+
+**Bonus: Verify your installation**
+
+To verify the installation was successful, make sure you are navigate in the `~/ws` directory inside the Docker container (whether in VSCode Dev Container or plain Docker shell) and do `colcon build` to ensure all packages can be built.
+
+Next, test the time trial by launching the base system followed by the time trial: 
+
+```bash
+ros2 launch stack_master base_system_launch.xml racecar_version:=SIM map_name:=glc_ot_ez sim:=True
+
+ros2 launch stack_master time_trials_launch.xml racecar_version:=SIM
+```
+
+You should see the car driving around the track!
 
 ### To manually install dependencies (should not be necessary if you build in docker):
 ```bash
