@@ -230,7 +230,7 @@ Next, test the time trial by launching the base system followed by the time tria
 ```bash
 ros2 launch stack_master base_system_launch.xml racecar_version:=SIM map_name:=glc_ot_ez sim:=True
 
-ros2 launchs stack_master time_trials_launch.xml racecar_version:=SIM
+ros2 launch stack_master time_trials_launch.xml racecar_version:=SIM
 ```
 
 You should see the car driving around the track!
