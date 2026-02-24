@@ -18,3 +18,7 @@
 	path = sensors/vesc
 	url = https://github.com/ForzaETH/vesc.git
 	branch = foxy
+[submodule "system_identification/on-track-sysid"]
+	path = system_identification/on-track-sysid
+	url = https://github.com/Ingenuity-Labs-Racing/On-Track-SysID.git
+	branch = main

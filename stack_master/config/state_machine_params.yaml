@@ -8,7 +8,16 @@ state_machine:
     volt_threshold: 11. # [V] voltage threshold below which we start screaming
 
     force_state: False  # force state to be the one specified in force_state_choice
+    
+    #FTG params
+    debug: False  # publishes filtered scans if True but may not run smoothly
 
+    safety_radius: 30  # helps not to cut corners
+    max_lidar_dist: 9.
+
+    range_offset: 180  # LiDAR has 1080 range points, only consider [range_offset,-range_offset]
+    track_width: 3  # approx gap distance on a straight when there are no obstacles (set debug to True to see gap distances during driving)
+    max_speed: 5.0
 
     splini_ttl: 2. # [s] ttl counter for validity of spliner waypoints -> NOW DYNAMIC RECONFIGURABLE
 

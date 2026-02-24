@@ -7,10 +7,10 @@ from rclpy.node import Node
 
 
 class FTG_Controller(Node):
-    #Lidar processing params
-    PREPROCESS_CONV_SIZE = 3
-    
-    #Steering params
+    # Lidar processing params
+    PREPROCESS_CONV_SIZE = 2
+
+    # Steering params
     STRAIGHTS_STEERING_ANGLE = np.pi / 18  # 10 degrees
     MILD_CURVE_ANGLE = np.pi / 6  # 30 degrees
     ULTRASTRAIGHTS_ANGLE = np.pi / 60  # 3 deg
@@ -35,19 +35,17 @@ class FTG_Controller(Node):
         self.SAFETY_RADIUS = safety_radius
         self.MAX_LIDAR_DIST = max_lidar_dist
         self.MAX_SPEED = max_speed
-        self.radians_per_elem = None # used when calculating the angles of the LiDAR data
+        self.radians_per_elem = None  # used when calculating the angles of the LiDAR data
         self.range_offset = range_offset
         self.track_width = track_width
-        
-        
+
         # Speed params
         scale = 0.6  # .575 is  max
         self.CORNERS_SPEED = 0.3 * self.MAX_SPEED * scale
         self.MILD_CORNERS_SPEED = 0.45 * self.MAX_SPEED * scale
         self.STRAIGHTS_SPEED = 0.8 * self.MAX_SPEED * scale
         self.ULTRASTRAIGHTS_SPEED = self.MAX_SPEED * scale
-        
-        
+
         self.velocity = 0
         self.scan = None
 
@@ -56,7 +54,7 @@ class FTG_Controller(Node):
         self.best_gap = self.create_publisher(MarkerArray, '/best_gap/markers', 10)
 
     def _preprocess_lidar(self, ranges) -> np.ndarray:
-        """ 
+        """
         Preprocess the LiDAR scan array.
 
         This method performs preprocessing on the LiDAR scan array. The preprocessing steps include:
@@ -75,55 +73,55 @@ class FTG_Controller(Node):
         # every point in the array is
         proc_ranges = np.array(ranges[self.range_offset:-self.range_offset])
         # sets each value to the mean over a given window to smoothen the signal
-        proc_ranges = np.convolve(proc_ranges, np.ones(self.PREPROCESS_CONV_SIZE)/self.PREPROCESS_CONV_SIZE, 'valid') 
+        proc_ranges = np.convolve(proc_ranges, np.ones(self.PREPROCESS_CONV_SIZE) / self.PREPROCESS_CONV_SIZE, 'valid')
         # clip the ranges between 0 and your maximum lidar distance
         proc_ranges = np.clip(proc_ranges, 0, self.MAX_LIDAR_DIST)
         # reverse lidar because it is right to left
         return proc_ranges[::-1]
 
     def _get_steer_angle(self, point_x, point_y) -> float:
-        """ 
+        """
         Get the angle of a particular element in the LiDAR data and
         transform it into an appropriate steering angle.
-        
+
         Parameters:
             point_x (float): The x-coordinate of the LiDAR data point
             point_y (float): The y-coordinate of the LiDAR data point
-        
+
         Returns:
             float: The transformed steering angle
-        
+
         """
         steering_angle = math.atan2(point_y, point_x)
         return np.clip(steering_angle, -0.4, 0.4)
 
     def _get_best_range_point(self, proc_ranges) -> tuple:
-        """ 
+        """
         Find the best point i.e. the middle of the largest gap within the bubble radius.
-        
+
         Parameters:
             proc_ranges (list): List of processed ranges.
-        
+
         Returns:
             tuple: The x and y coordinates of the best point.
         """
-        #Get the bubble radius 
+        # Get the bubble radius
         radius = self._get_radius()
-        
-        #Find the largest gap
+
+        # Find the largest gap
         gap_left, gap_right = self._find_largest_gap(ranges=proc_ranges, radius=radius)
         gap_left += self.range_offset - 180
         gap_right += self.range_offset - 180
         gap_middle = int((gap_right + gap_left) / 2)
-        #Calculate cartesian point of the best point position from the lidar measurements in laser frame
+        # Calculate cartesian point of the best point position from the lidar measurements in laser frame
         best_y = np.cos(gap_middle * self.radians_per_elem) * radius
         best_x = np.sin(gap_middle * self.radians_per_elem) * radius
-        
+
         if self.DEBUG:
-            #Delete old gaps from RVIZ
+            # Delete old gaps from RVIZ
             self._delete_gap_markers()
 
-            #Visualise the gap
+            # Visualise the gap
             gap_markers = MarkerArray()
             for i in range(gap_left, gap_right):
                 mrk = Marker()
@@ -137,7 +135,7 @@ class FTG_Controller(Node):
                 mrk.color.r = 1.0
                 mrk.color.g = 1.0
                 mrk.id = int(i - gap_left)
-                #Calculate cartesian point of the gap  marker position from the lidar measurements in laser frame
+                # Calculate cartesian point of the gap  marker position from the lidar measurements in laser frame
                 mrk.pose.position.y = math.cos(i * self.radians_per_elem) * radius
                 mrk.pose.position.x = math.sin(i * self.radians_per_elem) * radius
                 mrk.pose.orientation.w = 1.0
@@ -160,11 +158,11 @@ class FTG_Controller(Node):
             best_mrk.pose.position.x = best_x
             best_mrk.pose.orientation.w = 1.0
             self.best_pnt.publish(best_mrk)
-        
+
         return best_x, best_y
 
     def process_lidar(self, ranges) -> tuple:
-        """ 
+        """
         Process each LiDAR scan as per the Follow Gap algorithm &
         calculate the speed and steering angle.
 
@@ -174,11 +172,11 @@ class FTG_Controller(Node):
         Returns:
             tuple: A tuple containing the speed and steering angle
         """
-        #Preprocess the LiDAR to smoothen it
+        # Preprocess the LiDAR to smoothen it
         proc_ranges = self._preprocess_lidar(ranges)
-        
+
         proc_ranges = self._safety_border(proc_ranges)
-        
+
         if self.DEBUG:
             scan_markers = MarkerArray()
             for i, scan in enumerate(proc_ranges):
@@ -194,16 +192,16 @@ class FTG_Controller(Node):
                 mrk.color.b = 1.0
 
                 mrk.id = i
-                mrk.pose.position.x = math.sin(i* self.radians_per_elem) * scan
-                mrk.pose.position.y = math.cos(i* self.radians_per_elem) * scan
+                mrk.pose.position.x = math.sin(i * self.radians_per_elem) * scan
+                mrk.pose.position.y = math.cos(i * self.radians_per_elem) * scan
                 mrk.pose.orientation.w = 1.0
                 scan_markers.markers.append(mrk)
             self.scan_pub.publish(scan_markers)
 
-        #Get best point to target aka middle of the largest gap
+        # Get best point to target aka middle of the largest gap
         best_x, best_y = self._get_best_range_point(proc_ranges)
 
-        #Get steer angle from best points
+        # Get steer angle from best points
         steering_angle = self._get_steer_angle(point_x=best_x, point_y=best_y)
 
         if self.mapping:
@@ -221,7 +219,7 @@ class FTG_Controller(Node):
         return speed, steering_angle
 
     def _find_largest_gap(self, ranges, radius) -> tuple:
-        """ 
+        """
         Find the index of the starting and ending of the largest gap and its width
 
         Parameters:
@@ -229,29 +227,29 @@ class FTG_Controller(Node):
             radius (float): Threshold radius value
 
         Returns:
-            tuple: A tuple containing the index of the starting of the largest gap, 
+            tuple: A tuple containing the index of the starting of the largest gap,
                     the index of the ending of the largest gap, and the width of the largest gap.
 
         """
-        #Binarise the ranges in zeros for values under the radius threshold and ones for above and equal
+        # Binarise the ranges in zeros for values under the radius threshold and ones for above and equal
         bin_ranges = np.where(ranges >= radius, 1, 0)
-        
-        #Get largest gap from binary ranges
+
+        # Get largest gap from binary ranges
         bin_diffs = np.abs(np.diff(bin_ranges))
         bin_diffs[0] = 1
         bin_diffs[-1] = 1
 
         diff_idxs = bin_diffs.nonzero()[0]
-        #Check that binarised ranges are positive
+        # Check that binarised ranges are positive
         high_gaps = []
-        for i in range(len(diff_idxs)-1):
+        for i in range(len(diff_idxs) - 1):
             low = diff_idxs[i]
-            high = diff_idxs[i+1]
+            high = diff_idxs[i + 1]
             high_gaps.append(np.mean(bin_ranges[low:high]) > 0.5)
 
         gap_left = diff_idxs[np.argmax(high_gaps * np.diff(diff_idxs))]
         gap_width = np.max(high_gaps * np.diff(diff_idxs))
-        gap_right = gap_left + gap_width        
+        gap_right = gap_left + gap_width
 
         return gap_left, gap_right
 
@@ -268,12 +266,12 @@ class FTG_Controller(Node):
     def set_vel(self, velocity) -> None:
         """
         Set the velocity of the car.
-        
+
         Parameters:
             velocity (float): The desired velocity value.
         """
         self.velocity = velocity
-    
+
     def _safety_border(self, ranges) -> np.ndarray:
         """
         Add a safety bubble if there is a big increase in the range between two points.

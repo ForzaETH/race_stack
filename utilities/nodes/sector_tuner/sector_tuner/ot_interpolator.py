@@ -57,7 +57,7 @@ class OvertakingInterpolator(Node):
 
         timer_period = 0.5  # seconds
         self.wait_for_message_timer = self.create_timer(timer_period, self.wait_for_message_callback)
-        self.get_logger().info("Wating on first messages from global waypoints topics (og, scaled, and shortest path).")
+        self.get_logger().info("Waiting on first messages from global waypoints topics (og, scaled, and shortest path).")
         
     def parameters_to_dict(self):
         params = {}
