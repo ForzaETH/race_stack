@@ -300,9 +300,9 @@ class StateMachine(Node):
         if self.ftg_disabled:
             return False
         else:
-            if self.cur_state == StateType.TRAILING and self.cur_vs < self.params.ftg_threshold_speed:
+            if self.state == StateType.TRAILING and self.cur_vs < self.params.ftg_threshold_speed:
                 self.ftg_counter += 1
-                self.get_logger().warn(f"[{self.name}] FTG counter: {self.ftg_counter}/{threshold}")
+                # self.get_logger().warn(f"[{self.name}] FTG counter: {self.ftg_counter}/{threshold}")
             else:
                 self.ftg_counter = 0
 

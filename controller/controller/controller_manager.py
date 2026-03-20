@@ -538,7 +538,7 @@ class Controller(Node):
         self.waypoint_safety_counter += 1
         print(self.waypoint_safety_counter, self.rate, self.state_machine_rate)
         if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
-            self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
+            self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!", throttle_duration_sec=0.5)
             speed = 0
             steering_angle = 0
         self.map_controller.flag1 = False
@@ -571,7 +571,7 @@ class Controller(Node):
 
         self.waypoint_safety_counter += 1
         if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
-            self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
+            self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!", throttle_duration_sec=0.5)
             speed = 0
             steering_angle = 0
         self.pp_controller.flag1 = False
@@ -617,8 +617,8 @@ class Controller(Node):
         ack_msg = AckermannDriveStamped()
         ack_msg.header.stamp = self.get_clock().now().to_msg()
         ack_msg.header.frame_id = 'base_link'
-        ack_msg.drive.steering_angle = steer
-        ack_msg.drive.speed = speed
+        ack_msg.drive.steering_angle = float(steer)
+        ack_msg.drive.speed = float(speed)
         self.drive_pub.publish(ack_msg)
 
     ############################################ MSG CREATION############################################

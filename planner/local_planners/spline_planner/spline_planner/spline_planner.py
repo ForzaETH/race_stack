@@ -522,7 +522,8 @@ class ObstacleSpliner(Node):
                     tb_dist = gb_wpnts[gb_wpnt_i].d_left if more_space == "left" else gb_wpnts[gb_wpnt_i].d_right
                     if abs(evasion_d[i]) > abs(tb_dist) - self.spline_bound_mindist:
                         self.get_logger().info(
-                            "Evasion trajectory too close to TRACKBOUNDS, aborting evasion"
+                            "Evasion trajectory too close to TRACKBOUNDS, aborting evasion",
+                            throttle_duration_sec=0.5
                         )
                         danger_flag = True
                         break
