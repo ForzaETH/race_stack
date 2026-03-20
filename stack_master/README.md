@@ -46,3 +46,5 @@ ros2 launch stack_master head_to_head_launch.xml racecar_version:=<NUCx used> LU
 - `<Look-Up Table name>` is the name of the Look-Up Table you want to use. It must belong to the list of Look-Up Tables available in the `systm_identification/steering_lookup/cfg` folder.
 - `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP.
 - `<overtake_mode>` is the mode you want to use for overtaking. `spliner` is the only current possibility.
+
+To launch an opponent in simulation for testing, refer to  [`opponent_publisher` README](./../utilities/nodes/opponent_publisher/README.md).
