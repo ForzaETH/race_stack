@@ -65,6 +65,7 @@ class StateMachine(Node):
 
         self.cur_s = None
         self.cur_d = None
+        self.cur_vs = 0.0
         self.create_subscription(
             Odometry,
             '/car_state/frenet/odom',
@@ -156,6 +157,7 @@ class StateMachine(Node):
     def car_state_frenet_cb(self, msg: Odometry):
         self.cur_s = msg.pose.pose.position.x
         self.cur_d = msg.pose.pose.position.y
+        self.cur_vs = msg.twist.twist.linear.x
 
     def avoidance_cb(self, data: OTWpntArray):
         """Subscribes to spliner waypoints"""
@@ -302,7 +304,7 @@ class StateMachine(Node):
         else:
             if self.state == StateType.TRAILING and self.cur_vs < self.params.ftg_threshold_speed:
                 self.ftg_counter += 1
-                # self.get_logger().warn(f"[{self.name}] FTG counter: {self.ftg_counter}/{threshold}")
+                self.get_logger().warn(f"[{self.get_name()}] FTG counter: {self.ftg_counter}/{threshold}")
             else:
                 self.ftg_counter = 0
 

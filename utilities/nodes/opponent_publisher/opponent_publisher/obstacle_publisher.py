@@ -68,7 +68,7 @@ class ObstaclePublisher(Node):
         )
         
         self.sub_map = self.create_subscription(OccupancyGrid, "/map", self.map_cb, qos_profile=qos_profile)
-        self.obstacle_pub = self.create_publisher(ObstacleArray, '/perception/obstacles', 10)
+        self.obstacle_pub = self.create_publisher(ObstacleArray, '/perception/detection/raw_obstacles', 10)
         self.marker_pub = self.create_publisher(MarkerArray, '/dummy_obstacle_markers', 10)
         self.opponent_traj_pub = self.create_publisher(OpponentTrajectory, '/opponent_waypoints', 10)
         self.pub_map = self.create_publisher(OccupancyGrid, "/map", qos_profile=qos_profile)
