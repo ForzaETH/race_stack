@@ -2,10 +2,11 @@
     <arg name="mode" default="timetrials" description="choose between: dummy / timetrials / head_to_head" />
     <arg name="overtake_mode" default="spliner" description="choose between: spliner" />
     <arg name="log-level" default="debug"/>
+    <arg name="param_file" default="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
 
     <!-- launch state machine -->
     <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen">
-        <param from="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
+        <param from="$(var param_file)"/>
         <param name="mode" value="$(var mode)"/>
         <param name="overtake_mode" value="$(var overtake_mode)"/>
     </node>
