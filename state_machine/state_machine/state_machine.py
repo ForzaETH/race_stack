@@ -99,6 +99,7 @@ class StateMachine(Node):
         # INITIALIZATIONS
         self.waypoints_dist = 0.1
         self.state = StateType(self.params.initial_state)
+        self.prev_state = StateType(self.params.initial_state)
         self.local_waypoints = WpntArray()
         self.first_visualization = True
         self.x_viz = 0
@@ -554,6 +555,10 @@ class StateMachine(Node):
     #############
     def main_loop_callback(self):
         self.get_logger().debug(f"Current state: {self.state}")
+        if self.state != self.prev_state:
+            self.get_logger().debug(f"\n\nState change detected, \
+                                      from {self.prev_state} to {self.state}")
+            self.prev_state = self.state
         # transition logic
         if self.params.force_state:
             self.state = self.params.force_state_choice
