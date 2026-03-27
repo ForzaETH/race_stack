@@ -48,6 +48,7 @@ stack_master/maps/GLC_smile_small/ot_sectors.yaml
 !stack_master/maps/hangar_1905_v0
 stack_master/maps/hangar_1905_v0/speed_scaling.yaml
 stack_master/maps/hangar_1905_v0/ot_sectors.yaml
+!stack_master/maps/Mar27
 
 #todo: what's up with maps -> external map folder?
 .vscode/build
