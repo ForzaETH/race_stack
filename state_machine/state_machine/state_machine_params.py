@@ -66,8 +66,13 @@ class StateMachineParams:
         node.set_descriptor("n_loc_wpnts", descriptor=descriptor)
         self.n_loc_wpnts: int = node.get_parameter("n_loc_wpnts").value
         
-        self.overtake_mode = "spliner"
-        """Overtake mode\nOnly spliner is supported at the moment"""
+        descriptor = ParameterDescriptor(
+            description="Overtake mode\nOnly spliner is supported at the moment\n",
+            type=ParameterType.PARAMETER_STRING,
+            read_only=False,
+        )
+        node.set_descriptor("overtake_mode", descriptor=descriptor)
+        self.overtake_mode: str = node.get_parameter("overtake_mode").value
         
         descriptor = ParameterDescriptor(
             description="Voltage threshold for the car, below which the car is considered to be low bat.\n",
