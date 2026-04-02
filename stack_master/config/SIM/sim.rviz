@@ -9,6 +9,7 @@ Panels:
         - /Perception1/Detection1
         - /Perception1/Detection1/Breakpoints1/Topic1
         - /Perception1/Tracking1
+        - /MarkerArray1
       Splitter Ratio: 0.5
     Tree Height: 793
   - Class: rviz_common/Selection
@@ -450,6 +451,18 @@ Visualization Manager:
           Value: true
       Enabled: true
       Name: Sector Markers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /dummy_obstacle_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

@@ -11,10 +11,8 @@ The following parameters are currently available fir the `launch` file:
 - `speed_scaler`: if `constant_speed` is False the opponent will drive at this scaled raceline velocity, if `constant_speed` is True the opponent will drive at this speed
 - `trajectory`: select the trajectory among the available ones. Currently the available trajectories are `centerline/min_curv/shortest_path`. In the future we are planning to  integrate the `min_time` trajectory too.
 - `start_s`: select the initial starting coordinate along the `s` Frenet coordinate.
-- `type`: select "virtual" or "lidar" and the opponent will either spawn as a dummy obstacle (already has perception) or as a lidar detectable point (needs to be detected).
-
 ### Examples
-- Obstacle with global trajectory speed * 0.5 and Lidar Obstacle: `ros2 launch opponent_publisher opponent_publisher_launch.xml speed_scaler:=0.5 trajectory:=min_curv type:=lidar`
+- Obstacle with global trajectory speed * 0.5: `ros2 launch opponent_publisher opponent_publisher_launch.xml speed_scaler:=0.5 trajectory:=min_curv`
 - Obstacle with constant speed at $3m/s$: `ros2 launch opponent_publisher opponent_publisher_launch.xml constant_speed:=True speed_scaler:=3.`
 
 
