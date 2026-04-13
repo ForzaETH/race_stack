@@ -2,6 +2,24 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Start Zenoh Router",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+                "source /opt/ros/humble/setup.bash && ros2 run rmw_zenoh_cpp rmw_zenohd"
+            ],
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "zenoh"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
             "label": "Build Workspace",
             "detail": "Builds all packages in the workspace",
             "type": "shell",
@@ -46,13 +64,18 @@
         {
             "id": "packages",
             "type": "promptString",
-            "description" : "Name of package to build",
+            "description": "Name of package to build",
         },
         {
-            "id" : "build-type",
+            "id": "build-type",
             "type": "pickString",
             "description": "Choose between debug and release build modes",
-            "options": ["Debug", "Release", "Debug no-symlink", "Release no-symlink"],
+            "options": [
+                "Debug",
+                "Release",
+                "Debug no-symlink",
+                "Release no-symlink"
+            ],
             "default": "Release"
         }
     ]

@@ -21,3 +21,4 @@ ros-humble-rqt
 ros-humble-xacro
 ros-humble-nav2-map-server
 ros-humble-nav2-lifecycle-manager
+ros-humble-rmw-zenoh-cpp
