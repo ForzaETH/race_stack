@@ -8,7 +8,7 @@ import numpy as np
 from sensor_msgs.msg import Imu
 from f110_msgs.msg import WpntArray
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped, TransformStamped
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, TransformStamped
 from frenet_conversion.frenet_converter import FrenetConverter
 from tf_transformations import euler_from_quaternion
 
@@ -44,12 +44,18 @@ class Carstate(Node):
         self.gb_wpnts = None
         self.car_state_odom = None
         self.global_fusion_odom = None
+        self.tracked_pose_received = False  # guards EKF2 output until first Cartographer correction
 
         # subscribers
         self.ekf_odom_sub = self.create_subscription(Odometry, self.odom_in_topic, self.ekf_odom_cb, 10)
         self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.gb_wpnts_cb, 10)
         if self.use_ekf2:
             self.ekf2_odom_sub = self.create_subscription(Odometry, '/global_fusion/odom', self.ekf2_odom_cb, 10)
+            # Guard: only trust EKF2 output after Cartographer has sent at least one pose
+            # correction. Without this, EKF2 starts at (0,0,0) and carstate_node would
+            # forward the map-origin pose to the controller before convergence.
+            self.tracked_pose_sub = self.create_subscription(
+                PoseWithCovarianceStamped, '/tracked_pose_with_cov', self.tracked_pose_cb, 1)
 
         # publishers
         self.state_odom_pub = self.create_publisher(Odometry, self.odom_out_topic, 10)
@@ -71,6 +77,13 @@ class Carstate(Node):
     def ekf2_odom_cb(self, data):
         self.global_fusion_odom = data
 
+    def tracked_pose_cb(self, data: PoseWithCovarianceStamped):
+        # Set once on the first message — EKF2 has now received a Cartographer correction
+        # and its internal state is no longer at the map origin.
+        if not self.tracked_pose_received:
+            self.get_logger().info('First Cartographer pose correction received by EKF2 — EKF2 output is now trusted.')
+            self.tracked_pose_received = True
+
     def gb_wpnts_cb(self, data):
         self.gb_wpnts = data
 
@@ -86,7 +99,7 @@ class Carstate(Node):
         ekf2_print = False
         while (self.ekf_odom is None
                or (frenet_bool and self.gb_wpnts is None)
-               or (self.use_ekf2 and self.global_fusion_odom is None)):
+               or (self.use_ekf2 and (self.global_fusion_odom is None or not self.tracked_pose_received))):
             rclpy.spin_once(self)
             if self.ekf_odom is not None and not ekf_print:
                 self.get_logger().info('Received Odometry message.')
@@ -99,8 +112,8 @@ class Carstate(Node):
                 self.frenet_converter = FrenetConverter(np.array(waypoints_x), np.array(waypoints_y), np.array(waypoints_psi))
                 self.get_logger().info('Received Global Waypoints message and frenet converter initialized!')
                 frenet_print = True
-            if self.use_ekf2 and self.global_fusion_odom is not None and not ekf2_print:
-                self.get_logger().info('Received EKF2 global fusion odometry.')
+            if self.use_ekf2 and self.global_fusion_odom is not None and not self.tracked_pose_received and not ekf2_print:
+                self.get_logger().info('EKF2 publishing (waiting for first Cartographer correction before use)...')
                 ekf2_print = True
         self.get_logger().info('All required messages received. Continuing...')
 
