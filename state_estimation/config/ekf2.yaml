@@ -53,18 +53,19 @@ ekf_filter_node_map:
         pose0_queue_size: 5
         pose0_differential: false
         pose0_relative: false
-        # Reject Cartographer corrections deviating > 2σ from the current estimate.
-        # When Cartographer is lost (wrong poses, no high covariance signal), this causes
-        # EKF2 to fall back to dead-reckoning from EKF1 velocity. Tune this value:
-        # lower = more aggressive rejection, higher = trust Cartographer more.
-        pose0_rejection_threshold: 2.0
+        # Reject Cartographer corrections deviating > 4σ from the current estimate.
+        # Raised from 2.0: the crash pattern (failure after multiple changed areas) indicates
+        # that 2σ was too strict, causing dead-reckoning drift to accumulate across several
+        # degraded sections before the sharp turn. A partially-wrong correction is still
+        # better than pure dead-reckoning over 3+ changed map sections.
+        pose0_rejection_threshold: 4.0
 
-        process_noise_covariance: [0.005,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
-                                   0.0,    0.005,  0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+        process_noise_covariance: [0.001,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.001,  0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.06,  0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.03,  0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.03,  0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
-                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.01,  0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.005, 0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025,  0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.04,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,

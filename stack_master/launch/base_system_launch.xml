@@ -5,6 +5,7 @@
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
   <arg name="use_ekf2" default="False" description="True to enable EKF2 global fusion (Cartographer pose + EKF1 velocity)" />
+  <arg name="use_pose_graph_fix" default="False" description="True to use f110_2d_loc_pgfix.lua with stronger odometry weights and more loop closures" />
 
   <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
   <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
@@ -44,6 +45,7 @@
       <arg name="map_name" value="$(var map_name)" />
       <arg name="frenet_bool" value="True" />
       <arg name="use_ekf2" value="$(var use_ekf2)" />
+      <arg name="use_pose_graph_fix" value="$(var use_pose_graph_fix)" />
     </include>
   </group>
 
