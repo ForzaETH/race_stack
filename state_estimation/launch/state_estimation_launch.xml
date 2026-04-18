@@ -5,6 +5,7 @@
     <arg name="map_name" default="hangar" />
     <arg name="frenet_bool" default="False" />
     <arg name="skip_early_fusion" default="False" />
+    <arg name="use_ekf2" default="False" description="Enable EKF2 global fusion (Cartographer pose + EKF1 velocity)" />
     <arg name="use_sim_time" default="False" />
 
     <!-- EKF IMU + Odom Fusion -->
@@ -69,10 +70,26 @@
         </node>
     </group>
 
+    <!-- EKF2: optional map-frame global fusion (Cartographer pose + EKF1 velocity) -->
+    <!-- Activate with use_ekf2:=true. Provides pose fallback when Cartographer lags or jumps. -->
+    <group if="$(var use_ekf2)">
+        <!-- Relay /tracked_pose (PoseStamped) -> /tracked_pose_with_cov (PoseWithCovarianceStamped) -->
+        <node name="tracked_pose_relay" pkg="state_estimation" exec="tracked_pose_relay" output="screen">
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+        <!-- EKF2 node: world_frame=map, fuses Cartographer pose with EKF1 velocity -->
+        <node name="ekf_filter_node_map" pkg="robot_localization" exec="ekf_node" output="screen">
+            <param from="$(find-pkg-share state_estimation)/config/ekf2.yaml" />
+            <remap from="/odometry/filtered" to="/global_fusion/odom" />
+            <param name="use_sim_time" value="$(var use_sim_time)" />
+        </node>
+    </group>
+
     <!-- Carstate Node -->
     <node name="carstate_node" pkg="state_estimation" exec="carstate_node" args="" output='screen'>
         <remap from="/odom_out" to="/car_state/odom" />
         <param name="frenet_bool" value="$(var frenet_bool)" />
+        <param name="use_ekf2" value="$(var use_ekf2)" />
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 

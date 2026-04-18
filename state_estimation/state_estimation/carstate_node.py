@@ -31,6 +31,8 @@ class Carstate(Node):
         self.odom_out_topic = self.get_parameter('/carstate_node/odom_out_topic').value
         self.pose_out_topic = self.get_parameter('/carstate_node/pose_out_topic').value
         self.frenet_bool = self.get_parameter('frenet_bool').get_parameter_value().bool_value # Bool if we want frenet on or off
+        self.declare_parameter('use_ekf2', False)
+        self.use_ekf2 = self.get_parameter('use_ekf2').get_parameter_value().bool_value # Bool to use EKF2 global fusion
 
         # Wait until the requried tf transforms exist
         self.tf_buffer = tf2_ros.Buffer()
@@ -41,10 +43,13 @@ class Carstate(Node):
         self.frenet_converter = None
         self.gb_wpnts = None
         self.car_state_odom = None
+        self.global_fusion_odom = None
 
         # subscribers
         self.ekf_odom_sub = self.create_subscription(Odometry, self.odom_in_topic, self.ekf_odom_cb, 10)
         self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.gb_wpnts_cb, 10)
+        if self.use_ekf2:
+            self.ekf2_odom_sub = self.create_subscription(Odometry, '/global_fusion/odom', self.ekf2_odom_cb, 10)
 
         # publishers
         self.state_odom_pub = self.create_publisher(Odometry, self.odom_out_topic, 10)
@@ -63,6 +68,9 @@ class Carstate(Node):
     def ekf_odom_cb(self, data):
         self.ekf_odom = data
 
+    def ekf2_odom_cb(self, data):
+        self.global_fusion_odom = data
+
     def gb_wpnts_cb(self, data):
         self.gb_wpnts = data
 
@@ -75,7 +83,10 @@ class Carstate(Node):
         self.get_logger().info('Carstate Node waiting for Odometry messages...')
         ekf_print = False
         frenet_print = False
-        while self.ekf_odom is None or (frenet_bool and self.gb_wpnts is None):
+        ekf2_print = False
+        while (self.ekf_odom is None
+               or (frenet_bool and self.gb_wpnts is None)
+               or (self.use_ekf2 and self.global_fusion_odom is None)):
             rclpy.spin_once(self)
             if self.ekf_odom is not None and not ekf_print:
                 self.get_logger().info('Received Odometry message.')
@@ -88,11 +99,29 @@ class Carstate(Node):
                 self.frenet_converter = FrenetConverter(np.array(waypoints_x), np.array(waypoints_y), np.array(waypoints_psi))
                 self.get_logger().info('Received Global Waypoints message and frenet converter initialized!')
                 frenet_print = True
+            if self.use_ekf2 and self.global_fusion_odom is not None and not ekf2_print:
+                self.get_logger().info('Received EKF2 global fusion odometry.')
+                ekf2_print = True
         self.get_logger().info('All required messages received. Continuing...')
 
 
     def cartesian_state_loop(self):
-        # publish SLAM cartesian positional and velocity data
+        if self.use_ekf2:
+            # EKF2 path: pose and velocity both come from the map-frame global fusion filter.
+            # Provides smoothed pose with dead-reckoning fallback when Cartographer lags.
+            if self.global_fusion_odom is None:
+                return
+            carstate_odom_msg = self.global_fusion_odom
+            carstate_odom_msg.header.frame_id = 'map'
+            carstate_pose_msg = PoseStamped()
+            carstate_pose_msg.header = carstate_odom_msg.header
+            carstate_pose_msg.pose = carstate_odom_msg.pose.pose
+            self.car_state_odom = carstate_odom_msg
+            self.state_odom_pub.publish(carstate_odom_msg)
+            self.state_pose_pub.publish(carstate_pose_msg)
+            return
+
+        # Default path: pose from Cartographer TF, velocity from EKF1.
         carstate_pose_msg = PoseStamped()
         carstate_odom_msg = Odometry()
 
