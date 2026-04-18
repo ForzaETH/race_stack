@@ -39,6 +39,14 @@ Or check out our [video playlist on Youtube](https://www.youtube.com/playlist?li
 
 After installation, the car (or the simulation environment) is ready to be tested. For examples on how to run the different modules on the car, refer to the [`stack_master` README](./stack_master/README.md).
 
+## Zenoh
+We use [zenoh](https://github.com/ros2/rmw_zenoh) as ros2 middleware. The zenoh router is started as a vscode task when you open the container. You can also start it manually with: `ros2 run rmw_zenoh_cpp rmw_zenohd`
+If you have problems you may need to first stop the ros2 daemon: `ros2 daemon stop`
+
+### Connect to host
+If you now want to connect to this host (e.g. to stream topics to RViz on another computer) you can run the following command on the other computer: `export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/THE_CAR_IP:7447"]'`. You will need to run this command in each terminal with which you want to connect. You can also add the ips of the cars to `remote_car.sh` and run `scripz && source remote_car.sh YOUR_CAR`.
+
+
 ## Contributing
 
 In case you find our package helpful and want to contribute, please either raise an issue or directly make a pull request. To create pull request please follow the guidelines in [CONTRIBUTING](./CONTRIBUTING.md).

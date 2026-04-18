@@ -52,6 +52,12 @@
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
 
+        <!-- Initial Pose Bridge: allows setting initial pose via RViz "2D Pose Estimate" tool -->
+        <node name="initialpose_bridge" pkg="state_estimation" exec="initialpose_bridge" output="screen">
+            <param name="slam_config_path" value="$(var slam_config_path)" />
+            <param name="slam_config_basename" value="f110_2d_loc.lua" />
+        </node>
+
     </group>
 
     <!-- ELIF SLAM MAPPING -->
