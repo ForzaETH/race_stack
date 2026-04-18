@@ -31,7 +31,7 @@ class Carstate(Node):
         self.odom_out_topic = self.get_parameter('/carstate_node/odom_out_topic').value
         self.pose_out_topic = self.get_parameter('/carstate_node/pose_out_topic').value
         self.frenet_bool = self.get_parameter('frenet_bool').get_parameter_value().bool_value # Bool if we want frenet on or off
-        self.declare_parameter('use_ekf2', False)
+        # self.declare_parameter('use_ekf2', False)
         self.use_ekf2 = self.get_parameter('use_ekf2').get_parameter_value().bool_value # Bool to use EKF2 global fusion
 
         # Wait until the requried tf transforms exist

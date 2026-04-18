@@ -58,7 +58,7 @@ ekf_filter_node_map:
         # that 2σ was too strict, causing dead-reckoning drift to accumulate across several
         # degraded sections before the sharp turn. A partially-wrong correction is still
         # better than pure dead-reckoning over 3+ changed map sections.
-        pose0_rejection_threshold: 4.0
+        pose0_rejection_threshold: 2.0
 
         process_noise_covariance: [0.001,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
                                    0.0,    0.001,  0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
