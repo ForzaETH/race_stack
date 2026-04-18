@@ -46,3 +46,50 @@ Now that you have a perfectly closed loop in your `map.png`, we feed it back int
 3. The Map Editor terminates, and your final raceline is automatically saved into your `stack_master/maps/MY_TRACK/` directory as **`global_waypoints.json`**. 
 
 You are now fully configured and ready to race!
+
+---
+
+## Changing Initial Pose After Mapping for Cartographer
+
+By default, Cartographer initializes localization at the **map origin** — the exact spot where you started the mapping run. If you place the car at a different location on the track for time trials, Cartographer won't know where it is and may fail to localize.
+
+The **Initial Pose Bridge** node solves this by letting you click on the map in RViz to tell Cartographer where the car actually is.
+
+### How It Works
+
+When you click "2D Pose Estimate" in RViz, the bridge node:
+1. Finishes the current Cartographer localization trajectory
+2. Starts a new trajectory at the clicked position
+3. Cartographer immediately begins scan-matching from that location
+
+### Steps
+
+1. **Launch the base system** as normal:
+   ```bash
+   ros2 launch stack_master base_system_launch.xml map_name:=MY_TRACK racecar_version:=NUC2
+   ```
+   The Initial Pose Bridge node starts automatically alongside Cartographer.
+
+2. **Open RViz** on your laptop (or on the car):
+   ```bash
+   rviz2 -d $(ros2 pkg prefix stack_master --share)/viz/head_to_head.rviz
+   ```
+   Or just run `rviz2`, set the Fixed Frame to `map`, and add a Map display on the `/map` topic.
+
+3. **Look at the real car** and identify approximately where it is on the physical track.
+
+4. **Click "2D Pose Estimate"** in the RViz toolbar (top bar), then click and drag on the map at the car's location. The drag direction sets the heading.
+
+5. **Verify in the terminal** — you should see output like:
+   ```
+   [initialpose_bridge] Received initial pose: x=5.20, y=3.10, yaw=0.79 rad
+   [initialpose_bridge] Finishing trajectory 1...
+   [initialpose_bridge] Starting new trajectory at clicked pose...
+   [initialpose_bridge] Started new trajectory 2
+   ```
+
+6. **Verify in RViz** — the robot's position should jump to where you clicked and the lidar scan should align with the map walls.
+
+7. **Start driving** — Cartographer will continue localizing from the correct position.
+
+> **Note:** You can click "2D Pose Estimate" multiple times if needed. Each click restarts the localization trajectory from the new position.
