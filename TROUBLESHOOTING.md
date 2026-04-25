@@ -26,6 +26,7 @@ rm -rf build/* install/* log/*
 ```
 
 ### 5. Display forwarding from Jetson Docker container to pit machine is failing
+
 Display forwarding must be working from the Jetson Docker container to the pit machine, for example for mapping with `mapping_launch.xml` with the `matplotlib` pop-up. Sometimes this stops working, for example with an error like 
 
 ```
@@ -34,7 +35,14 @@ UserWarning: Matplotlib is currently using agg, which is a non-GUI backend, so c
 
 This is because, for display forwarding to work, it must be forwarded from the Docker container to the host Jetson, and then across SSH to the pit computer. Details for authentication can be found in `main_dock.sh` and `xauth_setup.sh`.
 
-When the display forwarding fails the quickest fix is to recreate the container; the Docker image can be kept as-is. To do so, follow these steps:
+When the display forwarding fails, there is an easy fix to attempt, and a more involved fix. Start with the easy fix.
+
+**Option 1: Easy Fix - localhost DISPLAY change**
+1. Find the current display using `echo $DISPLAY`. It should show `localhost:10.0`
+2. If the result is different, for example `localhost:13.0`, run `export DISPLAY=localhost:10.0`
+
+**Option 2: Harder Fix - Docker rebuild**
+If Option 1 fails, recreate the Docker container; the Docker image can be kept as-is. To do so, follow these steps:
 
 1. Exit the container and find the name of the current container with `docker ps -a` - the most recently opened is the one you probably want to delete, for example, with name `forzaeth_racestack_ros2_humble`
 2. Remove it as follows, replacing the name if necessary:
