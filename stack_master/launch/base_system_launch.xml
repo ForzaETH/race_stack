@@ -4,6 +4,7 @@
   <arg name="map_name" description="Map name in stack_master/maps" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
+  <arg name="profile" default="False" description="Run cpu_monitor alongside the stack" />
 
   <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
   <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
@@ -75,5 +76,12 @@
 
   <!-- launch lap analyser -->
   <node pkg="lap_analyser" name="lap_analyser" exec="lap_analyser" output="screen" />
+
+  <!-- optional CPU profiler -->
+  <group if="$(var profile)">
+    <include file="$(find-pkg-share cpu_monitor)/launch/cpu_monitor_launch.xml">
+      <arg name="csv_path" value="/home/jetson/ws/log/cpu_$(var map_name).csv" />
+    </include>
+  </group>
 
 </launch>
