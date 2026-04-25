@@ -46,10 +46,10 @@
         {
             "id": "packages",
             "type": "promptString",
-            "description": "Name of package to build",
+            "description" : "Name of package to build",
         },
         {
-            "id": "build-type",
+            "id" : "build-type",
             "type": "pickString",
             "description": "Choose between debug and release build modes",
             "options": [

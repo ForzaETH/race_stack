@@ -2,8 +2,8 @@
     "name": "ForzaETH Race Stack Humble",
     "privileged": true,
     "remoteUser": "${localEnv:USER}",
-    // "image": "jet_forzaeth_racestack_ros2:humble",
-    "image": "nuc_forzaeth_racestack_ros2:humble",
+    "image": "jet_forzaeth_racestack_ros2:humble",
+    // "image": "nuc_forzaeth_racestack_ros2:humble",
     "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
     "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
     "workspaceMount": "source=${localWorkspaceFolder},target=/home/${localEnv:USER}/ws/src/race_stack,type=bind",
@@ -34,14 +34,11 @@
         "ROS_LOCALHOST_ONLY": "0",
         "ROS_DOMAIN_ID": "6",
         "USERNAME": "${localEnv:USER}",
-        "RCUTILS_COLORIZED_OUTPUT": "1",
-        "RMW_IMPLEMENTATION": "rmw_zenoh_cpp"
+        "RCUTILS_COLORIZED_OUTPUT": "1"
     },
     "runArgs": [
         "--name",
         "nuc_forzaeth_racestack_ros2_humble",
-        "--ipc",
-        "host",
         "--net",
         "host",
         "--privileged"

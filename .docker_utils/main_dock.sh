@@ -8,7 +8,6 @@ FORZETH_DIR=/home/jetson/ROS2_ForzaETH_Race_Stack/race_stack
 docker run --tty \
     --interactive \
     --network=host \
-    --ipc=host \
     --env DISPLAY=$DISPLAY \
     --env USER=$USER \
     --env XAUTHORITY=/home/$USER/.Xauthority \
