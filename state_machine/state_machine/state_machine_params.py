@@ -71,7 +71,7 @@ class StateMachineParams:
             type=ParameterType.PARAMETER_STRING,
             read_only=False,
         )
-        node.declare_parameter("overtake_mode", "spliner", descriptor=descriptor)
+        node.set_descriptor("overtake_mode", descriptor=descriptor)
         self.overtake_mode: str = node.get_parameter("overtake_mode").value
         
         descriptor = ParameterDescriptor(
