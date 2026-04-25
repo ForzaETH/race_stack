@@ -1,0 +1,13 @@
+<launch>
+  <arg name="sample_rate_hz" default="1.0"/>
+  <arg name="pid_rescan_period_s" default="5.0"/>
+  <arg name="top_n" default="10"/>
+  <arg name="csv_path" default=""/>
+
+  <node pkg="cpu_monitor" name="cpu_monitor" exec="cpu_monitor" output="screen">
+    <param name="sample_rate_hz" value="$(var sample_rate_hz)"/>
+    <param name="pid_rescan_period_s" value="$(var pid_rescan_period_s)"/>
+    <param name="top_n" value="$(var top_n)"/>
+    <param name="csv_path" value="$(var csv_path)"/>
+  </node>
+</launch>
