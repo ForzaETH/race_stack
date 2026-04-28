@@ -20,4 +20,4 @@ ros-humble-test-msgs
 ros-humble-rqt
 ros-humble-xacro
 ros-humble-nav2-map-server
-ros-humble-nav2-lifecycle-manager
+ros-humble-nav2-lifecycle-manager

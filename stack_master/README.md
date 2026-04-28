@@ -22,13 +22,13 @@ Be careful as once a sector is chosen it cannot be further subdivided.
 
 A ROS resourcing will be needed from here on. 
 
-## Changing Initial Pose After Mapping for Cartographer
+### Changing Initial Pose After Mapping for Cartographer
 
-By default, Cartographer initializes localization at the **map origin** — the exact spot where you started the mapping run. If you place the car at a different location on the track for time trials, Cartographer won't know where it is and may fail to localize.
+By default, Cartographer initializes localization at the **map origin** — the exact spot where you started the mapping run. If you place the car at a different location on the track for time-trials or h2h, Cartographer may fail to localize itself sometimes, especially if there are not enough landmarks nearby.
 
 The **Initial Pose Bridge** node solves this by letting you click on the map in RViz to tell Cartographer where the car actually is.
 
-### How It Works
+#### How It Works
 
 When you click "2D Pose Estimate" in RViz, the bridge node:
 1. Finishes the current Cartographer localization trajectory
