@@ -52,7 +52,12 @@
             "id" : "build-type",
             "type": "pickString",
             "description": "Choose between debug and release build modes",
-            "options": ["Debug", "Release", "Debug no-symlink", "Release no-symlink"],
+            "options": [
+                "Debug",
+                "Release",
+                "Debug no-symlink",
+                "Release no-symlink"
+            ],
             "default": "Release"
         }
     ]

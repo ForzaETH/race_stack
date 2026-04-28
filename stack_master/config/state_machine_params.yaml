@@ -8,6 +8,8 @@ state_machine:
     volt_threshold: 11. # [V] voltage threshold below which we start screaming
 
     force_state: False  # force state to be the one specified in force_state_choice
+
+    overtake_mode: 'spliner'
     
     #FTG params
     debug: False  # publishes filtered scans if True but may not run smoothly
