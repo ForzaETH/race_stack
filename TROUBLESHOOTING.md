@@ -65,3 +65,12 @@ If Option 1 fails, recreate the Docker container; the Docker image can be kept a
     ```
 
 The issue should be resolved now.
+
+### 6. PS4 controller /joy topic not publishing despite /dev/input/js0 being detected
+The joy_node (running inside the Docker container) uses SDL2, which reads from /dev/input/event* rather than /dev/input/js*. The event devices are owned by root:input with mode crw-rw----, so the user must be in the input group to read them. systemd-logind grants a temporary ACL on these devices to the user of the active graphical seat, which is why pairing may work when logged in at the desk but fail later over SSH or after the session changes — the ACL is session-bound and ephemeral. Verify the issue by running ros2 run joy joy_enumerate_devices inside the container; if the table is empty despite ls /dev/input/js* showing the controller and jstest /dev/input/js0 reading inputs correctly, this is the cause. Fix it permanently by adding the host user to the input group:
+
+```bash
+sudo usermod -aG input $USER
+```
+
+Then fully log out and log back in (a new terminal in the existing session will not pick up the new group). Verify with groups | grep input. The container inherits the host user's GIDs, so no container-side change is needed provided /dev/input is bind-mounted or passed via --device in main_dock.sh. The same pattern applies to other device groups worth joining preemptively on a new machine: dialout (VESC, USB-serial), video (cameras), plugdev (general hotplug).
