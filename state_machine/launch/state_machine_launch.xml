@@ -5,7 +5,7 @@
     <arg name="param_file" default="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
 
     <!-- launch state machine -->
-    <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen">
+    <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen" args="--ros-args --log-level state_machine:=$(var log-level)">
         <param from="$(var param_file)"/>
         <param name="mode" value="$(var mode)"/>
         <param name="overtake_mode" value="$(var overtake_mode)"/>

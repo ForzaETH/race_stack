@@ -38,7 +38,7 @@ class StateMachine(Node):
         # PARAMETER DECLARATION
         self.params = StateMachineParams(self)
 
-        self.ftg_disabled = False  # TODO fix with global prams?
+        self.ftg_disabled = True  # TODO fix with global prams?
 
         # update on parameter changes for rate
         self.add_on_set_parameters_callback(self.params.parameters_callback)
@@ -556,8 +556,7 @@ class StateMachine(Node):
     def main_loop_callback(self):
         self.get_logger().debug(f"Current state: {self.state}")
         if self.state != self.prev_state:
-            self.get_logger().debug(f"\n\nState change detected, \
-                                      from {self.prev_state} to {self.state}")
+            self.get_logger().debug(f"!!!STATE CHANGE DETECTED {self.prev_state} to {self.state}")
             self.prev_state = self.state
         # transition logic
         if self.params.force_state:
