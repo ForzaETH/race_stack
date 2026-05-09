@@ -1,6 +1,6 @@
 <!-- -*- mode: XML -*- -->
 <launch>
-    <arg name="racecar_version" default="NUC2" /> <!-- NUCX -->
+    <arg name="racecar_version" default="NUCNUC" /> <!-- NUCX -->
     <arg name="map_name" description="Name of the map to be created" />
     <arg name="sim" default="False" />
     <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
