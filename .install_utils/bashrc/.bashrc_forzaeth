@@ -4,9 +4,3 @@ source /home/$USERNAME/ws/install/setup.bash
 alias sauce='source /opt/ros/${ROS_DISTRO}/setup.bash && source /home/${USERNAME}/ws/install/setup.bash'
 alias scripz='cd /home/${USERNAME}/ws/src/race_stack/stack_master/scripts'
 export ROS_DOMAIN_ID=42
-
-# Automatically start Zenoh router in background if not already running
-if ! pgrep -x "rmw_zenohd" > /dev/null; then
-    echo "Starting local Zenoh router in the background..."
-    ros2 run rmw_zenoh_cpp rmw_zenohd > /dev/null 2>&1 &
-fi
