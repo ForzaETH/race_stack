@@ -19,6 +19,8 @@ docker run --tty \
     --volume $FORZETH_DIR/../cache/humble/log:/home/$USER/ws/log \
     --volume $FORZETH_DIR:/home/$USER/ws/src/race_stack \
     --privileged \
+    --group-add $(getent group input | cut -d: -f3) \
+    --group-add $(getent group dialout | cut -d: -f3) \
     --name forzaeth_racestack_ros2_humble \
     --entrypoint /bin/bash \
     ${IMAGE}:humble
