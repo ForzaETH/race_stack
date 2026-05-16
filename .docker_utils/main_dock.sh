@@ -1,9 +1,9 @@
 #! /bin/bash
 
 # Script to launch the main docker instance for the pblf110 car
-# IMAGE=nuc_forzaeth_racestack_ros2 # for x86
-IMAGE=jet_forzaeth_racestack_ros2 # for ARM
-FORZETH_DIR=/home/jetson/ROS2_ForzaETH_Race_Stack/race_stack
+IMAGE=nuc_forzaeth_racestack_ros2 # for x86
+# IMAGE=jet_forzaeth_racestack_ros2 # for ARM
+FORZETH_DIR=/home/ilr/ROS2_ForzaETH_Race_Stack/race_stack
 
 docker run --tty \
     --interactive \
