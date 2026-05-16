@@ -13,14 +13,14 @@ options = {
   use_nav_sat = false,
   num_laser_scans = 1,
   num_multi_echo_laser_scans = 0,
-  num_subdivisions_per_laser_scan = 1,   -- CHANGES: 1.0 or 2.0 (increased from 1 for 40Hz LiDAR motion de-skewing)
+  num_subdivisions_per_laser_scan = 1,
   num_point_clouds = 0,
   lookup_transform_timeout_sec = 0.2,
   submap_publish_period_sec = 0.3,
   pose_publish_period_sec = 5e-3,
   trajectory_publish_period_sec = 30e-3,
   rangefinder_sampling_ratio = 1.,
-  odometry_sampling_ratio = 0.5,   -- CHANGES: 0.5 or 1.0 (use all odometry with faster LiDAR)
+  odometry_sampling_ratio = 0.5,
   fixed_frame_pose_sampling_ratio = 1.,
   imu_sampling_ratio = 1.,
   publish_to_tf = true,
@@ -32,20 +32,15 @@ options = {
 
 MAP_BUILDER.use_trajectory_builder_2d = true
 MAP_BUILDER.use_trajectory_builder_3d = false
-MAP_BUILDER.num_background_threads = 4.0
+MAP_BUILDER.num_background_threads = 3.0
 TRAJECTORY_BUILDER_2D.use_imu_data = false
 TRAJECTORY_BUILDER_2D.max_range = 25.0
-TRAJECTORY_BUILDER_2D.min_range = 0.05
-TRAJECTORY_BUILDER.pure_localization_trimmer = {
-    max_submaps_to_keep = 5,
-}
+TRAJECTORY_BUILDER_2D.min_range = 0.1
 
 -- might be able to optimize these parameters
 -- see: http://google-cartographer-ros.readthedocs.io/en/latest/tuning.html
-TRAJECTORY_BUILDER_2D.submaps.num_range_data = 80
-POSE_GRAPH.optimize_every_n_nodes = 5
-POSE_GRAPH.global_sampling_ratio = 0.05
-POSE_GRAPH.constraint_builder.sampling_ratio = 0.05
+TRAJECTORY_BUILDER_2D.submaps.num_range_data = 100
+POSE_GRAPH.optimize_every_n_nodes = 20
 
 TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight = 0.2 * TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight
 
@@ -53,8 +48,5 @@ TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 0.2 * TRAJECTORY_B
 
 POSE_GRAPH.optimization_problem.odometry_rotation_weight = 0
 POSE_GRAPH.optimization_problem.odometry_translation_weight = 0
---POSE_GRAPH.optimization_problem.local_slam_pose_rotation_weight = 1.25 * POSE_GRAPH.optimization_problem.local_slam_pose_rotation_weight
-
 
 return options
-

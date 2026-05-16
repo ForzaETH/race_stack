@@ -1,0 +1,93 @@
+### EKF2 config - Map-frame global fusion ###
+# Fuses Cartographer pose corrections (/tracked_pose_with_cov) with EKF1 velocity
+# (/early_fusion/odom) to produce a continuous, smoothed pose in the map frame.
+#
+# Key properties vs EKF1:
+#   - world_frame: map  → estimates in the global map frame (EKF1 uses odom frame)
+#   - publish_tf: false → Cartographer retains ownership of map->base_link TF
+#   - pose0_rejection_threshold: rejects Cartographer jumps > 2σ, giving dead-reckoning
+#     fallback when Cartographer is lost or confused by map changes
+#
+# Output: /global_fusion/odom (remapped from /odometry/filtered in launch file)
+ekf_filter_node_map:
+    ros__parameters:
+        frequency: 50.0
+        sensor_timeout: 0.5
+        two_d_mode: true
+        transform_time_offset: 0.0
+        transform_timeout: 0.1
+        print_diagnostics: true
+        debug: false
+        permit_corrected_publication: false
+        publish_acceleration: false
+
+        # Do NOT publish TF: Cartographer retains map->base_link to avoid TF tree conflicts.
+        # carstate_node reads /global_fusion/odom directly when use_ekf2:=true.
+        publish_tf: false
+
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_link
+        world_frame: map  # EKF2 operates in map frame; EKF1 operates in odom frame
+
+        # Input 1: EKF1 output - use only velocities for state propagation between
+        # Cartographer corrections. Do NOT fuse EKF1 position (odom-frame accumulated drift).
+        odom0: /early_fusion/odom
+        odom0_config: [false, false, false,   # x, y, z    - ignored (odom frame, not map)
+                       false, false, false,   # roll, pitch, yaw - ignored (Cartographer gives yaw)
+                       true,  false, false,   # vx         - used for propagation
+                       false, false, true,    # vyaw       - used for propagation
+                       false, false, false]   # ax, ay, az
+        odom0_queue_size: 5
+        odom0_differential: false
+        odom0_relative: false
+
+        # Input 2: Cartographer pose with covariance (relayed from /tracked_pose).
+        # Provides absolute x, y, yaw corrections in the map frame.
+        pose0: /tracked_pose_with_cov
+        pose0_config: [true,  true,  false,   # x, y       - used
+                       false, false, true,    # yaw        - used
+                       false, false, false,
+                       false, false, false,
+                       false, false, false]
+        pose0_queue_size: 5
+        pose0_differential: false
+        pose0_relative: false
+        # Reject Cartographer corrections deviating > 2σ from the current estimate.
+        # When Cartographer is lost (wrong poses, no high covariance signal), this causes
+        # EKF2 to fall back to dead-reckoning from EKF1 velocity. Tune this value:
+        # lower = more aggressive rejection, higher = trust Cartographer more.
+        pose0_rejection_threshold: 2.0
+
+        process_noise_covariance: [0.05,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.05,  0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.06,  0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.03,  0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.03,  0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.06,  0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025,  0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.025,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.04,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.01,  0.0,    0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.01,  0.0,    0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.02,  0.0,    0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.01,  0.0,    0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.01,  0.0,
+                                   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.015]
+
+        # Start with large position uncertainty (EKF2 will converge on first Cartographer pose).
+        initial_estimate_covariance: [0.5,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.5,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    1e-9,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    1e-9,  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    1e-9,  0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.5,   0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1e-9,  0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1e-9,  0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1e-9,  0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1e-9,   0.0,     0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     1e-9,   0.0,     0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     1e-9,   0.0,    0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     1e-9,  0.0,    0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    1e-9,  0.0,
+                                      0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    1e-9]

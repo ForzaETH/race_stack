@@ -37,24 +37,23 @@ TRAJECTORY_BUILDER_2D.use_imu_data = false
 TRAJECTORY_BUILDER_2D.max_range = 25.0
 TRAJECTORY_BUILDER_2D.min_range = 0.05
 TRAJECTORY_BUILDER.pure_localization_trimmer = {
-    max_submaps_to_keep = 5,
+    max_submaps_to_keep = 10,   -- increased from 5: more map history retained through changed areas
 }
 
 -- might be able to optimize these parameters
 -- see: http://google-cartographer-ros.readthedocs.io/en/latest/tuning.html
 TRAJECTORY_BUILDER_2D.submaps.num_range_data = 80
 POSE_GRAPH.optimize_every_n_nodes = 5
-POSE_GRAPH.global_sampling_ratio = 0.05
-POSE_GRAPH.constraint_builder.sampling_ratio = 0.05
+POSE_GRAPH.global_sampling_ratio = 0.20           -- increased from 0.05: more global loop closure attempts
+POSE_GRAPH.constraint_builder.sampling_ratio = 0.20  -- increased from 0.05: more constraints considered
 
 TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight = 0.2 * TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight
 
 TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight = 0.2 * TRAJECTORY_BUILDER_2D.ceres_scan_matcher.translation_weight
 
-POSE_GRAPH.optimization_problem.odometry_rotation_weight = 0
-POSE_GRAPH.optimization_problem.odometry_translation_weight = 0
---POSE_GRAPH.optimization_problem.local_slam_pose_rotation_weight = 1.25 * POSE_GRAPH.optimization_problem.local_slam_pose_rotation_weight
-
+-- Odometry used as a soft rail in pose graph optimization.
+-- Prevents large pose jumps when scan matching is unreliable in changed map areas.
+POSE_GRAPH.optimization_problem.odometry_rotation_weight = 1e3   -- was 0
+POSE_GRAPH.optimization_problem.odometry_translation_weight = 1e3 -- was 0
 
 return options
-

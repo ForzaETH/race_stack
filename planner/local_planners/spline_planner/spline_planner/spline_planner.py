@@ -90,7 +90,7 @@ class ObstacleSpliner(Node):
         self.post_apex_0 = 2.0
         self.post_apex_1 = 3.0
         self.post_apex_2 = 4.0
-        self.evasion_dist = 0.50 # previously 0.65
+        self.evasion_dist = 0.30 # previously 0.65
         self.obs_traj_tresh = 0.4 # previously 0.3
         self.spline_bound_mindist = 0.2
         self.fixed_pred_time = 0.15

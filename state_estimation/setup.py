@@ -24,7 +24,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            
             'carstate_node = state_estimation.carstate_node:main',
+            'tracked_pose_relay = state_estimation.tracked_pose_relay:main',
             'initialpose_bridge = state_estimation.initialpose_bridge:main',
         ],
     },

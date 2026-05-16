@@ -1,14 +1,16 @@
 <!-- -*- mode: XML -*- -->
 <launch>
-  <arg name="racecar_version" default="NUC2" description="'SIM' / 'NUCx'" />
+  <arg name="racecar_version" default="NUCNUC" description="'SIM' / 'NUCx'" />
   <arg name="map_name" description="Map name in stack_master/maps" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
+  <arg name="use_ekf2" default="False" description="True to enable EKF2 global fusion (Cartographer pose + EKF1 velocity)" />
+  <arg name="use_pose_graph_fix" default="False" description="True to use f110_2d_loc_pgfix.lua with stronger odometry weights and more loop closures" />
   <arg name="profile" default="False" description="Run cpu_monitor alongside the stack" />
 
   <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
   <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
-  <let name="joy_teleop_config"
+  <let name="joy_config"
     value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
   <let name="vesc_config"
     value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
@@ -31,7 +33,7 @@
   <group unless="$(var sim)">
     <!-- launch teleop -->
     <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
-      <arg name="joy_config" value="$(var joy_teleop_config)" />
+      <arg name="joy_config" value="$(var joy_config)" />
       <arg name="vesc_config" value="$(var vesc_config)" />
       <arg name="sensors_config" value="$(var sensors_config)" />
       <arg name="mux_config" value="$(var mux_config)" />
@@ -43,6 +45,8 @@
       <arg name="mapping_bool" value="False" />
       <arg name="map_name" value="$(var map_name)" />
       <arg name="frenet_bool" value="True" />
+      <arg name="use_ekf2" value="$(var use_ekf2)" />
+      <arg name="use_pose_graph_fix" value="$(var use_pose_graph_fix)" />
     </include>
   </group>
 
