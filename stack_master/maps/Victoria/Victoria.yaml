@@ -1,0 +1,9 @@
+free_thresh: 0.196
+image: Victoria.png
+negate: 0
+occupied_thresh: 0.65
+origin:
+- -9.83087158203125
+- -4.030513763427734
+- 0
+resolution: 0.05000000074505806
