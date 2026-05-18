@@ -18,7 +18,7 @@ First, you must drive the car around the physical space to gather the raw LiDAR 
 
 1. Launch the Map Editor in **Mapping Mode** (`map_editor_mapping:=True`). This explicitly bypasses the strict "1-lap completion" algorithmic check, letting you save the grid whenever you feel the coverage is good enough.
     ```bash
-    ros2 launch map_editor map_editor_launch.xml map_name:=MAP_NAME map_editor_mapping:=True racecar_version:=NUC2
+    ros2 launch map_editor map_editor_launch.xml map_name:=MAP_NAME map_editor_mapping:=True racecar_version:=NUCNUC
     ```
 
 2. Manually drive the car around the full track using your controller until the map is sufficiently explored (clear trackbounds, good loop closures). You can stop anywhere.
