@@ -4,13 +4,13 @@ controller:
     t_clip_max: 5.0
     m_l1: 0.583
     q_l1: -0.167
-    speed_lookahead: 0.25
+    speed_lookahead: 0.25 #*
     lat_err_coeff: 1.0
     # acc_scaler_for_steer_safe: 1.2
     # dec_scaler_for_steer_safe: 0.9 
     # acc_scaler_for_steer_aggressive: 1.1
-    acc_scaler_for_steer: 1.2
-    dec_scaler_for_steer: 0.9
+    acc_scaler_for_steer: 1.2 #*
+    dec_scaler_for_steer: 0.9 #*
 
     start_scale_speed: 7.0
     end_scale_speed: 8.0
@@ -29,7 +29,7 @@ controller:
     allow_accel_trailing: False
     trailing_mode: True #True = Distance, False = Time
     prioritize_dyn: True
-    trailing_gap: 2.0 # Distance in meters or gap in seconds, depending on mode
+    trailing_gap: 2.0 # Distance in meters or gap in seconds, depending on mode *
     trailing_p_gain: 1.0
     trailing_i_gain: 0.0
     trailing_d_gain: 0.2
