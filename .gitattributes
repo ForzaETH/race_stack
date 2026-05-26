@@ -1,0 +1,3 @@
+# Ensure shell scripts always use LF line endings (required for execution on Linux/Ubuntu)
+*.sh text eol=lf
+.install_utils/bashrc/* text eol=lf

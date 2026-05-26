@@ -1,0 +1,31 @@
+# Ingenuity Labs Racing custom aliases - edit this file on the host, sourced inside the container
+
+# Launch maapping so that we can draw on the PNG file (run "drawing" afterwards)
+# Usage: map_with_drawing <MAP_NAME>
+map_with_drawing() {
+    ros2 launch map_editor map_editor_launch.xml \
+        map_name:="$1" \
+        map_editor_mapping:=True \
+        racecar_version:=NUCNUC
+}
+
+# Re-run global trajectory planning on an existing map (no remapping)
+# Usage: plan_racing_line <MAP_NAME>
+plan_racing_line() {
+    ros2 launch map_editor map_editor_launch.xml \
+        map_name:="$1" \
+        map_editor_mapping:=False \
+        racecar_version:=NUCNUC
+}
+
+# Wipe failed colcon build artifacts and rebuild (skipping simulation packages)
+clear_failed_build() {
+    cd ~/ws && \
+    rm -rf build log install && \
+    colcon build --symlink-install --packages-ignore f110_gym f1tenth_gym_ros && \
+    source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    source ~/ws/install/setup.bash
+}
+
+# Fix display forwarding if RViz or GUI tools fail to open
+alias export_display='export DISPLAY=localhost:10.0'
