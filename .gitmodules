@@ -16,7 +16,7 @@
 	branch = pip_package
 [submodule "sensors/vesc"]
 	path = sensors/vesc
-	url = https://github.com/ForzaETH/vesc.git
+	url = https://github.com/Ingenuity-Labs-Racing/vesc.git
 	branch = foxy
 [submodule "system_identification/on-track-sysid"]
 	path = system_identification/on-track-sysid
