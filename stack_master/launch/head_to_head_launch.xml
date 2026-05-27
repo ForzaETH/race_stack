@@ -26,6 +26,9 @@
     <!-- PERCEPTION -->
     <include file="$(find-pkg-share perception)/launch/perception_launch.xml">
         <arg name="param_file" value="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
-    </include> 
-    
+    </include>
+
+    <!-- Override vesc smoothing for head-to-head (heavier smoothing to dampen overtaking jitter) -->
+    <executable cmd="bash -c 'for i in {1..50}; do ros2 param set /ackermann_to_vesc_node servo_ma_window 10 &amp;&amp; ros2 param set /ackermann_to_vesc_node erpm_ma_window 15 &amp;&amp; break; sleep 0.2; done'" output="screen"/>
+
 </launch>
