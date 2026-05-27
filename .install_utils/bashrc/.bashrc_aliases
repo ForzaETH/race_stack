@@ -5,8 +5,7 @@
 map_with_drawing() {
     ros2 launch map_editor map_editor_launch.xml \
         map_name:="$1" \
-        map_editor_mapping:=True \
-        racecar_version:=NUCNUC
+        map_editor_mapping:=True
 }
 
 # Re-run global trajectory planning on an existing map (no remapping)
@@ -14,8 +13,23 @@ map_with_drawing() {
 plan_racing_line() {
     ros2 launch map_editor map_editor_launch.xml \
         map_name:="$1" \
+        map_editor_mapping:=False
+}
+
+# Used to run mapping from a rosbag
+# Usage: mapping_from_rosbag <MAP_NAME>
+mapping_from_rosbag() {
+    ros2 launch map_editor map_editor_launch.xml map_name:=<MAP_NAME> map_editor_mapping:=False 
+    ros2 launch map_editor map_editor_launch.xml \
+        map_name:="$1" \
         map_editor_mapping:=False \
-        racecar_version:=NUCNUC
+        use_sim_time:=True
+}
+
+# Used to play  rosbag that will be used for mapping (run on a separate terminal simultaneously with mapping_from_rosbag)
+# Usage: play_rosbag <BAG_NAME>
+play_rosbag() {
+    ros2 bag play "$1" --clock
 }
 
 # Wipe failed colcon build artifacts and rebuild (skipping simulation packages)
