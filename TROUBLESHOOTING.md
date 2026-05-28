@@ -74,3 +74,6 @@ sudo usermod -aG input $USER
 ```
 
 Then fully log out and log back in (a new terminal in the existing session will not pick up the new group). Verify with groups | grep input. The container inherits the host user's GIDs, so no container-side change is needed provided /dev/input is bind-mounted or passed via --device in main_dock.sh. The same pattern applies to other device groups worth joining preemptively on a new machine: dialout (VESC, USB-serial), video (cameras), plugdev (general hotplug).
+
+### 7. Car is mysteriously stuck in TRAILING state in h2h mode, despite no objects in front of it
+Sometimes the car is launched in h2h mode and stays in TRAILING mode stationary despite having no objects in front of it. When this occurs, a common explanation is the LiDAR is picking up bits of the car behind it, and recognizes these as objects. To avoid this, visualize the LiDAR LaserScan in RViz, and move cables or standoffs out of the way until the scan shows no objects behind the car. 
