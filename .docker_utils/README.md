@@ -77,6 +77,8 @@ cd <race_stack folder>
 source .devcontainer/xauth_setup.sh
 ```
 
+> **Note:** `main_dock.sh` now performs this xauth setup itself, so for this plain-docker flow the `source .devcontainer/xauth_setup.sh` step above is optional. It is still required for the VSCode devcontainer flow below.
+
 Then, in the same terminal, launch the docker container with the following command
 ```bash
 ./.docker_utils/main_dock.sh

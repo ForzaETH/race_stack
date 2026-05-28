@@ -90,11 +90,12 @@ class ObstacleSpliner(Node):
         self.post_apex_0 = 2.0
         self.post_apex_1 = 3.0
         self.post_apex_2 = 4.0
-        self.evasion_dist = 0.30 # previously 0.65
-        self.obs_traj_tresh = 0.4 # previously 0.3
-        self.spline_bound_mindist = 0.2
+        self.evasion_dist = 0.4 # previously 0.65
+        self.obs_traj_tresh = 1.0 # previously 0.3
+        self.spline_bound_mindist = 0.1
         self.fixed_pred_time = 0.15
         self.kd_obs_pred = 1.0
+        self.dist_to_raceline = 0.35
         
         pd = ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE,
@@ -111,7 +112,8 @@ class ObstacleSpliner(Node):
             {'name': 'obs_traj_tresh', 'default': self.obs_traj_tresh, 'descriptor': pd},
             {'name': 'spline_bound_mindist', 'default': self.spline_bound_mindist, 'descriptor': pd},
             {'name': 'fixed_pred_time', 'default': self.fixed_pred_time, 'descriptor': pd},
-            {'name': 'kd_obs_pred', 'default': self.kd_obs_pred, 'descriptor': pd}
+            {'name': 'kd_obs_pred', 'default': self.kd_obs_pred, 'descriptor': pd},
+            {'name': 'dist_to_raceline', 'default': self.dist_to_raceline, 'descriptor': pd}
         ]
 
         self.declare_all_parameters(param_dicts=param_dicts)
@@ -166,6 +168,8 @@ class ObstacleSpliner(Node):
                 self.fixed_pred_time = param.value
             elif param_name == 'kd_obs_pred':
                 self.kd_obs_pred = param.value
+            elif param_name == 'dist_to_raceline':
+                self.dist_to_raceline = param.value
         
         # Ensure ascending order for spline parameters
         if self.pre_apex_1 < self.pre_apex_0:
@@ -338,46 +342,51 @@ class ObstacleSpliner(Node):
         return obs
 
     def _check_ot_side_possible(self, more_space) -> bool:
-        # TODO make rosparam for cur_d threshold
-        if abs(self.cur_d) > 0.25 and more_space != self.last_ot_side:
+        if abs(self.cur_d) > self.dist_to_raceline and more_space != self.last_ot_side:
             self.get_logger().info("Can't switch sides, because we are not on the raceline")
             return False
         return True
 
     def _more_space(self, obstacle: Obstacle, gb_wpnts: List[Any], gb_idxs: List[int]) -> Tuple[str, float]:
-        left_gap = abs(gb_wpnts[gb_idxs[0]].d_left - obstacle.d_left)
-        right_gap = abs(gb_wpnts[gb_idxs[0]].d_right + obstacle.d_right)
+        wpnt = gb_wpnts[gb_idxs[0]]
+
+        left_bound_d = wpnt.d_left
+        right_bound_d = -wpnt.d_right
+
+        left_gap = left_bound_d - obstacle.d_left
+        right_gap = obstacle.d_right - right_bound_d
+
         min_space = self.evasion_dist + self.spline_bound_mindist
 
-        if right_gap > min_space and left_gap < min_space:
-            # Compute apex distance to the right of the opponent
-            d_apex_right = obstacle.d_right - self.evasion_dist
-            # If we overtake to the right of the opponent BUT the apex is to the left of the raceline, then we set the apex to 0
-            if d_apex_right > 0:
-                d_apex_right = 0
-            return "right", d_apex_right
+        d_apex_left = obstacle.d_left + self.evasion_dist
+        d_apex_right = obstacle.d_right - self.evasion_dist
 
-        elif left_gap > min_space and right_gap < min_space:
-            # Compute apex distance to the left of the opponent
-            d_apex_left = obstacle.d_left + self.evasion_dist
-            # If we overtake to the left of the opponent BUT the apex is to the right of the raceline, then we set the apex to 0
-            if d_apex_left < 0:
-                d_apex_left = 0
-            return "left", d_apex_left
-        else:
-            candidate_d_apex_left = obstacle.d_left + self.evasion_dist
-            candidate_d_apex_right = obstacle.d_right - self.evasion_dist
-
-            if abs(candidate_d_apex_left) <= abs(candidate_d_apex_right):
-                # If we overtake to the left of the opponent BUT the apex is to the right of the raceline, then we set the apex to 0
-                if candidate_d_apex_left < 0:
-                    candidate_d_apex_left = 0
-                return "left", candidate_d_apex_left
+        left_feasible = left_gap > min_space and d_apex_left < left_bound_d - self.spline_bound_mindist
+        right_feasible = right_gap > min_space and d_apex_right > right_bound_d + self.spline_bound_mindist
+        self.get_logger().debug(
+            f"SIDE DEBUG: obs_d=[{obstacle.d_right:.2f}, {obstacle.d_left:.2f}], "
+            f"bounds=[{right_bound_d:.2f}, {left_bound_d:.2f}], "
+            f"gaps: left={left_gap:.2f}, right={right_gap:.2f}, "
+            f"feasible: left={left_feasible}, right={right_feasible}, "
+            f"apex: left={d_apex_left:.2f}, right={d_apex_right:.2f}"
+        )
+    
+        if left_feasible and right_feasible:
+            if left_gap >= right_gap:
+                return "left", max(d_apex_left, 0)
             else:
-                # If we overtake to the right of the opponent BUT the apex is to the left of the raceline, then we set the apex to 0
-                if candidate_d_apex_right > 0:
-                    candidate_d_apex_right = 0
-                return "right", candidate_d_apex_right
+                return "right", min(d_apex_right, 0)
+    
+        if left_feasible:
+            return "left", max(d_apex_left, 0)
+    
+        if right_feasible:
+            return "right", min(d_apex_right, 0)
+    
+        # No safe side available; return least-bad option, but it will likely be rejected later.
+        if left_gap >= right_gap:
+            return "left", max(d_apex_left, 0)
+        return "right", min(d_apex_right, 0)
 
     #################### MAIN FUNCTIONS####################
     def spliner_loop(self):
@@ -461,6 +470,7 @@ class ObstacleSpliner(Node):
             # Choose the correct side and compute the distance to the apex based on left of right of the obstacle
             more_space, d_apex = self._more_space(
                 closest_obs, gb_wpnts, gb_idxs)
+            self.get_logger().debug(f"SPLINE CHOSE {more_space}")
 
             # Publish the point around which we are splining
             mrk = self.xy_to_point(

@@ -9,7 +9,7 @@ from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor
 from rcl_interfaces.srv import GetParameters
 from rclpy.parameter import Parameter
 from ament_index_python import get_package_share_directory
-from std_msgs.msg import String
+from std_msgs.msg import String, Int8
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from f110_msgs.msg import WpntArray, OTWpntArray, ObstacleArray
@@ -100,6 +100,12 @@ class StateMachine(Node):
         self.waypoints_dist = 0.1
         self.state = StateType(self.params.initial_state)
         self.prev_state = StateType(self.params.initial_state)
+        self._state_to_idx = {
+            StateType.GB_TRACK: 0,
+            StateType.TRAILING: 1,
+            StateType.OVERTAKE: 2,
+            StateType.FTGONLY: 3,
+        }
         self.local_waypoints = WpntArray()
         self.first_visualization = True
         self.x_viz = 0
@@ -120,6 +126,7 @@ class StateMachine(Node):
 
         # PUBLICATIONS
         self.state_pub = self.create_publisher(String, 'state', 10)
+        self.state_idx_pub = self.create_publisher(Int8, 'state_idx', 10)
         self.state_marker_pub = self.create_publisher(Marker, 'state_marker', 10)
         self.loc_wpnt_pub = self.create_publisher(WpntArray, 'local_waypoints', 10)
         self.vis_loc_wpnt_pub = self.create_publisher(MarkerArray, 'local_waypoints/markers', 10)
@@ -554,9 +561,8 @@ class StateMachine(Node):
     # MAIN LOOP #
     #############
     def main_loop_callback(self):
-        self.get_logger().debug(f"Current state: {self.state}")
         if self.state != self.prev_state:
-            self.get_logger().debug(f"!!!STATE CHANGE DETECTED {self.prev_state} to {self.state}")
+            self.get_logger().debug(f"STATE CHANGE from {self.prev_state} to {self.state}")
             self.prev_state = self.state
         # transition logic
         if self.params.force_state:
@@ -566,6 +572,7 @@ class StateMachine(Node):
         msg = String()
         msg.data = str(self.state)
         self.state_pub.publish(msg)
+        self.state_idx_pub.publish(Int8(data=self._state_to_idx[self.state]))
         self.visualize_state(state=self.state)
 
         self.local_waypoints.wpnts = self.state_logic(self)
