@@ -1,5 +1,12 @@
 #! /bin/bash
 
+# Script to create a Xauthority file for the docker container - copied from xauth_setup.sh to avoid issues
+XAUTH=$HOME/.Xauthority
+export XAUTH_LOC=$XAUTH
+xhost +local:$USER
+
+touch $XAUTH
+
 # Script to launch the main docker instance for the pblf110 car
 IMAGE=nuc_forzaeth_racestack_ros2 # for x86
 # IMAGE=jet_forzaeth_racestack_ros2 # for ARM
