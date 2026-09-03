@@ -39,6 +39,15 @@ actuation_manager:
     steering_max: 0.2723253758
     max_steering_rate: 2.4615384615
     output_rate: 75.0
+    command_timeout: 0.2
+    joy_timeout: 0.2
+    human_deadman_button: 4
+    autonomous_deadman_button: 5
+
+vesc_driver_node:
+  ros__parameters:
+    # Stop and centre if either final actuator stream becomes stale.
+    command_timeout: 0.2
 
 vesc_to_odom_node:
   ros__parameters:
