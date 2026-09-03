@@ -31,7 +31,7 @@
         <arg name="mapping_bool" value="True" />
         <arg name="map_name" value="$(var map_name)" />
         <arg name="frenet_bool" value="False" />
-        <arg name="use_sim_time" value="True" />
+        <arg name="use_sim_time" value="False" />
     </include>
 
 
