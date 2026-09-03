@@ -5,13 +5,11 @@
     <let name="joy_teleop_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
     <let name="vesc_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
     <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
-    <let name="mux_config" value="$(find-pkg-share stack_master)/config/mux.yaml" />
 
     <!-- launch teleop -->
     <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
         <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
         <arg name="vesc_config" value="$(var vesc_config)" />
         <arg name="sensors_config" value="$(var sensors_config)" />
-        <arg name="mux_config" value="$(var mux_config)" />
     </include>
 </launch>

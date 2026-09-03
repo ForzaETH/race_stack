@@ -36,12 +36,3 @@ joy_teleop:
           axis: 3
           scale: 0.34
           offset: 0.0
-
-    autonomous_control:
-      type: topic
-      interface_type: std_msgs/msg/Int8
-      topic_name: /dev/null
-      deadman_buttons: [5]
-      message_value:
-        data:
-          value: 0
