@@ -14,8 +14,6 @@ x-common-settings: &common-settings
   shm_size: "1gb"
   stdin_open: true
   tty: true
-  post_start:
-    - command: source /home/${USER}/ws/src/race_stack/.devcontainer/xauth_setup.sh
   command: tail -f /dev/null
   volumes:
     - /dev:/dev:rw
@@ -57,7 +55,7 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [ gpu ]
+              capabilities: [gpu]
 
   x86:
     build:
