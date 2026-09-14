@@ -7,7 +7,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "[ -f /.dockerenv ] && sh /home/race_crew/ws/src/race_stack/stack_master/scripts/run_zenoh.sh || true"
+                "[ -f /.dockerenv ] && bash ./stack_master/scripts/run_zenoh.sh || true"
             ],
             "isBackground": true,
             "presentation": {
