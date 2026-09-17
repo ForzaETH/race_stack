@@ -55,3 +55,5 @@ stack_master/maps/hangar_1905_v0/ot_sectors.yaml
 .vscode/c_cpp_properties.json
 
 .env
+
+bags/

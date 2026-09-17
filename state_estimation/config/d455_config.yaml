@@ -13,11 +13,11 @@ camera:
       device_type: ""
 
       # --- depth stream ---
-      enable_depth: true
+      enable_depth: false
       depth_module.profile: 640x360x30
 
       # --- color stream ---
-      enable_color: true
+      enable_color: false
       rgb_camera.profile: 640x360x30
 
       # --- infra streams ---

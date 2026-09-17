@@ -101,7 +101,9 @@ def launch_setup(context, *args, **kwargs):
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),
         ],
-        output='screen'
+        # Silence the container: 'log' alone would still mirror stderr (where ROS
+        # console logging goes) to the screen, so route both streams to the file.
+        output={'stdout': 'log', 'stderr': 'log'},
     )
 
     # --- Basalt -> EKF bridge ---

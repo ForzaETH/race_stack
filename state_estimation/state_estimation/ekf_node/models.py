@@ -19,7 +19,7 @@ class point_mass_model:
         self.Q = Q
 
         # Initial Values
-        self.x_0 = np.array([0, 0, 0, 0, 0, 0])
+        self.x_0 = np.zeros(self.dim_x)
         self.P_0 = np.eye(self.dim_x) * 10
         self.P_0[4][4] = 0.0001
 

@@ -43,6 +43,7 @@ class EkfNode(Node):
         self.declare_parameter('imu_topic', '/imu')
         self.declare_parameter('vesc_topic', '/odom')
         self.declare_parameter('vio_topic', '/basalt/odom')
+        self.declare_parameter('send_transform', False)
         self.declare_parameter('floor', rclpy.Parameter.Type.STRING)
         self.declare_parameter('R_imu', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('R_vesc', rclpy.Parameter.Type.DOUBLE_ARRAY)
@@ -58,6 +59,8 @@ class EkfNode(Node):
         self.IMU_TOPIC = self.get_parameter('imu_topic').value
         self.VESC_TOPIC = self.get_parameter('vesc_topic').value
         self.VIO_TOPIC = self.get_parameter('vio_topic').value
+        
+        self.send_transform = self.get_parameter('send_transform').value
 
         self.get_logger().info(f"[EKF Node] Racecar is: {self.racecar_version}")
 
@@ -109,8 +112,8 @@ class EkfNode(Node):
         # Initialize EKF
         # dim_z is just for initializaiton (can change depending on update)
         self.ekf = ExtendedKalmanFilter(dim_x=self.model.dim_x, dim_z=4)
-        self.ekf.x = self.model.x_0
-        self.ekf.P = self.model.P_0
+        self.ekf.x = np.array(self.model.x_0, dtype=float)
+        self.ekf.P = np.array(self.model.P_0, dtype=float)
 
         # Control input array
         self.ackermann_data = np.zeros(2)  # [accel, steer_angle]
@@ -127,14 +130,19 @@ class EkfNode(Node):
         # Sensors. Each sensor owns its own subscription, buffering and EKF update.
         # Adding a new sensor is a single line here. VIO shares the full-odometry
         # measurement model with the VESC.
+        # ``relative=True`` zero-references a sensor to its own first measurement,
+        # so it contributes no absolute origin. The IMU needs it: its heading comes
+        # from the VESC AHRS and shares no reference with the odometry sources.
         self.sensors = [
             ImuSensor(self, self.IMU_TOPIC, self.R_imu,
                       self.model.Hx_imu, self.model.HJacobian_imu,
-                      on_init=self.init_state_from_imu),
+                      on_init=self.init_state_from_imu, relative=True),
             OdomSensor(self, 'vesc', self.VESC_TOPIC, self.R_vesc,
-                       self.model.Hx_vesc, self.model.HJacobian_vesc),
+                       self.model.Hx_vesc, self.model.HJacobian_vesc,
+                       relative=False),
             OdomSensor(self, 'vio', self.VIO_TOPIC, self.R_vio,
-                       self.model.Hx_vesc, self.model.HJacobian_vesc),
+                       self.model.Hx_vesc, self.model.HJacobian_vesc,
+                       relative=False),
         ]
 
         # Control input subscriptions
@@ -273,8 +281,8 @@ class EkfNode(Node):
         t.transform.rotation.z = float(q[2])
         t.transform.rotation.w = float(q[3])
         
-        
-        self.tf_broadcaster.sendTransform(t)
+        if self.send_transform:
+            self.tf_broadcaster.sendTransform(t)
 
 
         self.odom_pub.publish(odom)
