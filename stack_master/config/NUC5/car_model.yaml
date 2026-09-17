@@ -1,0 +1,26 @@
+m: 2.783
+lf: 0.130
+lr: 0.127
+wheelbase: 0.257
+width_m: 0.228
+
+Iz: 0.0627
+h_cg: 0.074
+a_max: 5
+a_min: -5
+v_max: 15.0
+v_min: -5.0
+
+C_0d: 0.48
+C_d: -0.87
+C_acc: 8.29
+C_dec: 5.77
+C_R: 2.03
+C_0v: -5
+C_v: 3550
+
+tau_steer: 0.15779476
+max_steering_angle: 0.4189
+min_radius_curv_m: 0.56 # this is technically not a free parameter, it should be wheelbase / tan(max_steering_angle)
+max_steering_velocity: 3.2
+racecar_version: NUC5
