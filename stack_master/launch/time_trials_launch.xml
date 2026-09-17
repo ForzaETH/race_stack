@@ -5,20 +5,25 @@
     <arg name="measure" default="False" />
 
     <!-- TODO feed this somewhere-->
-    <let name="param_file" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml"/>
+    <let name="param_file"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml" />
 
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
-        <arg name="mode" value="$(var ctrl_algo)"/>
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
-        <arg name="mapping" value="False"/>
+        <arg name="mode" value="$(var ctrl_algo)" />
+        <arg name="param_file"
+            value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
+        <arg name="mapping" value="False" />
     </include>
 
     <!-- launch state machine -->
     <include file="$(find-pkg-share state_machine)/launch/state_machine_launch.xml">
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
-        <arg name="mode" value="timetrials"/>
-        <arg name="overtake_mode" value="dummy"/>
+        <arg name="param_file"
+            value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
+        <arg name="mode" value="timetrials" />
+        <arg name="overtake_mode" value="dummy" />
     </include>
+
+    <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml" />
 
 </launch>

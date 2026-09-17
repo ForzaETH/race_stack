@@ -39,6 +39,7 @@ class LocalPlanner(Node):
             "TRAILING": self.Trailing,
             "OVERTAKE": self.Overtaking,
             "FTGONLY": self.FTGOnly,
+            "LOW_BAT": self.GlobalTracking,
         }
 
         self.overtake_wpnts = None
@@ -377,7 +378,7 @@ class LocalPlanner(Node):
         self.del_marker_pub.publish(mrk)
 
     def update_pose_from_tf(self):
-        tf = self.tf_buffer.lookup_transform("map", "base_link", Time(), timeout=Duration(seconds=5.0))
+        tf = self.tf_buffer.lookup_transform("map", "car_state/base_link", Time(), timeout=Duration(seconds=5.0))
         x = tf.transform.translation.x
         y = tf.transform.translation.y
         q = tf.transform.rotation

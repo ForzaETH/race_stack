@@ -417,7 +417,7 @@ class StateMachine(Node):
         else:
             self.state = self.state_transition(self)
         msg = String()
-        msg.data = str(self.state)
+        msg.data = self.state.value
         self.state_pub.publish(msg)
         self.visualize_state(state=self.state)
 

@@ -36,7 +36,6 @@ class Controller(Node):
                          allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
 
-
         # remote parameters
         self.map_path = get_remote_parameter(self, 'global_parameters', 'map_path')
         self.racecar_version = get_remote_parameter(self, 'global_parameters', 'racecar_version')
@@ -47,13 +46,13 @@ class Controller(Node):
         self.rate = 40
         self.state = "GB_TRACK"
 
-        self.LUT_name = self.get_parameter('LU_table').value # name of lookup table
+        self.LUT_name = self.get_parameter('LU_table').value  # name of lookup table
         self.get_logger().info(f"Using {self.LUT_name}")
         self.mode = self.get_parameter('mode').value
         self.mapping = self.get_parameter('mapping').value
 
         # Publishers
-        self.publish_topic = '/drive' # TODO adapt car topic name here
+        self.publish_topic = '/drive'  # TODO adapt car topic name here
         self.drive_pub = self.create_publisher(AckermannDriveStamped, self.publish_topic, 10)
         self.steering_pub = self.create_publisher(Marker, 'steering', 10)
         self.lookahead_pub = self.create_publisher(Marker, 'lookahead_point', 10)
@@ -71,7 +70,7 @@ class Controller(Node):
         self.position_in_map = None
         self.position_in_map_frenet = None
         self.waypoint_safety_counter = 0
-        
+
         # buffers for improved computation
         self.waypoint_array_buf = MarkerArray()
         self.markers_buf = [Marker() for _ in range(1000)]
@@ -95,86 +94,93 @@ class Controller(Node):
             return
 
         # Subscribers
-        #self.create_subscription(Config, '/l1_param_tuner/parameter_updates',self.l1_params_cb) #l1 param tuning/updating
-        self.create_subscription(String,'/state',  self.state_cb, 10)
-        self.create_subscription(WpntArray,'/global_waypoints',  self.track_length_cb, 10)
-        self.create_subscription(ObstacleArray,'/perception/obstacles',  self.obstacle_cb, 10)
-        self.create_subscription(WpntArray,'/local_waypoints', self.local_waypoint_cb, 10) # waypoints (x, y, v, norm trackbound, s, kappa)
-        self.create_subscription(Odometry,'/car_state/odom',  self.odom_cb, 10) # car speed
-        self.create_subscription(PoseStamped,'/car_state/pose',  self.car_state_cb, 10) # car position (x, y, theta)
-        self.create_subscription(Odometry, '/car_state/frenet/odom',self.car_state_frenet_cb, 10) # car frenet coordinates
-        self.create_subscription(LaserScan, '/scan', self.scan_cb, 10) # lidar scan
+        # self.create_subscription(Config,
+        # '/l1_param_tuner/parameter_updates',self.l1_params_cb) #l1 param
+        # tuning/updating
+        self.create_subscription(String, '/state', self.state_cb, 10)
+        self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, 10)
+        self.create_subscription(ObstacleArray, '/perception/obstacles', self.obstacle_cb, 10)
+        self.create_subscription(WpntArray, '/local_waypoints', self.local_waypoint_cb,
+                                 10)  # waypoints (x, y, v, norm trackbound, s, kappa)
+        self.create_subscription(Odometry, '/car_state/odom', self.odom_cb, 10)  # car speed
+        self.create_subscription(PoseStamped, '/car_state/pose', self.car_state_cb, 10)  # car position (x, y, theta)
+        self.create_subscription(
+            Odometry,
+            '/car_state/frenet/odom',
+            self.car_state_frenet_cb,
+            10)  # car frenet coordinates
+        self.create_subscription(LaserScan, '/scan', self.scan_cb, 10)  # lidar scan
 
         # Block until relevant data is here
         self.wait_for_messages()
-        
-        #Init converter
+
+        # Init converter
         self.converter = FrenetConverter(self.waypoints[:, 0], self.waypoints[:, 1], self.waypoints[:, 2])
-            
+
         # dyn params
         self.param_handler = ParameterEventHandler(self)
         self.callback_handle = self.param_handler.add_parameter_event_callback(
-            callback=self.l1_param_cb, 
+            callback=self.l1_param_cb,
         )
-        param_dicts = [{'name' : 't_clip_min',
-                        'default' : self.l1_params["t_clip_min"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
-                       {'name' : 't_clip_max',
-                        'default' : self.l1_params["t_clip_max"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=10.0, step=0.01)])},
-                       {'name' : 'm_l1',
-                        'default' : self.l1_params["m_l1"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.001)])},
-                       {'name' : 'q_l1',
-                        'default' : self.l1_params["q_l1"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=-1.0, to_value=1.0, step=0.001)])},
-                       {'name' : 'speed_lookahead',
-                        'default' : self.l1_params["speed_lookahead"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])},
-                       {'name' : 'lat_err_coeff',
-                        'default' : self.l1_params["lat_err_coeff"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])},
-                       {'name' : 'acc_scaler_for_steer',
-                        'default' : self.l1_params["acc_scaler_for_steer"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
-                       {'name' : 'dec_scaler_for_steer',
-                        'default' : self.l1_params["dec_scaler_for_steer"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
-                       {'name' : 'start_scale_speed',
-                        'default' : self.l1_params["start_scale_speed"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=10.0, step=0.01)])},
-                       {'name' : 'end_scale_speed',
-                        'default' : self.l1_params["end_scale_speed"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=10.0, step=0.01)])},
-                       {'name' : 'downscale_factor',
-                        'default' : self.l1_params["downscale_factor"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=0.5, step=0.01)])},
-                       {'name' : 'speed_lookahead_for_steer',
-                        'default' : self.l1_params["speed_lookahead_for_steer"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=0.2, step=0.01)])},
-                       {'name' : 'prioritize_dyn',
-                        'default' : self.prioritize_dyn,
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)},
-                       {'name' : 'trailing_gap',
-                        'default' : self.l1_params["trailing_gap"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.1)])},
-                       {'name' : 'trailing_p_gain',
-                        'default' : self.l1_params["trailing_p_gain"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])},
-                       {'name' : 'trailing_i_gain',
-                        'default' : self.l1_params["trailing_i_gain"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=0.5, step=0.001)])},
-                       {'name' : 'trailing_d_gain',
-                        'default' : self.l1_params["trailing_d_gain"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])},
-                       {'name' : 'blind_trailing_speed',
-                        'default' : self.l1_params["blind_trailing_speed"],
-                        'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])}]
+        param_dicts = [{'name': 't_clip_min',
+                        'default': self.l1_params["t_clip_min"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
+                       {'name': 't_clip_max',
+                        'default': self.l1_params["t_clip_max"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=10.0, step=0.01)])},
+                       {'name': 'm_l1',
+                        'default': self.l1_params["m_l1"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.001)])},
+                       {'name': 'q_l1',
+                        'default': self.l1_params["q_l1"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=-1.0, to_value=1.0, step=0.001)])},
+                       {'name': 'speed_lookahead',
+                        'default': self.l1_params["speed_lookahead"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])},
+                       {'name': 'lat_err_coeff',
+                        'default': self.l1_params["lat_err_coeff"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])},
+                       {'name': 'acc_scaler_for_steer',
+                        'default': self.l1_params["acc_scaler_for_steer"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
+                       {'name': 'dec_scaler_for_steer',
+                        'default': self.l1_params["dec_scaler_for_steer"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
+                       {'name': 'start_scale_speed',
+                        'default': self.l1_params["start_scale_speed"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=10.0, step=0.01)])},
+                       {'name': 'end_scale_speed',
+                        'default': self.l1_params["end_scale_speed"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=10.0, step=0.01)])},
+                       {'name': 'downscale_factor',
+                        'default': self.l1_params["downscale_factor"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=0.5, step=0.01)])},
+                       {'name': 'speed_lookahead_for_steer',
+                        'default': self.l1_params["speed_lookahead_for_steer"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=0.2, step=0.01)])},
+                       {'name': 'prioritize_dyn',
+                        'default': self.prioritize_dyn,
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)},
+                       {'name': 'trailing_gap',
+                        'default': self.l1_params["trailing_gap"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.1)])},
+                       {'name': 'trailing_p_gain',
+                        'default': self.l1_params["trailing_p_gain"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])},
+                       {'name': 'trailing_i_gain',
+                        'default': self.l1_params["trailing_i_gain"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=0.5, step=0.001)])},
+                       {'name': 'trailing_d_gain',
+                        'default': self.l1_params["trailing_d_gain"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])},
+                       {'name': 'blind_trailing_speed',
+                        'default': self.l1_params["blind_trailing_speed"],
+                        'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])}]
         params = self.delcare_dyn_parameters(param_dicts)
         self.set_parameters(params)
 
         # main loop
-        self.create_timer(1/self.rate, self.control_loop)
+        self.create_timer(1 / self.rate, self.control_loop)
 
         self.get_logger().info("Controller ready")
 
@@ -197,7 +203,7 @@ class Controller(Node):
                 state_print = True
 
         self.get_logger().info('All required messages received. Continuing...')
-        
+
     def delcare_dyn_parameters(self, param_dicts):
         params = []
         for param_dict in param_dicts:
@@ -214,31 +220,32 @@ class Controller(Node):
             self.l1_params = yaml.safe_load(f)
             self.l1_params = self.l1_params['controller']['ros__parameters']
 
-        self.create_subscription(Imu,'/vesc/sensors/imu/raw', self.imu_cb, 10) # acceleration subscriber for steer change
-        self.acc_now = np.zeros(10) # rolling buffer for acceleration
+        self.create_subscription(Imu, '/vesc/sensors/imu/raw', self.imu_cb,
+                                 10)  # acceleration subscriber for steer change
+        self.acc_now = np.zeros(10)  # rolling buffer for acceleration
 
         self.map_controller = MAP_Controller(
-                self.l1_params["t_clip_min"],
-                self.l1_params["t_clip_max"],
-                self.l1_params["m_l1"],
-                self.l1_params["q_l1"],
-                self.l1_params["speed_lookahead"],
-                self.l1_params["lat_err_coeff"],
-                self.l1_params["acc_scaler_for_steer"],
-                self.l1_params["dec_scaler_for_steer"],
-                self.l1_params["start_scale_speed"],
-                self.l1_params["end_scale_speed"],
-                self.l1_params["downscale_factor"],
-                self.l1_params["speed_lookahead_for_steer"],
-                self.l1_params["prioritize_dyn"],
-                self.l1_params["trailing_gap"],
-                self.l1_params["trailing_p_gain"],
-                self.l1_params["trailing_i_gain"],
-                self.l1_params["trailing_d_gain"],
-                self.l1_params["blind_trailing_speed"],
-                self.rate,
-                self.LUT_name)
-        
+            self.l1_params["t_clip_min"],
+            self.l1_params["t_clip_max"],
+            self.l1_params["m_l1"],
+            self.l1_params["q_l1"],
+            self.l1_params["speed_lookahead"],
+            self.l1_params["lat_err_coeff"],
+            self.l1_params["acc_scaler_for_steer"],
+            self.l1_params["dec_scaler_for_steer"],
+            self.l1_params["start_scale_speed"],
+            self.l1_params["end_scale_speed"],
+            self.l1_params["downscale_factor"],
+            self.l1_params["speed_lookahead_for_steer"],
+            self.l1_params["prioritize_dyn"],
+            self.l1_params["trailing_gap"],
+            self.l1_params["trailing_p_gain"],
+            self.l1_params["trailing_i_gain"],
+            self.l1_params["trailing_d_gain"],
+            self.l1_params["blind_trailing_speed"],
+            self.rate,
+            self.LUT_name)
+
     def init_pp_controller(self):
 
         # get l1 parameres
@@ -247,7 +254,7 @@ class Controller(Node):
         with open(config_path, 'r') as f:
             self.l1_params = yaml.safe_load(f)
             self.l1_params = self.l1_params['controller']['ros__parameters']
-            
+
         # get wheelbase
         if self.sim:
             config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'sim_params.yaml')
@@ -259,36 +266,36 @@ class Controller(Node):
             with open(config_path, 'r') as f:
                 car_params = yaml.safe_load(f)
                 self.wheelbase = car_params['vesc_to_odom_node']['ros__parameters']['wheelbase']
-        
 
-        self.create_subscription(Imu,'/vesc/sensors/imu/raw', self.imu_cb, 10) # acceleration subscriber for steer change
-        self.acc_now = np.zeros(10) # rolling buffer for acceleration
+        self.create_subscription(Imu, '/vesc/sensors/imu/raw', self.imu_cb,
+                                 10)  # acceleration subscriber for steer change
+        self.acc_now = np.zeros(10)  # rolling buffer for acceleration
 
         self.pp_controller = PP_Controller(
-                self.l1_params["t_clip_min"],
-                self.l1_params["t_clip_max"],
-                self.l1_params["m_l1"],
-                self.l1_params["q_l1"],
-                self.l1_params["speed_lookahead"],
-                self.l1_params["lat_err_coeff"],
-                self.l1_params["acc_scaler_for_steer"],
-                self.l1_params["dec_scaler_for_steer"],
-                self.l1_params["start_scale_speed"],
-                self.l1_params["end_scale_speed"],
-                self.l1_params["downscale_factor"],
-                self.l1_params["speed_lookahead_for_steer"],
-                self.l1_params["prioritize_dyn"],
-                self.l1_params["trailing_gap"],
-                self.l1_params["trailing_p_gain"],
-                self.l1_params["trailing_i_gain"],
-                self.l1_params["trailing_d_gain"],
-                self.l1_params["blind_trailing_speed"],
-                self.rate,
-                self.wheelbase)
+            self.l1_params["t_clip_min"],
+            self.l1_params["t_clip_max"],
+            self.l1_params["m_l1"],
+            self.l1_params["q_l1"],
+            self.l1_params["speed_lookahead"],
+            self.l1_params["lat_err_coeff"],
+            self.l1_params["acc_scaler_for_steer"],
+            self.l1_params["dec_scaler_for_steer"],
+            self.l1_params["start_scale_speed"],
+            self.l1_params["end_scale_speed"],
+            self.l1_params["downscale_factor"],
+            self.l1_params["speed_lookahead_for_steer"],
+            self.l1_params["prioritize_dyn"],
+            self.l1_params["trailing_gap"],
+            self.l1_params["trailing_p_gain"],
+            self.l1_params["trailing_i_gain"],
+            self.l1_params["trailing_d_gain"],
+            self.l1_params["blind_trailing_speed"],
+            self.rate,
+            self.wheelbase)
 
     def init_ftg_controller(self):
 
-        #TODO fix to work without alternative value
+        # TODO fix to work without alternative value
         self.state_machine_debug = get_remote_parameter(self, 'state_machine', 'debug')
         self.state_machine_safety_radius = get_remote_parameter(self, 'state_machine', 'safety_radius')
         self.state_machine_max_lidar_dist = get_remote_parameter(self, 'state_machine', 'max_lidar_dist')
@@ -296,7 +303,8 @@ class Controller(Node):
         self.state_machine_range_offset = get_remote_parameter(self, 'state_machine', 'range_offset')
         self.state_machine_track_width = get_remote_parameter(self, 'state_machine', 'track_width')
 
-        self.get_logger().info(f"FTG Controller parameters: {self.state_machine_debug}, {self.state_machine_safety_radius}, {self.state_machine_max_lidar_dist}, {self.state_machine_max_speed}, {self.state_machine_range_offset}, {self.state_machine_track_width}")
+        self.get_logger().info(
+            f"FTG Controller parameters: {self.state_machine_debug}, {self.state_machine_safety_radius}, {self.state_machine_max_lidar_dist}, {self.state_machine_max_speed}, {self.state_machine_range_offset}, {self.state_machine_track_width}")
 
         self.ftg_controller = FTG_Controller(
             mapping=self.mapping,
@@ -307,10 +315,10 @@ class Controller(Node):
             range_offset=self.state_machine_range_offset,
             track_width=self.state_machine_track_width)
 
-
     #############
     # CALLBACKS #
     #############
+
     def l1_param_cb(self, parameter_event):
         """
         Notices the change in the parameters and alters the spline params accordingly
@@ -318,7 +326,7 @@ class Controller(Node):
 
         if parameter_event.node != "/controller" or self.mode == "FTG":
             return
-        
+
         if self.mode == "MAP":
             self.map_controller.t_clip_min = self.get_parameter('t_clip_min').value
             self.map_controller.t_clip_max = self.get_parameter('t_clip_max').value
@@ -358,21 +366,21 @@ class Controller(Node):
             self.pp_controller.trailing_d_gain = self.get_parameter('trailing_d_gain').value
             self.pp_controller.blind_trailing_speed = self.get_parameter('blind_trailing_speed').value
         self.get_logger().info("Updated parameters")
-            
+
     def scan_cb(self, data: LaserScan):
         self.scan = data
 
-    def track_length_cb(self, data:WpntArray):
+    def track_length_cb(self, data: WpntArray):
         self.track_length = data.wpnts[-1].s_m
         self.waypoints = np.array([[wpnt.x_m, wpnt.y_m, wpnt.psi_rad] for wpnt in data.wpnts])
 
-    def obstacle_cb(self, data:ObstacleArray):
+    def obstacle_cb(self, data: ObstacleArray):
         if len(data.obstacles) > 0 and \
-            self.position_in_map_frenet is not None and len(self.position_in_map_frenet) and \
-            self.track_length is not None:
+                self.position_in_map_frenet is not None and len(self.position_in_map_frenet) and \
+                self.track_length is not None:
 
             self.opponent_s = None
-            static_flag = False # If we have a Static and a Dynamic obstacle we prefer the dynamic
+            static_flag = False  # If we have a Static and a Dynamic obstacle we prefer the dynamic
             closest_opp = self.track_length
             for obstacle in data.obstacles:
                 opponent_dist = (obstacle.s_start - self.position_in_map_frenet[0]) % self.track_length
@@ -384,9 +392,9 @@ class Controller(Node):
                     opponent_vs = obstacle.vs
                     opponent_visible = obstacle.is_visible
                     if opponent_static:
-                        static_flag = self.prioritize_dyn # Chosen Obstacle is static
+                        static_flag = self.prioritize_dyn  # Chosen Obstacle is static
                     else:
-                        static_flag = False # Chosen obstacle is dynamic
+                        static_flag = False  # Chosen obstacle is dynamic
                     self.opponent = [opponent_s, opponent_d, opponent_vs, opponent_static, opponent_visible]
         else:
             self.opponent = None
@@ -398,7 +406,7 @@ class Controller(Node):
         x = data.pose.position.x
         y = data.pose.position.y
         rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y,
-                                       data.pose.orientation.z, data.pose.orientation.w])
+                                  data.pose.orientation.z, data.pose.orientation.w])
         rot_euler = rot.as_euler('xyz', degrees=False)
         theta = rot_euler[2]
         self.position_in_map = np.array([x, y, theta])[np.newaxis]
@@ -412,25 +420,35 @@ class Controller(Node):
                 self.waypoint_list_in_map.append([waypoint_in_map[0],
                                                   waypoint_in_map[1],
                                                   speed,
-                                                  min(waypoint.d_left, waypoint.d_right)/(waypoint.d_right + waypoint.d_left),
-                                                  waypoint.s_m, waypoint.kappa_radpm, waypoint.psi_rad, waypoint.ax_mps2]
-                                                )
+                                                  min(waypoint.d_left,
+                                                      waypoint.d_right) / (waypoint.d_right + waypoint.d_left),
+                                                  waypoint.s_m,
+                                                  waypoint.kappa_radpm,
+                                                  waypoint.psi_rad,
+                                                  waypoint.ax_mps2])
             else:
-                self.waypoint_list_in_map.append([waypoint_in_map[0], waypoint_in_map[1], speed, 0, waypoint.s_m, waypoint.kappa_radpm, waypoint.psi_rad, waypoint.ax_mps2])
+                self.waypoint_list_in_map.append([waypoint_in_map[0],
+                                                  waypoint_in_map[1],
+                                                  speed,
+                                                  0,
+                                                  waypoint.s_m,
+                                                  waypoint.kappa_radpm,
+                                                  waypoint.psi_rad,
+                                                  waypoint.ax_mps2])
         self.waypoint_array_in_map = np.array(self.waypoint_list_in_map)
         self.waypoint_safety_counter = 0
 
     def imu_cb(self, data):
         # save acceleration in a rolling buffer
         self.acc_now[1:] = self.acc_now[:-1]
-        self.acc_now[0] = -data.linear_acceleration.y # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
+        self.acc_now[0] = -data.linear_acceleration.y  # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
 
     def car_state_frenet_cb(self, data: Odometry):
         s = data.pose.pose.position.x
         d = data.pose.pose.position.y
         vs = data.twist.twist.linear.x
         vd = data.twist.twist.linear.y
-        self.position_in_map_frenet = np.array([s,d,vs,vd])
+        self.position_in_map_frenet = np.array([s, d, vs, vd])
 
     def l1_params_cb(self):
         pass
@@ -440,68 +458,67 @@ class Controller(Node):
 
     def map_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.map_controller.main_loop(self.state,
-                                                                                                                    self.position_in_map,
-                                                                                                                    self.waypoint_array_in_map,
-                                                                                                                    self.speed_now,
-                                                                                                                    self.opponent,
-                                                                                                                    self.position_in_map_frenet,
-                                                                                                                    self.acc_now,
-                                                                                                                    self.track_length)
+                                                                                                                               self.position_in_map,
+                                                                                                                               self.waypoint_array_in_map,
+                                                                                                                               self.speed_now,
+                                                                                                                               self.opponent,
+                                                                                                                               self.position_in_map_frenet,
+                                                                                                                               self.acc_now,
+                                                                                                                               self.track_length)
         self.set_lookahead_marker(L1_point, 100)
         self.visualize_steering(steering_angle)
         self.visualize_trailing_opponent()
         self.l1_pub.publish(Point(x=float(idx_nearest_waypoint), y=L1_distance))
-        
+
         self.waypoint_safety_counter += 1
         print(self.waypoint_safety_counter, self.rate, self.state_machine_rate)
-        if self.waypoint_safety_counter >= self.rate/self.state_machine_rate* 10: #we can use the same waypoints for 5 cycles
+        if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
             self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
             speed = 0
             steering_angle = 0
         self.map_controller.flag1 = False
-        
+
         # Publish PID data of the Trailing controller for tuning
-        if self.map_controller.flag1 == True:
-            pid_msg = self.create_pid_msg(self.map_controller.gap_should, 
-                                            self.map_controller.gap, 
-                                            self.map_controller.gap_error, 
-                                            self.map_controller.v_diff, 
-                                            self.map_controller.i_gap, 
-                                            self.map_controller.trailing_command)
+        if self.map_controller.flag1:
+            pid_msg = self.create_pid_msg(self.map_controller.gap_should,
+                                          self.map_controller.gap,
+                                          self.map_controller.gap_error,
+                                          self.map_controller.v_diff,
+                                          self.map_controller.i_gap,
+                                          self.map_controller.trailing_command)
             self.gap_data.publish(pid_msg)
-            
+
         return speed, steering_angle
-    
+
     def pp_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.pp_controller.main_loop(self.state,
-                                                                                                                    self.position_in_map,
-                                                                                                                    self.waypoint_array_in_map,
-                                                                                                                    self.speed_now,
-                                                                                                                    self.opponent,
-                                                                                                                    self.position_in_map_frenet,
-                                                                                                                    self.acc_now,
-                                                                                                                    self.track_length)
+                                                                                                                              self.position_in_map,
+                                                                                                                              self.waypoint_array_in_map,
+                                                                                                                              self.speed_now,
+                                                                                                                              self.opponent,
+                                                                                                                              self.position_in_map_frenet,
+                                                                                                                              self.acc_now,
+                                                                                                                              self.track_length)
         self.set_lookahead_marker(L1_point, 100)
         self.visualize_steering(steering_angle)
         self.visualize_trailing_opponent()
         self.l1_pub.publish(Point(x=float(idx_nearest_waypoint), y=L1_distance))
-        
-        
+
         self.waypoint_safety_counter += 1
-        if self.waypoint_safety_counter >= self.rate/self.state_machine_rate* 10: #we can use the same waypoints for 5 cycles
+        if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
             self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
             speed = 0
             steering_angle = 0
         self.pp_controller.flag1 = False
-        
+
         # Publish PID data of the Trailing controller for tuning
-        if self.pp_controller.flag1 == True:
-            pid_msg = self.create_pid_msg(self.pp_controller.gap_should, 
-                                            self.pp_controller.gap, 
-                                            self.pp_controller.gap_error, 
-                                            self.pp_controller.v_diff, 
-                                            self.pp_controller.i_gap, 
-                                            self.pp_controller.trailing_command)
+        if self.pp_controller.flag1:
+            pid_msg = self.create_pid_msg(self.pp_controller.gap_should,
+                                          self.pp_controller.gap,
+                                          self.pp_controller.gap_error,
+                                          self.pp_controller.v_diff,
+                                          self.pp_controller.i_gap,
+                                          self.pp_controller.trailing_command)
             self.gap_data.publish(pid_msg)
         return speed, steering_angle
 
@@ -509,17 +526,17 @@ class Controller(Node):
         speed, steer = self.ftg_controller.process_lidar(self.scan.ranges)
         self.get_logger().warning("[STATE MACHINE] FTGONLY!!!")
         return speed, steer
-    
+
     def create_pid_msg(self, should, actual, error, d_value, i_value, input):
-            pid_msg = PidData()
-            pid_msg.header.stamp = self.get_clock().now().to_msg()
-            pid_msg.should = should
-            pid_msg.actual = actual
-            pid_msg.error = error
-            pid_msg.d_value = d_value
-            pid_msg.i_value = i_value
-            pid_msg.input = input
-            return pid_msg
+        pid_msg = PidData()
+        pid_msg.header.stamp = self.get_clock().now().to_msg()
+        pid_msg.should = should
+        pid_msg.actual = actual
+        pid_msg.error = error
+        pid_msg.d_value = d_value
+        pid_msg.i_value = i_value
+        pid_msg.input = input
+        return pid_msg
 
     #############
     # MAIN LOOP #
@@ -538,8 +555,8 @@ class Controller(Node):
         ack_msg.drive.steering_angle = steer
         ack_msg.drive.speed = speed
         self.drive_pub.publish(ack_msg)
-        
-    ############################################MSG CREATION############################################
+
+    ############################################ MSG CREATION############################################
     # visualization utilities
     def visualize_steering(self, theta):
 
@@ -616,7 +633,7 @@ class Controller(Node):
         self.lookahead_pub.publish(lookahead_marker)
 
     def visualize_trailing_opponent(self):
-        if(self.state == "TRAILING" and (self.opponent is not None)):
+        if (self.state == "TRAILING" and (self.opponent is not None)):
             on = True
         else:
             on = False
@@ -641,7 +658,7 @@ class Controller(Node):
         opponent_marker.pose.orientation.y = 0.0
         opponent_marker.pose.orientation.z = 0.0
         opponent_marker.pose.orientation.w = 1.0
-        if on == False:
+        if not on:
             opponent_marker.action = Marker.DELETE
         self.trailing_pub.publish(opponent_marker)
 
