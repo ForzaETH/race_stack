@@ -1,35 +1,36 @@
 {
-    "name": "ForzaETH Race Stack Humble",
     "dockerComposeFile": "../docker-compose.yaml",
-    "service": "x86",
+    "service": "race_stack",
     "runServices": [
-        "x86"
+        "race_stack"
     ],
-    "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
-    "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
+    "workspaceFolder": "/ws",
+    "remoteUser": "race_crew",
     "customizations": {
         "vscode": {
             "extensions": [
                 "ms-vscode.cpptools",
-                "ms-vscode.cpptools-themes",
                 "ms-vscode.cpptools-extension-pack",
-                "twxs.cmake",
-                "donjayamanne.python-extension-pack",
-                "aaron-bond.better-comments",
-                "eamodio.gitlens",
-                "ms-iot.vscode-ros",
-                "Github.copilot",
-                "redhat.vscode-xml",
-                "ms-python.autopep8",
-                "xaver.clang-format",
-                "cschlosser.doxdocgen",
-                "foxundermoon.shell-format",
-                "timonwong.shellcheck"
-            ]
+                "ms-python-python",
+                "ms-iot.vscode-ros"
+            ],
+            "settings": {
+                "python.autoComplete.extraPaths": [
+                    "/opt/ros/humble/lib/python3.10/site-packages",
+                    "/opt/ros/humble/local/lib/python3.10/dist-packages"
+                ],
+                "python.analysis.extraPaths": [
+                    "/opt/ros/humble/lib/python3.10/site-packages",
+                    "/opt/ros/humble/local/lib/python3.10/dist-packages"
+                ],
+                "python.envFile": "${workspaceFolder}/.env",
+                "search.exclude": {
+                    "**/build": true,
+                    "**/install": true,
+                    "**/log": true
+                }
+            }
         }
     },
-    "containerEnv": {
-        "DISPLAY": ":501",
-    },
-    "postCreateCommand": "~/ws/src/race_stack/.install_utils/post_create_command.sh"
+    "postCreateCommand": "bash /ws/src/race_stack/.install_utils/post_create_command.sh"
 }
