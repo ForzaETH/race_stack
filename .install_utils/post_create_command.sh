@@ -1,26 +1,22 @@
 #!/bin/bash
 
-# Setup permissions
-# USER="$(id -u -n)"
-sudo chown -R $USER:$USER ~/ws/
+# Stop at error
+set -e
 
-# Install dependencies
-rosdep update &&
-    rosdep install --from-paths /home/$USERNAME/ws/src --ignore-src -y
+# Setup user permissions
+sudo chown -R race_crew:race_crew /ws/
 
-# Setup race_stack
-bash ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh || echo "Failed to setup f110_sim"
-bash ~/ws/src/race_stack/.install_utils/gb_opt_setup.sh || echo "Failed to setup gb_opt"
+# Clone external repositories into /ws/src (no submodules)
+vcs import /ws/src < /ws/src/race_stack/.install_utils/dependencies.repos
 
-# Apply Joystick patch
-sudo chmod 666 /dev/input/js0
-sudo chmod 666 /dev/input/event*
+# Install ROS 2 dependencies (race_stack and additional cloned repos)
+rosdep update
+rosdep install --from-paths /ws/src --ignore-src -y
 
-# setup f1tenth_gym
-cd ~/ws &&
-    colcon build --packages-up-to f110_gym --base-paths ~/ws \
-        --cmake-args "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
-        -Wall -Wextra -Wpedantic --cmake-clean-cache
+# Set joystick permissions 
+sudo chmod 666 /dev/input/js0 2>/dev/null || true
+sudo chmod 666 /dev/input/event* 2>/dev/null || true
 
-cd ~/ws/src/race_stack &&
-    ./.vscode/build.sh Release
+# Build workspace
+cd /ws
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release

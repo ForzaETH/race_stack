@@ -1,79 +1,36 @@
-x-common-build-settings: &common-build-settings
-  context: .
-  pull: false
-
-x-user-args: &user-args
-  USER: ${USER}
-  UID: ${HOST_UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
-  GID: ${HOST_GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
-
-x-common-settings: &common-settings
-  network_mode: host
-  ipc: host
-  privileged: true
-  shm_size: "1gb"
-  stdin_open: true
-  tty: true
-  command: tail -f /dev/null
-  volumes:
-    - /dev:/dev:rw
-    - $HOME/.Xauthority:/tmp/.Xauthority
-    - /tmp/.X11-unix:/tmp/.X11-unix
-    - ./:/home/${USER}/ws/src/race_stack:rw
-    - ../race_stack_cache/humble/build:/home/${USER}/ws/build:rw
-    - ../race_stack_cache/humble/install:/home/${USER}/ws/install:rw
-    - ../race_stack_cache/humble/logs:/home/${USER}/ws/logs:rw
-    - .vscode:/home/${USER}/ws/.vscode:rw
-  environment:
-    - DISPLAY=${DISPLAY}
-    - XAUTHORITY=/tmp/.Xauthority
-    - USER=${USER}
-    - USERNAME=${USER}
-    - ROS_LOCALHOST_ONLY=0
-    - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
-    - RCUTILS_COLORIZED_OUTPUT=1
-    - TERM=xterm-256color
-    - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-    - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
-
 services:
-  jet:
+  race_stack:
     build:
-      <<: *common-build-settings
-      dockerfile: ./.devcontainer/Dockerfile
+      context: .
+      dockerfile: .devcontainer/Dockerfile
       args:
-        <<: *user-args
-        IMAGE: dustynv/ros:noetic-ros-base-l4t-r35.2.1
-        PLATFORM: jet
-    container_name: forzaeth_devcontainer_jet
-    image: race_stack:humble_jet
-    <<: *common-settings
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-  x86:
-    build:
-      <<: *common-build-settings
-      dockerfile: ./.devcontainer/Dockerfile
-      args:
-        <<: *user-args
-        PLATFORM: x86
-    container_name: forzaeth_devcontainer_x86
-    image: race_stack:humble_x86
-    <<: *common-settings
-  arm:
-    build:
-      <<: *common-build-settings
-      dockerfile: ./.devcontainer/Dockerfile
-      args:
-        <<: *user-args
-        PLATFORM: arm
-    container_name: forzaeth_devcontainer_arm
-    image: race_stack:humble_arm
-    <<: *common-settings
+        USER: race_crew
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+        IMAGE: ros:humble-desktop
+    container_name: forzaeth_devcontainer
+    image: race_stack:humble_dev
+    network_mode: host
+    ipc: host
+    privileged: true
+    shm_size: "1gb"
+    stdin_open: true
+    tty: true
+    command: tail -f /dev/null
+    volumes:
+      - /dev:/dev:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./:/ws/src/race_stack:rw
+      - ../race_stack_cache/humble/build:/ws/build:rw
+      - ../race_stack_cache/humble/install:/ws/install:rw
+      - ../race_stack_cache/humble/log:/ws/log:rw
+    environment:
+      - DISPLAY=${DISPLAY}
+      - USER=race_crew
+      - USERNAME=race_crew
+      - ROS_LOCALHOST_ONLY=0
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - TERM=xterm-256color
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}

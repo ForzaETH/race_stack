@@ -1,0 +1,25 @@
+repositories:
+    f1tenth_gym:
+        type: git
+        url: https://github.com/ForzaETH/f1tenth_gym/
+        version: f8f8c9d4781d44a2959bae013f276410cb4e9da0
+    f1tenth_gym_ros:
+        type: git
+        url: https://github.com/ForzaETH/f1tenth_gym_ros/
+        version: 6ffd20960373366880193a6bc891d0835eaefa3d
+    f1tenth_system:
+        type: git
+        url: https://github.com/ForzaETH/f1tenth_system/
+        version: f2262a65ed7272ba4f873520cd6324ece8665c0d
+    global_racetrajectory_optimization:
+        type: git
+        url: https://github.com/ForzaETH/global_racetrajectory_optimization/
+        version: b1b38ecfefec7200d5bcb243f115af1d795b3766
+    basalt_ros:
+        type: git
+        url: https://github.com/ForzaETH/basalt_ros.git
+        version: main
+    basalt_wrapper:
+        type: git
+        url: https://github.com/ForzaETH/basalt_wrapper.git
+        version: main

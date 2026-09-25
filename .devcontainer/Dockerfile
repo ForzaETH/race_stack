@@ -1,62 +1,41 @@
-ARG IMAGE=ros:humble
+ARG IMAGE=ros:humble-desktop
 FROM ${IMAGE}
-ARG PLATFORM=arm
-ARG USER
-ARG UID
-ARG GID
 
-RUN if [[ "$(uname -m)" == "aarch64" ]] && [[ "$PLATFORM" == "jet" ]]; then \
-    echo "Building for Jetson ARM architecture..."; \
-    if [[ "$IMAGE" != "dustynv/ros:humble-ros-base-l4t-r36.3.0" ]]; then \
-    echo "Error: The selected base image is wrong."; \
-    exit 1; \
-    fi; \
-    elif [[ "$(uname -m)" == "arm64" ]] && [[ "$PLATFORM" == "arm" ]]; then \
-    echo "Building for Apple ARM architecture..."; \
-    if [[ "$IMAGE" != "ros:humble-desktop" ]]; then \
-    echo "Error: The selected base image is wrong."; \
-    exit 1; \
-    fi; \
-    elif [[ "$(uname -m)" == "x86_64" ]] && [[ "$PLATFORM" == "x86" ]]; then \
-    echo "Building for x86 architecture..."; \
-    if [[ "$IMAGE" != "ros:humble-desktop" ]]; then \
-    echo "Error: The selected base image is wrong."; \
-    exit 1; \
-    fi; \
-    fi;
-
-
+ARG USER=race_crew
+ARG UID=1000
+ARG GID=1000
 
 SHELL [ "/bin/bash", "-c" ]
 ARG DEBIAN_FRONTEND=noninteractive
 
-ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
-RUN chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh
+# Create user and give permissions
+RUN groupadd -fg ${GID} ${USER} \
+    && useradd -ms /bin/bash -u ${UID} -g ${GID} -G sudo ${USER} \
+    && apt-get update && apt-get install -y sudo \
+    && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
+    && chmod 0440 /etc/sudoers.d/${USER} \
+    && usermod -aG dialout,plugdev ${USER}
 
-ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
-RUN chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh
+# Copy linux and python requirement lists
+COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
+COPY .install_utils/requirements/python_req.txt /tmp/python_req.txt
 
+# Install system dependencies & setup standalone UV
+RUN apt-get update && xargs apt-get install -y < /tmp/linux_req.txt \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir uv
 
-ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt
-RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req.txt
-ADD ./.install_utils/python_req.txt /tmp/.install_utils/python_req.txt
-RUN pip3 install -r /tmp/.install_utils/python_req.txt &&\
-    pip3 install quadprog~=0.1.11
+# Install python dependencies through UV (Lightning Fast)
+RUN uv pip install --system -r /tmp/python_req.txt
 
-ADD ./.install_utils /.install_utils
-RUN useradd -ms /bin/bash -u ${UID} -G sudo ${USER} && groupadd -fg ${GID} ${USER} \
-    && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-USER $USER
+# Place workspace sourcing into terminal user profile
+RUN echo "source /opt/ros/humble/setup.bash" >> /home/${USER}/.bashrc && \
+    echo "source /ws/install/setup.bash" >> /home/${USER}/.bashrc
 
-ADD .install_utils/bashrc/ /tmp/.install_utils/
-RUN echo "export USERNAME=$USER" >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_git >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_forzaeth >> /home/$USER/.bashrc
+# Delete temporary requirement files
+RUN rm /tmp/linux_req.txt /tmp/python_req.txt
 
-USER root
-# Clean up
-RUN rm -rf /tmp/.install_utils
-
-USER $USER
-WORKDIR /home/$USER/ws
+# Set runtime environment
+USER ${USER}
+WORKDIR /ws
 CMD ["/bin/bash"]

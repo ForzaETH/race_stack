@@ -11,10 +11,11 @@
             "extensions": [
                 "ms-vscode.cpptools",
                 "ms-vscode.cpptools-extension-pack",
-                "ms-python-python",
+                "ms-python.python",
                 "ms-iot.vscode-ros"
             ],
             "settings": {
+                "ros.distro": "humble",
                 "python.autoComplete.extraPaths": [
                     "/opt/ros/humble/lib/python3.10/site-packages",
                     "/opt/ros/humble/local/lib/python3.10/dist-packages"
@@ -23,7 +24,7 @@
                     "/opt/ros/humble/lib/python3.10/site-packages",
                     "/opt/ros/humble/local/lib/python3.10/dist-packages"
                 ],
-                "python.envFile": "${workspaceFolder}/.env",
+                "python.envFile": "${workspaceFolder}/src/race_stack/.env",
                 "search.exclude": {
                     "**/build": true,
                     "**/install": true,

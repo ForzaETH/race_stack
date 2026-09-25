@@ -4,11 +4,7 @@
         {
             "label": "Start Zenoh Router",
             "type": "shell",
-            "command": "bash",
-            "args": [
-                "-c",
-                "[ -f /.dockerenv ] && bash ./stack_master/scripts/run_zenoh.sh || true"
-            ],
+            "command": "bash /ws/src/race_stack/stack_master/scripts/run_zenoh.sh || true",
             "isBackground": true,
             "presentation": {
                 "reveal": "always",
@@ -21,9 +17,9 @@
         },
         {
             "label": "Build Workspace",
-            "detail": "Builds all packages in the workspace",
+            "detail": "Builds all packages in the workspace natively",
             "type": "shell",
-            "command": "cd ../../; ./src/race_stack/.vscode/build.sh ${input:build-type}",
+            "command": "cd /ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=${input:build-type} -DCMAKE_EXPORT_COMPILE_COMMANDS=On",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -34,9 +30,9 @@
         },
         {
             "label": "Build Target",
-            "detail": "Builds one or more targets in the workspace",
+            "detail": "Builds specific packages in the workspace",
             "type": "shell",
-            "command": "cd ../../; ./src/race_stack/.vscode/build.sh ${input:build-type} ${input:packages}",
+            "command": "cd /ws && colcon build --packages-up-to ${input:packages} --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=${input:build-type} -DCMAKE_EXPORT_COMPILE_COMMANDS=On",
             "problemMatcher": [
                 "$gcc"
             ],
@@ -47,16 +43,16 @@
         },
         {
             "label": "Clean Workspace",
-            "detail": "Run colcon clean",
+            "detail": "Wipes the build, install, and log directories",
             "type": "shell",
-            "command": "cd ../../; ./src/race_stack/.vscode/clean.sh",
+            "command": "cd /ws && colcon clean workspace --yes",
             "problemMatcher": []
         },
         {
             "label": "Clean Target",
-            "detail": "Run colcon clean on one or more targets",
+            "detail": "Cleans specific packages",
             "type": "shell",
-            "command": "cd ../../; ./src/race_stack/.vscode/clean.sh ${input:packages}",
+            "command": "cd /ws && colcon clean packages --packages-up-to ${input:packages} --yes",
             "problemMatcher": []
         }
     ],
@@ -64,17 +60,16 @@
         {
             "id": "packages",
             "type": "promptString",
-            "description": "Name of package to build",
+            "description": "Name of package(s) to target"
         },
         {
             "id": "build-type",
             "type": "pickString",
-            "description": "Choose between debug and release build modes",
+            "description": "Choose CMake build type",
             "options": [
                 "Debug",
                 "Release",
-                "Debug no-symlink",
-                "Release no-symlink"
+                "RelWithDebInfo"
             ],
             "default": "Release"
         }

@@ -1,3 +1,6 @@
+# Current State
+This branch is highly experimental and may not work on all (any) devices yet. It is recommended to avoid using this branch for race stack developement.
+
 # Docker Structure and Guidelines
 **Note:** Currently only installation via docker has been tested and is supported.
 

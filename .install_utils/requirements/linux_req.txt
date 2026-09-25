@@ -1,0 +1,40 @@
+# --------------------------------------
+# System and Networking 
+# --------------------------------------
+wget
+jq
+apt-utils
+net-tools
+joystick
+x11-apps
+
+# --------------------------------------
+# Python
+# --------------------------------------
+python3-pip
+python3-colcon-clean
+python3-vcstool
+python3-numpy
+python3-tk
+python3-vcstool
+python3-numpy
+
+# --------------------------------------
+# Hardware
+# --------------------------------------
+ros-humble-rmw-zenoh-cpp
+ros-humble-rviz2
+ros-humble-rqt*
+ros-humble-realsense2-*
+
+# --------------------------------------
+# Basalt VIO
+# --------------------------------------
+libbz2-dev
+libtbb-dev
+libopencv-dev
+libboost-all-dev
+libgl1-mesa-dev
+libglu1-mesa-dev
+libglew-dev
+liblz4-dev
