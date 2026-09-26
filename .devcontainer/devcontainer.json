@@ -1,14 +1,15 @@
 {
+    "name": "ForzaETH Race Stack",
     "initializeCommand": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
     "dockerComposeFile": [
         "../docker-compose.yaml",
         "docker-compose.local.yaml"
     ],
     "service": "race_stack",
-    "runServices": [
-        "race_stack",
-        "zenoh_router"
-    ],
+    "forwardPorts": [20501],
+    "portsAttributes": {
+        "20501": { "label": "noVNC" }
+    },
     "workspaceFolder": "/ws",
     "remoteUser": "race_crew",
     "customizations": {
@@ -30,7 +31,6 @@
                     "/opt/ros/humble/lib/python3.10/site-packages",
                     "/opt/ros/humble/local/lib/python3.10/dist-packages"
                 ],
-                "python.envFile": "${workspaceFolder}/src/race_stack/.env",
                 "search.exclude": {
                     "**/build": true,
                     "**/install": true,
