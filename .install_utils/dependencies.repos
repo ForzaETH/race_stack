@@ -2,15 +2,15 @@ repositories:
     f1tenth_gym:
         type: git
         url: https://github.com/ForzaETH/f1tenth_gym/
-        version: f8f8c9d4781d44a2959bae013f276410cb4e9da0
+        version: humble
     f1tenth_gym_ros:
         type: git
         url: https://github.com/ForzaETH/f1tenth_gym_ros/
-        version: 6ffd20960373366880193a6bc891d0835eaefa3d
+        version: humble
     f1tenth_system:
         type: git
         url: https://github.com/ForzaETH/f1tenth_system/
-        version: f2262a65ed7272ba4f873520cd6324ece8665c0d
+        version: humble
     vesc:
         type: git
         url: https://github.com/ForzaETH/vesc/
