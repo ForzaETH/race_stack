@@ -38,3 +38,20 @@ services:
       - TERM=xterm-256color
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
       - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
+
+  zenoh_router:
+    image: race_stack:humble_dev
+    pull_policy: never
+    depends_on:
+      - race_stack
+    container_name: forzaeth_zenoh_router
+    hostname: ${RACECAR_VERSION:-NUC1}
+    env_file:
+      - .env
+    network_mode: host
+    ipc: host
+    restart: unless-stopped
+    command: bash -c "source /opt/ros/humble/setup.bash && exec ros2 run rmw_zenoh_cpp rmw_zenohd"
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
