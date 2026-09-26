@@ -1,4 +1,4 @@
-ARG IMAGE=ros:humble-desktop
+ARG IMAGE=ros:humble-ros-base
 FROM ${IMAGE}
 
 ARG USER=race_crew
@@ -6,12 +6,13 @@ ARG UID=1000
 ARG GID=1000
 
 SHELL [ "/bin/bash", "-c" ]
-ARG DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # Create user and give permissions
 RUN groupadd -fg ${GID} ${USER} \
     && useradd -ms /bin/bash -u ${UID} -g ${GID} -G sudo ${USER} \
-    && apt-get update && apt-get install -y sudo \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends sudo \
     && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
     && chmod 0440 /etc/sudoers.d/${USER} \
     && usermod -aG dialout,plugdev ${USER}
@@ -20,12 +21,12 @@ RUN groupadd -fg ${GID} ${USER} \
 COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
 COPY .install_utils/requirements/python_req.txt /tmp/python_req.txt
 
-# Install system dependencies & setup standalone UV
+# Install system dependencies and setup standalone UV
 RUN apt-get update && xargs apt-get install -y < /tmp/linux_req.txt \
     && apt-get clean && rm -rf /var/lib/apt/lists/* \
     && pip3 install --no-cache-dir uv
 
-# Install python dependencies through UV (Lightning Fast)
+# Install python dependencies through UV
 RUN uv pip install --system -r /tmp/python_req.txt
 
 # Place workspace sourcing into terminal user profile
