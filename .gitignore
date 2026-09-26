@@ -36,6 +36,7 @@
 
 # py
 *.pyc
+__pycache__/
 
 #vscode
 .vscode
