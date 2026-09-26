@@ -24,13 +24,13 @@ We provide an installation guide [here](.install_utils/README.md).
 
 Or check out our [video playlist on Youtube](https://www.youtube.com/playlist?list=PLMzSGo5LtaW9cgdwHB_FnX3qlAYx7P6JI):  
 <a href="https://www.youtube.com/watch?v=A9Clg1n6rII">
-  <img src="./base_system/misc/install_thumbnail.png" alt="Install" style="width: 33%;"/>
+  <img src="./.install_utils/misc/install_thumbnail.png" alt="Install" style="width: 33%;"/>
 </a>
 <a href="https://www.youtube.com/watch?v=6PtFzrRz1GU">
-  <img src="./base_system/misc/simulator_thumbnail.png" alt="Simulation" style="width: 33%;"/>
+  <img src="./.install_utils/misc/simulator_thumbnail.png" alt="Simulation" style="width: 33%;"/>
 </a>
 <a href="https://www.youtube.com/watch?v=ACQdLD27v-k">
-  <img src="./base_system/misc/hardware_thumbnail.png" alt="Car" style="width: 33%;"/>
+  <img src="./.install_utils/misc/hardware_thumbnail.png" alt="Car" style="width: 33%;"/>
 </a>
 
 **Note:** Click on the thumbnails to watch the videos.
