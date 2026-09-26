@@ -1,4 +1,5 @@
 CACHE_DIR := ../race_stack_cache/humble
+MAPS_DIR := ../race_stack_maps
 
 .PHONY: setup help
 
@@ -8,6 +9,7 @@ help:
 
 setup:
 	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log
+	@mkdir -p $(MAPS_DIR)
 
 	@echo "Cloning external repositories..."
 	@mkdir -p $(WORKSPACE_DIR)/src
