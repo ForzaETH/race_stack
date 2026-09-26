@@ -2,20 +2,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Start Zenoh Router",
-            "type": "shell",
-            "command": "bash /ws/src/race_stack/stack_master/scripts/run_zenoh.sh || true",
-            "isBackground": true,
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "group": "zenoh"
-            },
-            "runOptions": {
-                "runOn": "folderOpen"
-            }
-        },
-        {
             "label": "Build Workspace",
             "detail": "Builds all packages in the workspace natively",
             "type": "shell",
