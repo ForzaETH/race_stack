@@ -26,7 +26,13 @@ done < <(find /ws/src -mindepth 2 -name '*.repos' \
 rosdep update
 rosdep install --from-paths /ws/src --ignore-src -y
 
-# Set joystick permissions 
+# Copy the sample maps into MAPS_DIR
+for map in /ws/src/race_stack/sample_maps/*/; do
+	name=$(basename "$map")
+	[ -e "${MAPS_DIR:?MAPS_DIR is not set}/$name" ] || cp -r "$map" "$MAPS_DIR/$name"
+done
+
+# Set joystick permissions
 sudo chmod 666 /dev/input/js0 2>/dev/null || true
 sudo chmod 666 /dev/input/event* 2>/dev/null || true
 
