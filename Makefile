@@ -7,8 +7,11 @@ help:
 	@echo "Prepares the cache and environnment variables for a VsCode DevContainer setup."
 
 setup:
-	@echo "Cloning external repositories..."
 	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log
+
+	@echo "Cloning external repositories..."
+	@mkdir -p $(WORKSPACE_DIR)/src
+	vcs import $(WORKSPACE_DIR) < .install_utils/dependencies.repos
 
 	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env
