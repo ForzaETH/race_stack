@@ -40,6 +40,7 @@ services:
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
       - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
       - MAPS_DIR=/ws/maps
+      - PYTHONPYCACHEPREFIX=/ws/build/.pycache
 
   zenoh_router:
     image: race_stack:humble_dev
