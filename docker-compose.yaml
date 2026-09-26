@@ -7,9 +7,14 @@ services:
         USER: race_crew
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
-        IMAGE: ros:humble-desktop
+        IMAGE: ros:humble-ros-base
     container_name: forzaeth_devcontainer
     image: race_stack:humble_dev
+    hostname: ${RACECAR_VERSION:-NUC1}
+    extra_hosts:
+      - "${RACECAR_VERSION:-NUC1}:127.0.1.1"
+    env_file:
+      - .env
     network_mode: host
     ipc: host
     privileged: true
@@ -25,7 +30,6 @@ services:
       - ../race_stack_cache/humble/install:/ws/install:rw
       - ../race_stack_cache/humble/log:/ws/log:rw
     environment:
-      - DISPLAY=${DISPLAY}
       - USER=race_crew
       - USERNAME=race_crew
       - ROS_LOCALHOST_ONLY=0
