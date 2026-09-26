@@ -1,8 +1,13 @@
 {
-    "dockerComposeFile": "../docker-compose.yaml",
+    "initializeCommand": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
+    "dockerComposeFile": [
+        "../docker-compose.yaml",
+        "docker-compose.local.yaml"
+    ],
     "service": "race_stack",
     "runServices": [
-        "race_stack"
+        "race_stack",
+        "zenoh_router"
     ],
     "workspaceFolder": "/ws",
     "remoteUser": "race_crew",
@@ -12,10 +17,10 @@
                 "ms-vscode.cpptools",
                 "ms-vscode.cpptools-extension-pack",
                 "ms-python.python",
-                "ms-iot.vscode-ros"
+                "Ranch-Hand-Robotics.rde-ros-2"
             ],
             "settings": {
-                "ros.distro": "humble",
+                "ROS2.distro": "humble",
                 "python.defaultInterpreterPath": "/usr/bin/python3",
                 "python.autoComplete.extraPaths": [
                     "/opt/ros/humble/lib/python3.10/site-packages",
