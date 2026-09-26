@@ -29,6 +29,7 @@ services:
       - ../race_stack_cache/humble/build:/ws/build:rw
       - ../race_stack_cache/humble/install:/ws/install:rw
       - ../race_stack_cache/humble/log:/ws/log:rw
+      - ../race_stack_maps:/ws/maps:rw
     environment:
       - USER=race_crew
       - USERNAME=race_crew
@@ -38,6 +39,7 @@ services:
       - TERM=xterm-256color
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
       - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
+      - MAPS_DIR=/ws/maps
 
   zenoh_router:
     image: race_stack:humble_dev
