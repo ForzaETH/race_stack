@@ -8,15 +8,12 @@
     <let name="joy_teleop_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
     <let name="vesc_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
 
-    <!-- Crawl backwards to find the maps in the src folder. -->
-    <let name="map_src_path" value="$(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/maps/$(var map_name)" />
+    <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
 
     <!-- ON PHYSICAL SYSTEM -->
     <node pkg="global_planner" exec="mapping_node" name="mapping_node" output="screen" emulate_tty="true">
         <param from="$(find-pkg-share stack_master)/config/global_planner/mapping.yaml" />
-        <param name="map_name" value="$(var map_name)" />
-        <param from="$(find-pkg-share stack_master)/config/global_planner/mapping.yaml" />
-        <param name="map_name" value="$(var map_name)" />
+        <param name="map_path" value="$(var map_path)" />
     </node>
 
     <!-- launch teleop -->
@@ -41,7 +38,7 @@
         <param name="racecar_version" value="$(var racecar_version)" />
         <param name="floor" value="$(var floor)" />
         <param name="sim" value="false" />
-        <param name="map_path" value="$(var map_src_path)" />
+        <param name="map_path" value="$(var map_path)" />
         <param name="use_sim_time" value="false" />
     </node>
 

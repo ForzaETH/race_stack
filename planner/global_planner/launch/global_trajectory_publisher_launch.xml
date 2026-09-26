@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="map_path" description="Path to the map file (yaml or similar). Override with a launch arg or set MAP_PATH env var." />
+    <arg name="map_path" description="Path to the map folder" />
 
     <node pkg="global_planner" name="global_republisher" exec="global_trajectory_publisher">
         <param name="map_path" value="$(var map_path)" />

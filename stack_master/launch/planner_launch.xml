@@ -1,14 +1,14 @@
 <launch>
     <arg name="map_name" description="Name of the map to be created" default="latest"/>
-    <let name="map_src_path" value="$(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/maps/$(var map_name)" />
+    <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
 
     <node pkg="global_planner" exec="global_planner" name="global_planner" output="screen">
         <param from="$(find-pkg-share stack_master)/config/global_planner/global_planner_params.yaml" />
-        <param name="map_name" value="$(var map_name)" />
+        <param name="map_path" value="$(var map_path)" />
     </node>
     <node pkg="rviz2" exec="rviz2" name="rviz2" args="-d $(find-pkg-share global_planner)/rviz/editor.rviz" />
     <node pkg="nav2_map_server" name="map_server" exec="map_server" output="screen">
-        <param name="yaml_filename" value="$(var map_src_path)/$(var map_name).yaml" />
+        <param name="yaml_filename" value="$(var map_path)/$(var map_name).yaml" />
     </node>
     <node pkg="nav2_lifecycle_manager" name="lifecycle_manager" exec="lifecycle_manager" output="screen">
         <param name="autostart" value="True" />
@@ -16,11 +16,11 @@
     </node>
     <!-- Launch Sector Slicer from Utils -->
     <node pkg="sector_tuner" exec="sector_slicer" name="sector_slicer" output="screen">
-        <param name="map_name" value="$(var map_name)" />
+        <param name="map_path" value="$(var map_path)" />
     </node>
 
     <!-- Launch Overtaking Sector Slicer from Utils -->
     <node pkg="sector_tuner" exec="ot_sector_slicer" name="ot_sector_slicer" output="screen">
-        <param name="map_name" value="$(var map_name)" />
+        <param name="map_path" value="$(var map_path)" />
     </node>
 </launch>

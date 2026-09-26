@@ -2,13 +2,11 @@
 <launch>
   <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
   <arg name="floor" default="dubi" />
-  <arg name="map_name" default="latest" description="Map name in stack_master/maps" />
+  <arg name="map_name" default="24-05-08-glc-v0" description="Map folder name in $MAPS_DIR" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
 
-  <!-- Note: This is merely the share path (read-only) as the base_system
-    is not expected to modify maps in any way. -->
-  <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
+  <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
 
   <!-- launch simulator -->
   <group if="$(var sim)">
@@ -55,13 +53,13 @@
   <!-- launch sector tuner -->
   <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
     <param name="map_name" value="$(var map_name)" />
-    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/speed_scaling.yaml" />
+    <param from="$(var map_path)/speed_scaling.yaml" />
   </node>
 
   <!-- launch ot sector tuner -->
   <node pkg="sector_tuner" name="ot_interpolator" exec="ot_interpolator">
     <param name="map_name" value="$(var map_name)" />
-    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/ot_sectors.yaml" />
+    <param from="$(var map_path)/ot_sectors.yaml" />
   </node>
 
   <!-- launch lap analyser -->

@@ -23,7 +23,7 @@
 
     <!--  LOCALIZATION -->
     <arg name="slam_config_path" default="$(find-pkg-share stack_master)/config/$(var racecar_version)/slam" />
-    <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
+    <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
 
         <!-- IF SLAM LOC ONLY -->
         <group unless="$(var mapping_bool)">
