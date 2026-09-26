@@ -31,7 +31,8 @@ RUN uv pip install --system -r /tmp/python_req.txt
 
 # Place workspace sourcing into terminal user profile
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/${USER}/.bashrc && \
-    echo "source /ws/install/setup.bash" >> /home/${USER}/.bashrc
+    echo "source /ws/install/setup.bash" >> /home/${USER}/.bashrc && \
+    echo 'export XDG_RUNTIME_DIR=/tmp/runtime-$USER && mkdir -p -m 0700 $XDG_RUNTIME_DIR' >> /home/${USER}/.bashrc
 
 # Delete temporary requirement files
 RUN rm /tmp/linux_req.txt /tmp/python_req.txt
