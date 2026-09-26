@@ -55,3 +55,22 @@ services:
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+
+  # Virtual desktop for visualisations (RVIZ), required for MacOS
+  novnc:
+    build: https://github.com/ETH-PBL/remote-novnc.git#main
+    image: forzaeth_novnc:latest
+    container_name: forzaeth_novnc
+    profiles: ["novnc"] # Only start if this profile is enabled (only MacOS)
+    restart: unless-stopped
+    environment:
+      - USER_ID=501
+    ports:
+      - "127.0.0.1:6501:6501"   
+      - "127.0.0.1:20501:20501"
+    command:
+      - bash
+      - -c
+      - |
+        echo '<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&resize=scale">' > /usr/share/novnc/index.html
+        exec /start_vnc.sh
