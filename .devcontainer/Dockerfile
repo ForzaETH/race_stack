@@ -34,6 +34,10 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /home/${USER}/.bashrc && \
     echo "source /ws/install/setup.bash" >> /home/${USER}/.bashrc && \
     echo 'export XDG_RUNTIME_DIR=/tmp/runtime-$USER && mkdir -p -m 0700 $XDG_RUNTIME_DIR' >> /home/${USER}/.bashrc
 
+# Create mount points for persistent volumes for local extensions
+RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist \
+    && chown -R ${UID}:${GID} /home/${USER}/.vscode-server /home/${USER}/.persist
+
 # Delete temporary requirement files
 RUN rm /tmp/linux_req.txt /tmp/python_req.txt
 
