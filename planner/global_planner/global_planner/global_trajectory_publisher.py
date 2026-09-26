@@ -33,7 +33,7 @@ class GlobalRepublisher(Node):
         # shortest_path
         self.publish_shortest_path = self.get_parameter('publish_shortest_path').get_parameter_value().bool_value
         if self.publish_shortest_path:
-            self.get_logger().info("Global Republisher: Publishing shortest path waypoints and markers")
+            self.get_logger().debug("Global Republisher: Publishing shortest path waypoints and markers")
             self.glb_sp_markers = None
             self.glb_sp_wpnts = None
             self.glb_sp_wpnts_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', 10)
@@ -67,7 +67,7 @@ class GlobalRepublisher(Node):
         # Read info from json file if it is provided, so everything is always published
         map_path = self.get_parameter('map_path').get_parameter_value().string_value
         if map_path:
-            self.get_logger().info(f"Reading parameters from {map_path}")
+            self.get_logger().debug(f"Reading parameters from {map_path}")
             try:
                 (
                     self.map_infos, self.est_lap_time, self.centerline_markers,

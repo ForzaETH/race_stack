@@ -23,7 +23,7 @@ class LapAnalyser(Node):
                          allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
 
-        self.get_logger().info("Lap_analyser node started")
+        self.get_logger().debug("Lap_analyser node started")
 
         # Wait for state machine to start to figure out where to place the visualization message
         self.vis_pos = Pose()
@@ -39,7 +39,7 @@ class LapAnalyser(Node):
             self.vis_pos = self.state_marker.pose
 
         self.vis_pos.position.z += 1.5  # appear on top of the state marker
-        self.get_logger().info(f"LapAnalyser will be centered at {self.vis_pos.position.x}, {self.vis_pos.position.y}, {self.vis_pos.position.z}")
+        self.get_logger().debug(f"LapAnalyser will be centered at {self.vis_pos.position.x}, {self.vis_pos.position.y}, {self.vis_pos.position.z}")
 
         # stuff for min distance to track boundary
         self.wp_flag = False
@@ -83,7 +83,6 @@ class LapAnalyser(Node):
         package_path = get_package_share_directory('lap_analyser')
         ws_path = os.path.abspath(os.path.join(package_path, '..', '..', '..', '..'))
         data_path = os.path.join(ws_path, 'data/lap_analyser')
-        self.get_logger().warn(data_path)
         if not os.path.exists(data_path):
             os.makedirs(data_path)
         

@@ -60,7 +60,7 @@ class SectorTuner(Node):
         # Visualizations
         self.sector_visualization_pub = self.create_publisher(MarkerArray, '/sector_markers', 10)
         
-        self.get_logger().info("Waiting for global waypoints...")
+        self.get_logger().debug("Waiting for global waypoints...")
         
     def parameters_to_dict(self):
         params = {}

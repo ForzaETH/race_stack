@@ -9,7 +9,6 @@ from visualization_msgs.msg import MarkerArray, Marker
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
 import copy
 from frenet_conversion.frenet_converter import FrenetConverter
-import tqdm
 from tf_transformations import quaternion_from_euler
 from stack_master.parameter_event_handler import ParameterEventHandler
 
@@ -34,7 +33,7 @@ class OvertakingInterpolator(Node):
         # get initial scaling
         self.sectors_params=self.parameters_to_dict()
         self.n_sectors = self.sectors_params['n_sectors']
-        self.get_logger().info(str(self.sectors_params))
+        self.get_logger().debug(str(self.sectors_params))
         self.yeet_factor = self.sectors_params['yeet_factor']
         self.spline_len = int(self.sectors_params['spline_len'])
 
@@ -57,7 +56,7 @@ class OvertakingInterpolator(Node):
 
         timer_period = 0.5  # seconds
         self.wait_for_message_timer = self.create_timer(timer_period, self.wait_for_message_callback)
-        self.get_logger().info("Wating on first messages from global waypoints topics (og, scaled, and shortest path).")
+        self.get_logger().debug("Wating on first messages from global waypoints topics (og, scaled, and shortest path).")
         
     def parameters_to_dict(self):
         params = {}
@@ -109,12 +108,12 @@ class OvertakingInterpolator(Node):
             return
         if(self.glb_wpnts_sp_og is None):
             return
-        self.get_logger().info("All messages received at least once!")
+        self.get_logger().debug("All messages received at least once!")
 
         # Finish initialization that depends on message content
         self.wait_for_message_timer.destroy()
         self.converter = self.initialize_converter()
-        self.get_logger().info("Entering main loop!")
+        self.get_logger().debug("Entering main loop!")
         timer_period = 0.5  # seconds
         self.wait_for_message_timer = self.create_timer(timer_period, self.loop_cb)
         
@@ -139,7 +138,7 @@ class OvertakingInterpolator(Node):
         Initialize the FrenetConverter object
         """
         converter = FrenetConverter(self.waypoints[:, 0], self.waypoints[:, 1], self.waypoints[:, 2])
-        self.get_logger().info("[OT Interpolator] initialized FrenetConverter object")
+        self.get_logger().debug("[OT Interpolator] initialized FrenetConverter object")
         return converter
 
     def get_interpolating_schedule(self):
@@ -211,7 +210,7 @@ class OvertakingInterpolator(Node):
         nearest_p_idx = None
         self.interp_wpnt = copy.deepcopy(self.glb_wpnts_scaled)
 
-        for i, waypoint in tqdm.tqdm(enumerate(self.interp_wpnt.wpnts)):
+        for i, waypoint in enumerate(self.interp_wpnt.wpnts):
             if schedule[i] > 0:
                 # find direction of global
                 coordinate = np.array([self.glb_wpnts_scaled.wpnts[i].x_m, self.glb_wpnts_scaled.wpnts[i].y_m])
