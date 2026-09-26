@@ -22,6 +22,7 @@ setup:
 	@echo "Configuring Display for X11 GUI Forwarding..."
 	@if [ "$$(uname -s)" = "Darwin" ]; then \
 		echo "DISPLAY=:501" >> .env; \
+		echo "COMPOSE_PROFILES=novnc" >> .env; \
 	else \
 		echo "DISPLAY=$$DISPLAY" >> .env; \
 	fi
