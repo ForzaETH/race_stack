@@ -1,6 +1,9 @@
 {
     "name": "ForzaETH Race Stack",
-    "initializeCommand": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
+    "initializeCommand": {
+        "local-compose": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
+        "x11-access": "if [ \"$(uname -s)\" = Linux ] && [ -n \"$DISPLAY\" ] && command -v xhost >/dev/null; then xhost +SI:localuser:$(id -un) >/dev/null || true; fi"
+    },
     "dockerComposeFile": [
         "../docker-compose.yaml",
         "docker-compose.local.yaml"

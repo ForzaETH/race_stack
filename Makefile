@@ -1,19 +1,30 @@
 CACHE_DIR := ../race_stack_cache/humble
 MAPS_DIR := ../race_stack_maps
+DEPS_DIR := ../race_stack_deps
 
-.PHONY: setup help
+.PHONY: setup deps help
 
 help:
 	@echo "Usage: make setup"
 	@echo "Prepares the cache and environnment variables for a VsCode DevContainer setup."
+	@echo "       make deps"
+	@echo "Clones the external repositories into $(DEPS_DIR) (mounted as /ws/src in the container)."
 
-setup:
+deps:
+	@mkdir -p $(DEPS_DIR)
+	@awk '/^    [^ ].*:$$/ {name = $$1; sub(/:$$/, "", name)} /url:/ {url = $$2} /version:/ {print name, url, $$2}' \
+		.install_utils/dependencies.repos | while read -r name url version; do \
+		if [ -d "$(DEPS_DIR)/$$name" ]; then echo "$$name: already cloned, skipped"; continue; fi; \
+		echo "Cloning $$name ($$version)..."; \
+		git clone --quiet "$$url" "$(DEPS_DIR)/$$name" \
+			&& git -C "$(DEPS_DIR)/$$name" checkout --quiet "$$version" \
+			&& git -C "$(DEPS_DIR)/$$name" submodule update --init --recursive --quiet \
+			|| exit 1; \
+	done
+
+setup: deps
 	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log
 	@mkdir -p $(MAPS_DIR)
-
-	@echo "Cloning external repositories..."
-	@mkdir -p $(WORKSPACE_DIR)/src
-	vcs import $(WORKSPACE_DIR) < .install_utils/dependencies.repos
 
 	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env

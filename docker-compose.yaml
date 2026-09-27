@@ -25,6 +25,7 @@ services:
     volumes:
       - /dev:/dev:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../race_stack_deps:/ws/src:rw
       - ./:/ws/src/race_stack:rw
       - ../race_stack_cache/humble/build:/ws/build:rw
       - ../race_stack_cache/humble/install:/ws/install:rw
