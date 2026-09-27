@@ -13,7 +13,7 @@ from std_msgs.msg import Float32MultiArray, String
 from visualization_msgs.msg import Marker, MarkerArray
 
 from stack_master.parameter_event_handler import ParameterEventHandler
-from local_planner.local_planner_params import LocalPlannerParams
+from local_planner.parameters_codegen import local_planner as local_planner_parameters
 
 
 def time_to_float(time_instant) -> float:
@@ -26,14 +26,12 @@ class LocalPlanner(Node):
     """
 
     def __init__(self):
-        super().__init__("local_planner",
-                          allow_undeclared_parameters=True,
-                          automatically_declare_parameters_from_overrides=True)
+        super().__init__("local_planner")
 
-        # PARAMETER DECLARATION
-        self.params = LocalPlannerParams(self)
+        self.param_listener = local_planner_parameters.ParamListener(self)
+        self.params = self.param_listener.get_params()
 
-        self.cur_state = None
+        self.cur_state: str | None = None
         self.state_functions = {  # which wpt-generation function to use for which state
             "GB_TRACK": self.GlobalTracking,
             "TRAILING": self.Trailing,
@@ -42,7 +40,7 @@ class LocalPlanner(Node):
             "LOW_BAT": self.GlobalTracking,
         }
 
-        self.overtake_wpnts = None
+        self.overtake_wpnts: list[Wpnt] = []
 
         # Position variables
         self.cur_s = 0.0
@@ -51,9 +49,9 @@ class LocalPlanner(Node):
         # waypoint variables
         self.cur_id_ot = 1
         self.max_s = 0.0
-        self.current_position = None
-        self.glb_wpnts = None
-        self.gb_wpnts_arr = None
+        self.current_position = [0.0, 0.0, 0.0]  # [x, y, theta], updated from TF every loop
+        self.glb_wpnts: list[Wpnt] = []
+        self.gb_wpnts_arr = np.empty((0, 10))
         self.gb_max_idx = None
         self.max_speed = -1  # max speed in global waypoints for visualising
         self.local_wpnts = WpntArray()
@@ -65,11 +63,11 @@ class LocalPlanner(Node):
         # spliner variables
         splini_ttl = self.params.splini_ttl if self.params.ot_planner == "spliner" else self.params.pred_splini_ttl
         self.splini_ttl_counter = int(splini_ttl * self.params.rate_hz)  # convert seconds to counters
-        self.last_valid_avoidance_wpnts = None
-        self.avoidance_wpnts = None
+        self.last_valid_avoidance_wpnts: list[Wpnt] | None = None
+        self.avoidance_wpnts: OTWpntArray | None = None
 
         # Graph Based Variables
-        self.graph_based_wpts = None
+        self.graph_based_wpts = np.empty((0, 7))
 
         # create TF listener, to transform local waypoints from the map into the odom frame
         self.tf_buffer = tf2_ros.Buffer()
@@ -86,7 +84,7 @@ class LocalPlanner(Node):
 
         self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_cb, 10)  # from velocity scaler
         self.get_logger().info("[Local Planner] Waiting for scaled global waypoints message...")
-        while self.glb_wpnts is None:
+        while not self.glb_wpnts:
             rclpy.spin_once(self)
         self.get_logger().info("[Local Planner] Received scaled global waypoints message.")
 
@@ -128,14 +126,15 @@ class LocalPlanner(Node):
         data
             Data received from velocity interpolator topic
         """
-        self.glb_wpnts = data.wpnts[:-1]  # exclude last point (because last point == first point)
+        wpnts: list[Wpnt] = list(data.wpnts)
+        self.glb_wpnts = wpnts[:-1]  # exclude last point (because last point == first point)
         self.num_glb_wpnts = len(self.glb_wpnts)
-        self.max_s = data.wpnts[-1].s_m
-        self.gb_max_idx = data.wpnts[-1].id
+        self.max_s = wpnts[-1].s_m
+        self.gb_max_idx = wpnts[-1].id
         if self.params.ot_planner == "graph_based":
             self.gb_wpnts_arr = np.array([
                 [w.s_m, w.d_m, w.x_m, w.y_m, w.d_right, w.d_left, w.psi_rad,
-                 w.kappa_radpm, w.vx_mps, w.ax_mps2] for w in data.wpnts
+                 w.kappa_radpm, w.vx_mps, w.ax_mps2] for w in wpnts
             ])
 
     def glb_wpnts_og_cb(self, data):
@@ -181,7 +180,7 @@ class LocalPlanner(Node):
         data
             Data received from overtake topic
         """
-        self.overtake_wpnts = data.wpnts
+        self.overtake_wpnts = list(data.wpnts)
         self.num_ot_points = len(self.overtake_wpnts)
 
     def dyn_param_cb(self, param: Parameter):
@@ -189,12 +188,12 @@ class LocalPlanner(Node):
         Notices the change in the State Machine parameters and sets
         """
         if param.name == "gb_ego_width_m":
-            self.params.gb_ego_width_m = param.value
+            self.params.gb_ego_width_m = param.get_parameter_value().double_value
         elif param.name == "splini_ttl" and self.params.ot_planner == "spliner":
-            self.params.splini_ttl = param.value
+            self.params.splini_ttl = param.get_parameter_value().double_value
             self.splini_ttl_counter = int(self.params.splini_ttl * self.params.rate_hz)  # convert seconds to counter
         elif param.name == "splini_hyst_timer_sec":
-            self.params.splini_hyst_timer_sec = param.value
+            self.params.splini_hyst_timer_sec = param.get_parameter_value().double_value
 
         self.get_logger().info(f"[Local Planner] Parameter '{param.name}' was set to {param.value}")
 
@@ -218,10 +217,10 @@ class LocalPlanner(Node):
             return False
         else:
             # If the splinis are valid update the last valid ones
-            self.last_valid_avoidance_wpnts = self.avoidance_wpnts.wpnts.copy()
+            self.last_valid_avoidance_wpnts = list(self.avoidance_wpnts.wpnts)
             return True
 
-    def get_splini_wpts(self) -> WpntArray:
+    def get_splini_wpts(self) -> list[Wpnt]:
         """Obtain the waypoints by fusing those obtained by spliner with the
         global ones. Return the fused waypoints starting at s=0.0.
         """
@@ -268,7 +267,7 @@ class LocalPlanner(Node):
         return splini_glob
 
     def get_graph_based_wpts(self) -> WpntArray:
-        waypoint_arr = WpntArray()
+        wpnts: list[Wpnt] = []
         # Fill waypoint and marker array
         for i, coord in enumerate(self.graph_based_wpts[:self.params.n_loc_wpnts, :]):
             wpnt = Wpnt()
@@ -290,9 +289,9 @@ class LocalPlanner(Node):
             # left and right track bounds distances of the local waypoint
             wpnt.d_left = d_left - wpnt.d_m
             wpnt.d_right = d_right + wpnt.d_m
-            waypoint_arr.wpnts.append(wpnt)
+            wpnts.append(wpnt)
 
-        return waypoint_arr
+        return WpntArray(wpnts=wpnts)
 
     def _check_on_spline(self) -> bool:
         if self.last_valid_avoidance_wpnts is not None:
@@ -331,7 +330,7 @@ class LocalPlanner(Node):
         return [t.x, t.y, t.z], [r.x, r.y, r.z, r.w]
 
     def _pub_local_wpnts(self, wpts: WpntArray):
-        loc_markers = MarkerArray()
+        markers: list[Marker] = []
         loc_wpnts = wpts
         loc_wpnts.header.stamp = self.get_clock().now().to_msg()
         loc_wpnts.header.frame_id = "odom"
@@ -349,7 +348,7 @@ class LocalPlanner(Node):
 
             mrk = Marker()
             mrk.header.frame_id = "odom"
-            mrk.type = mrk.SPHERE
+            mrk.type = Marker.SPHERE
             mrk.scale.x = 0.15
             mrk.scale.y = 0.15
             mrk.scale.z = 0.15
@@ -361,21 +360,20 @@ class LocalPlanner(Node):
             mrk.pose.position.y = wpnt.y_m
             mrk.pose.position.z = wpnt.vx_mps / self.max_speed  # Visualise speed in z dimension
             mrk.pose.orientation.w = 1.0
-            loc_markers.markers.append(mrk)
+            markers.append(mrk)
 
         if len(loc_wpnts.wpnts) == 0:
             self.get_logger().warn("[Local Planner] No local waypoints published...", throttle_duration_sec=1.0)
         else:
             self.loc_wpnt_pub.publish(loc_wpnts)
 
-        self.vis_loc_wpnt_pub.publish(loc_markers)
+        self.vis_loc_wpnt_pub.publish(MarkerArray(markers=markers))
 
     def publish_del_marker(self):
         """Publishes a marker that deletes the previous markers"""
-        mrk = MarkerArray()
-        mrk.markers.append(Marker())
-        mrk.markers[0].action = Marker.DELETEALL
-        self.del_marker_pub.publish(mrk)
+        del_marker = Marker()
+        del_marker.action = Marker.DELETEALL
+        self.del_marker_pub.publish(MarkerArray(markers=[del_marker]))
 
     def update_pose_from_tf(self):
         tf = self.tf_buffer.lookup_transform("map", "car_state/base_link", Time(), timeout=Duration(seconds=5.0))
@@ -475,7 +473,7 @@ class LocalPlanner(Node):
             # Once ttl has reached 0 we overwrite the avoidance waypoints with the empty waypoints
             if self.splini_ttl_counter <= 0:
                 self.last_valid_avoidance_wpnts = None
-                self.avoidance_wpnts = WpntArray()
+                self.avoidance_wpnts = OTWpntArray()
                 self.splini_ttl_counter = -1
 
         # get the proper local waypoints based on the new state
