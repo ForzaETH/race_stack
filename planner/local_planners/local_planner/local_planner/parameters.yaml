@@ -1,0 +1,48 @@
+# Parameter definition for the local planner.
+# Values are set in stack_master/config/local_planner_params.yaml
+
+local_planner:
+  rate_hz:
+    type: int
+    default_value: 40
+    description: "Rate at which the local planner should run in Hz"
+    read_only: true
+    validation:
+      bounds<>: [10, 100]
+  n_loc_wpnts:
+    type: int
+    default_value: 80
+    description: "Number of local waypoints published, 1 waypoint every 0.1 meter"
+    validation:
+      bounds<>: [40, 200]
+  ot_planner:
+    type: string
+    default_value: "frenet"
+    description: "Overtaking planner to use"
+    read_only: true
+    validation:
+      one_of<>: [["frenet", "spliner", "predictive_spliner", "graph_based"]]
+  gb_ego_width_m:
+    type: double
+    default_value: 0.4
+    description: "Distance from gb path for rejoining in meters. NOTE: dynamically overridden from the state_machine node"
+    validation:
+      bounds<>: [0.0, 5.0]
+  splini_ttl:
+    type: double
+    default_value: 2.0
+    description: "Time to live for spliner waypoints in seconds. NOTE: dynamically overridden from the state_machine node"
+    validation:
+      bounds<>: [1.0, 5.0]
+  pred_splini_ttl:
+    type: double
+    default_value: 0.2
+    description: "Time to live for predictive spliner waypoints in seconds"
+    validation:
+      bounds<>: [0.0, 2.0]
+  splini_hyst_timer_sec:
+    type: double
+    default_value: 0.2
+    description: "Time we have to wait between switching from overtaking on one side to the other in seconds. NOTE: dynamically overridden from the state_machine node"
+    validation:
+      bounds<>: [0.0, 2.0]

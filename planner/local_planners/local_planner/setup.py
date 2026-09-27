@@ -1,9 +1,13 @@
 from setuptools import setup
 import os
 from glob import glob
+from generate_parameter_library_py.setup_helper import generate_parameter_module
 
 
 package_name = 'local_planner'
+
+# Generates the typed parameters_codegen module from its YAML definition
+generate_parameter_module('parameters_codegen', 'local_planner/parameters.yaml')
 
 setup(
     name=package_name,

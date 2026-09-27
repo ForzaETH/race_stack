@@ -21,9 +21,8 @@ from frenet_conversion.frenet_converter import FrenetConverter
 from controller.map import MAP_Controller
 from controller.pp import PP_Controller
 from controller.ftg import FTG_Controller
-from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange
+from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange, SetParametersResult
 from tf_transformations import quaternion_from_euler
-from stack_master.parameter_event_handler import ParameterEventHandler
 
 from pbl_config import get_remote_parameter
 
@@ -118,10 +117,6 @@ class Controller(Node):
         self.converter = FrenetConverter(self.waypoints[:, 0], self.waypoints[:, 1], self.waypoints[:, 2])
 
         # dyn params
-        self.param_handler = ParameterEventHandler(self)
-        self.callback_handle = self.param_handler.add_parameter_event_callback(
-            callback=self.l1_param_cb,
-        )
         param_dicts = [{'name': 't_clip_min',
                         'default': self.l1_params["t_clip_min"],
                         'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
@@ -177,6 +172,9 @@ class Controller(Node):
                         'default': self.l1_params["blind_trailing_speed"],
                         'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])}]
         params = self.delcare_dyn_parameters(param_dicts)
+        
+        self.tunable_params = {param_dict['name'] for param_dict in param_dicts}
+        self.add_on_set_parameters_callback(self.on_params_changed)
         self.set_parameters(params)
 
         # main loop
@@ -319,53 +317,16 @@ class Controller(Node):
     # CALLBACKS #
     #############
 
-    def l1_param_cb(self, parameter_event):
-        """
-        Notices the change in the parameters and alters the spline params accordingly
-        """
+    def on_params_changed(self, params):
+        if self.mode not in ("MAP", "PP"):
+            return SetParametersResult(successful=True)
 
-        if parameter_event.node != "/controller" or self.mode == "FTG":
-            return
-
-        if self.mode == "MAP":
-            self.map_controller.t_clip_min = self.get_parameter('t_clip_min').value
-            self.map_controller.t_clip_max = self.get_parameter('t_clip_max').value
-            self.map_controller.m_l1 = self.get_parameter('m_l1').value
-            self.map_controller.q_l1 = self.get_parameter('q_l1').value
-            self.map_controller.speed_lookahead = self.get_parameter('speed_lookahead').value
-            self.map_controller.lat_err_coeff = self.get_parameter('lat_err_coeff').value
-            self.map_controller.acc_scaler_for_steer = self.get_parameter('acc_scaler_for_steer').value
-            self.map_controller.dec_scaler_for_steer = self.get_parameter('dec_scaler_for_steer').value
-            self.map_controller.start_scale_speed = self.get_parameter('start_scale_speed').value
-            self.map_controller.end_scale_speed = self.get_parameter('end_scale_speed').value
-            self.map_controller.downscale_factor = self.get_parameter('downscale_factor').value
-            self.map_controller.speed_lookahead_for_steer = self.get_parameter('speed_lookahead_for_steer').value
-            self.map_controller.prioritize_dyn = self.get_parameter('prioritize_dyn').value
-            self.map_controller.trailing_gap = self.get_parameter('trailing_gap').value
-            self.map_controller.trailing_p_gain = self.get_parameter('trailing_p_gain').value
-            self.map_controller.trailing_i_gain = self.get_parameter('trailing_i_gain').value
-            self.map_controller.trailing_d_gain = self.get_parameter('trailing_d_gain').value
-            self.map_controller.blind_trailing_speed = self.get_parameter('blind_trailing_speed').value
-        elif self.mode == "PP":
-            self.pp_controller.t_clip_min = self.get_parameter('t_clip_min').value
-            self.pp_controller.t_clip_max = self.get_parameter('t_clip_max').value
-            self.pp_controller.m_l1 = self.get_parameter('m_l1').value
-            self.pp_controller.q_l1 = self.get_parameter('q_l1').value
-            self.pp_controller.speed_lookahead = self.get_parameter('speed_lookahead').value
-            self.pp_controller.lat_err_coeff = self.get_parameter('lat_err_coeff').value
-            self.pp_controller.acc_scaler_for_steer = self.get_parameter('acc_scaler_for_steer').value
-            self.pp_controller.dec_scaler_for_steer = self.get_parameter('dec_scaler_for_steer').value
-            self.pp_controller.start_scale_speed = self.get_parameter('start_scale_speed').value
-            self.pp_controller.end_scale_speed = self.get_parameter('end_scale_speed').value
-            self.pp_controller.downscale_factor = self.get_parameter('downscale_factor').value
-            self.pp_controller.speed_lookahead_for_steer = self.get_parameter('speed_lookahead_for_steer').value
-            self.pp_controller.prioritize_dyn = self.get_parameter('prioritize_dyn').value
-            self.pp_controller.trailing_gap = self.get_parameter('trailing_gap').value
-            self.pp_controller.trailing_p_gain = self.get_parameter('trailing_p_gain').value
-            self.pp_controller.trailing_i_gain = self.get_parameter('trailing_i_gain').value
-            self.pp_controller.trailing_d_gain = self.get_parameter('trailing_d_gain').value
-            self.pp_controller.blind_trailing_speed = self.get_parameter('blind_trailing_speed').value
-        self.get_logger().info("Updated parameters")
+        controller = self.map_controller if self.mode == "MAP" else self.pp_controller
+        for param in params:
+            if param.name in self.tunable_params:
+                setattr(controller, param.name, param.value)
+                self.get_logger().info(f"{param.name} = {param.value}")
+        return SetParametersResult(successful=True)
 
     def scan_cb(self, data: LaserScan):
         self.scan = data

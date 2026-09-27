@@ -38,6 +38,11 @@
 *.pyc
 __pycache__/
 
+# Node parameters must be defined in a yaml format. Through generate_parameter_library,
+# all accessor, editor and type-checking functions are implemented automatically at 
+# build time
+parameters_codegen.py
+
 #vscode
 .vscode
 
