@@ -23,6 +23,7 @@
             "settings": {
                 "ROS2.distro": "humble",
                 "python.defaultInterpreterPath": "/usr/bin/python3",
+                "python.envFile": "",
                 "python.autoComplete.extraPaths": [
                     "/opt/ros/humble/lib/python3.10/site-packages",
                     "/opt/ros/humble/local/lib/python3.10/dist-packages"
@@ -31,6 +32,12 @@
                     "/opt/ros/humble/lib/python3.10/site-packages",
                     "/opt/ros/humble/local/lib/python3.10/dist-packages"
                 ],
+                "python.analysis.typeCheckingMode": "basic",
+                "python.analysis.diagnosticSeverityOverrides": {
+                    "reportArgumentType": "none",
+                    "reportOptionalMemberAccess": "none"
+                },
+                "python.analysis.ignore": ["**/parameters_codegen.py"],
                 "search.exclude": {
                     "**/build": true,
                     "**/install": true,
