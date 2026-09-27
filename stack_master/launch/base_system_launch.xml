@@ -1,11 +1,10 @@
 <!-- -*- mode: XML -*- -->
 <launch>
-  <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
+  <arg name="racecar" default="$(env RACECAR_VERSION)" description="'SIM' for the simulator, or the car name ('NUCx')" />
   <arg name="floor" default="dubi" />
   <arg name="map_name" default="24-05-08-glc-v0" description="Map folder name in $MAPS_DIR" />
-  <arg name="sim" default="False" description="True/False if you want to run simulation" />
-  <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
 
+  <let name="sim" value="$(eval &quot;'$(var racecar)' == 'SIM'&quot;)" />
   <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
 
   <!-- launch simulator -->
@@ -15,18 +14,21 @@
     </include>
     <!-- only needed in sim -->
     <include file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml" />
+    
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_map_to_odom"
+          args="--frame-id map --child-frame-id odom" />
   </group>
 
   <!-- launch real car system -->
   <group unless="$(var sim)">
     <!-- launch teleop stack -->
     <include file="$(find-pkg-share stack_master)/launch/teleop_launch.xml">
-      <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="racecar_version" value="$(var racecar)" />
     </include>
 
     <!-- launch SE -->
     <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
-      <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="racecar_version" value="$(var racecar)" />
       <arg name="mapping_bool" value="False" />
       <arg name="map_name" value="$(var map_name)" />
       <arg name="frenet_bool" value="True" />
@@ -35,12 +37,12 @@
 
   <!-- launch global parameter node -->
   <node pkg="stack_master" name="global_parameters" exec="global_parameter_node">
-    <param name="racecar_version" value="$(var racecar_version)" />
+    <param name="racecar_version" value="$(var racecar)" />
     <param name="floor" value="$(var floor)" />
     <param name="sim" value="$(var sim)" />
     <param name="map_path" value="$(var map_path)" />
     <!-- Fails with l1 params for some reason
-    <param from="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml" /> -->
+    <param from="$(find-pkg-share stack_master)/config/$(var racecar)/l1_params.yaml" /> -->
     <param name="use_sim_time" value="$(var sim)" />
   </node>
 
@@ -52,13 +54,11 @@
 
   <!-- launch sector tuner -->
   <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
-    <param name="map_name" value="$(var map_name)" />
     <param from="$(var map_path)/speed_scaling.yaml" />
   </node>
 
   <!-- launch ot sector tuner -->
   <node pkg="sector_tuner" name="ot_interpolator" exec="ot_interpolator">
-    <param name="map_name" value="$(var map_name)" />
     <param from="$(var map_path)/ot_sectors.yaml" />
   </node>
 
