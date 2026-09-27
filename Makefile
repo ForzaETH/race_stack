@@ -21,6 +21,11 @@ deps:
 			&& git -C "$(DEPS_DIR)/$$name" submodule update --init --recursive --quiet \
 			|| exit 1; \
 	done
+	@# f1tenth_gym is a plain Python library that colcon cannot build (package_dir layout); it is
+	@# pip-installed in the container instead, so hide it from colcon (and from its own git status)
+	@touch $(DEPS_DIR)/f1tenth_gym/COLCON_IGNORE
+	@grep -qx COLCON_IGNORE $(DEPS_DIR)/f1tenth_gym/.git/info/exclude 2>/dev/null \
+		|| echo COLCON_IGNORE >> $(DEPS_DIR)/f1tenth_gym/.git/info/exclude
 
 setup: deps
 	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log
