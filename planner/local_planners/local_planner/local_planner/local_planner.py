@@ -13,6 +13,7 @@ from std_msgs.msg import Float32MultiArray, String
 from visualization_msgs.msg import Marker, MarkerArray
 
 from stack_master.parameter_event_handler import ParameterEventHandler
+from pbl_config import get_remote_parameter
 from local_planner.parameters_codegen import local_planner as local_planner_parameters
 
 
@@ -30,6 +31,9 @@ class LocalPlanner(Node):
 
         self.param_listener = local_planner_parameters.ParamListener(self)
         self.params = self.param_listener.get_params()
+
+        # remote parameters
+        self.base_frame = get_remote_parameter(self, 'global_parameters', 'base_frame', default='base_link')
 
         self.cur_state: str | None = None
         self.state_functions = {  # which wpt-generation function to use for which state
@@ -376,7 +380,7 @@ class LocalPlanner(Node):
         self.del_marker_pub.publish(MarkerArray(markers=[del_marker]))
 
     def update_pose_from_tf(self):
-        tf = self.tf_buffer.lookup_transform("map", "car_state/base_link", Time(), timeout=Duration(seconds=5.0))
+        tf = self.tf_buffer.lookup_transform("map", self.base_frame, Time(), timeout=Duration(seconds=5.0))
         x = tf.transform.translation.x
         y = tf.transform.translation.y
         q = tf.transform.rotation

@@ -22,7 +22,8 @@ class FTG_Controller(Node):
                  max_lidar_dist,
                  max_speed,
                  range_offset,
-                 track_width) -> None:
+                 track_width,
+                 laser_frame='laser') -> None:
         super().__init__('controller_manager')
         """
         Initialize the FTG controller.
@@ -38,6 +39,7 @@ class FTG_Controller(Node):
         self.radians_per_elem = None # used when calculating the angles of the LiDAR data
         self.range_offset = range_offset
         self.track_width = track_width
+        self.laser_frame = laser_frame
         
         
         # Speed params
@@ -127,7 +129,7 @@ class FTG_Controller(Node):
             gap_markers = MarkerArray()
             for i in range(gap_left, gap_right):
                 mrk = Marker()
-                mrk.header.frame_id = 'car_state/laser'
+                mrk.header.frame_id = self.laser_frame
                 mrk.header.stamp = self.get_clock().now().to_msg()
                 mrk.type = mrk.SPHERE
                 mrk.scale.x = 0.05
@@ -146,7 +148,7 @@ class FTG_Controller(Node):
 
             # visualize best point aka middle of the gap
             best_mrk = Marker()
-            best_mrk.header.frame_id = 'car_state/laser'
+            best_mrk.header.frame_id = self.laser_frame
             best_mrk.header.stamp = self.get_clock().now().to_msg()
             best_mrk.type = best_mrk.SPHERE
             best_mrk.scale.x = 0.2
@@ -183,7 +185,7 @@ class FTG_Controller(Node):
             scan_markers = MarkerArray()
             for i, scan in enumerate(proc_ranges):
                 mrk = Marker()
-                mrk.header.frame_id = 'car_state/laser'
+                mrk.header.frame_id = self.laser_frame
                 mrk.header.stamp = self.get_clock().now().to_msg()
                 mrk.type = mrk.SPHERE
                 mrk.scale.x = 0.05
@@ -312,7 +314,7 @@ class FTG_Controller(Node):
         del_mrk_array = MarkerArray()
         for i in range(1):
             del_mrk = Marker()
-            del_mrk.header.frame_id = 'car_state/laser'
+            del_mrk.header.frame_id = self.laser_frame
             del_mrk.header.stamp = self.get_clock().now().to_msg()
             del_mrk.action = del_mrk.DELETEALL
             del_mrk.id = i

@@ -39,6 +39,8 @@ class Controller(Node):
         self.map_path = get_remote_parameter(self, 'global_parameters', 'map_path')
         self.racecar_version = get_remote_parameter(self, 'global_parameters', 'racecar_version')
         self.sim = get_remote_parameter(self, 'global_parameters', 'sim')
+        self.base_frame = get_remote_parameter(self, 'global_parameters', 'base_frame', default='base_link')
+        self.laser_frame = get_remote_parameter(self, 'global_parameters', 'laser_frame', default='laser')
         self.state_machine_rate = get_remote_parameter(self, 'state_machine', 'rate_hz')
 
         # variables
@@ -311,7 +313,8 @@ class Controller(Node):
             max_lidar_dist=self.state_machine_max_lidar_dist,
             max_speed=self.state_machine_max_speed,
             range_offset=self.state_machine_range_offset,
-            track_width=self.state_machine_track_width)
+            track_width=self.state_machine_track_width,
+            laser_frame=self.laser_frame)
 
     #############
     # CALLBACKS #
@@ -524,7 +527,7 @@ class Controller(Node):
         quaternions = quaternion_from_euler(0, 0, theta)
 
         lookahead_marker = Marker()
-        lookahead_marker.header.frame_id = "car_state/base_link"
+        lookahead_marker.header.frame_id = self.base_frame
         lookahead_marker.header.stamp = self.get_clock().now().to_msg()
         lookahead_marker.type = 0
         lookahead_marker.id = 50
