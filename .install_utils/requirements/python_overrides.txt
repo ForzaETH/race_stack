@@ -1,0 +1,4 @@
+# Versions here override what dependencies require (uv pip install --override)
+
+# trajectory-planning-helpers pins quadprog==0.1.7; 0.1.12 has the same solve_qp API
+quadprog==0.1.12

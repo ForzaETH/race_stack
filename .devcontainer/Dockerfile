@@ -20,6 +20,7 @@ RUN groupadd -fg ${GID} ${USER} \
 # Copy linux and python requirement lists
 COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
 COPY .install_utils/requirements/python_req.txt /tmp/python_req.txt
+COPY .install_utils/requirements/python_overrides.txt /tmp/python_overrides.txt
 
 # Install system dependencies and setup standalone UV
 RUN apt-get update && xargs apt-get install -y < /tmp/linux_req.txt \
@@ -27,7 +28,7 @@ RUN apt-get update && xargs apt-get install -y < /tmp/linux_req.txt \
     && pip3 install --no-cache-dir uv
 
 # Install python dependencies through UV
-RUN uv pip install --system -r /tmp/python_req.txt
+RUN uv pip install --system -r /tmp/python_req.txt --override /tmp/python_overrides.txt
 
 # Place workspace sourcing into terminal user profile
 RUN echo "source /opt/ros/humble/setup.bash" >> /home/${USER}/.bashrc && \
@@ -39,7 +40,7 @@ RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist \
     && chown -R ${UID}:${GID} /home/${USER}/.vscode-server /home/${USER}/.persist
 
 # Delete temporary requirement files
-RUN rm /tmp/linux_req.txt /tmp/python_req.txt
+RUN rm /tmp/linux_req.txt /tmp/python_req.txt /tmp/python_overrides.txt
 
 # Set runtime environment
 USER ${USER}
