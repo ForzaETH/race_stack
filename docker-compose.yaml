@@ -22,6 +22,7 @@ services:
     stdin_open: true
     tty: true
     command: tail -f /dev/null
+    init: true
     volumes:
       - /dev:/dev:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -57,6 +58,27 @@ services:
     ipc: host
     restart: unless-stopped
     command: bash -c "source /opt/ros/humble/setup.bash && exec ros2 run rmw_zenoh_cpp rmw_zenohd"
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+
+  # Foxglove bridge (ws://<host>:8765)
+  foxglove_bridge:
+    image: race_stack:humble_dev
+    pull_policy: never
+    depends_on:
+      - zenoh_router
+    container_name: forzaeth_foxglove_bridge
+    env_file:
+      - .env
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ../race_stack_cache/humble/install:/ws/install:ro
+    command: >
+      bash -c "source /opt/ros/humble/setup.bash
+      && if [ -f /ws/install/setup.bash ]; then source /ws/install/setup.bash; fi
+      && exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml address:=${FOXGLOVE_ADDRESS:-0.0.0.0}"
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp

@@ -13,6 +13,7 @@ ros-humble-rmw-zenoh-cpp
 ros-humble-rviz2
 ros-humble-asio-cmake-module
 ros-humble-realsense2-camera
+ros-humble-foxglove-bridge
 libbz2-dev
 libtbb-dev
 libopencv-dev
