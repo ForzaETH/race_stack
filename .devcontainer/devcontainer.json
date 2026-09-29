@@ -13,6 +13,7 @@
     "portsAttributes": {
         "20501": { "label": "noVNC" }
     },
+    "otherPortsAttributes": { "onAutoForward": "ignore" }, // ignore ports not explictely listed
     "workspaceFolder": "/ws",
     "remoteUser": "race_crew",
     "customizations": {
@@ -25,6 +26,7 @@
             ],
             "settings": {
                 "ROS2.distro": "humble",
+                // Python setup
                 "python.defaultInterpreterPath": "/usr/bin/python3",
                 "python.envFile": "",
                 "python.autoComplete.extraPaths": [
