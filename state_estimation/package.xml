@@ -19,6 +19,13 @@
   <depend>frenet_conversion</depend>
   <depend>pbl_config</depend>
   <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>imu_transformer</exec_depend>
+  <exec_depend>cartographer_ros</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
