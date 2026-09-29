@@ -34,7 +34,7 @@
             -configuration_basename f110_2d_loc.lua
             -load_state_filename $(var map_path)/$(var map_name).pbstream
             --minloglevel 2">
-            <remap from="odom" to="basalt/odom" />
+            <remap from="odom" to="state_estimation/odom" />
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
 
@@ -63,7 +63,7 @@
             -configuration_directory $(var slam_config_path)
             -configuration_basename f110_2d.lua
             --minloglevel 2">
-            <remap from="odom" to="basalt/odom" />
+            <remap from="odom" to="state_estimation/odom" />
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
 

@@ -11,6 +11,7 @@
   <exec_depend>tf2_ros</exec_depend>
   <exec_depend>tf_transformations</exec_depend>
   <exec_depend>stack_master</exec_depend>
+  <exec_depend>pbl_config</exec_depend>
   <depend>rclpy</depend>
   <depend>generate_parameter_library_py</depend>
 

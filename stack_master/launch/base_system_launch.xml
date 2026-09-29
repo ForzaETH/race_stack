@@ -6,6 +6,9 @@
 
   <let name="sim" value="$(eval &quot;'$(var racecar)' == 'SIM'&quot;)" />
   <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
+  <!-- ego TF frames: the simulator prefixes them with its ego_namespace (config/SIM/sim.yaml) -->
+  <let name="base_frame" value="$(eval &quot;'car_state/base_link' if $(var sim) else 'base_link'&quot;)" />
+  <let name="laser_frame" value="$(eval &quot;'car_state/laser' if $(var sim) else 'laser'&quot;)" />
 
   <!-- launch simulator -->
   <group if="$(var sim)">
@@ -40,6 +43,8 @@
     <param name="racecar_version" value="$(var racecar)" />
     <param name="floor" value="$(var floor)" />
     <param name="sim" value="$(var sim)" />
+    <param name="base_frame" value="$(var base_frame)" />
+    <param name="laser_frame" value="$(var laser_frame)" />
     <param name="map_path" value="$(var map_path)" />
     <!-- Fails with l1 params for some reason
     <param from="$(find-pkg-share stack_master)/config/$(var racecar)/l1_params.yaml" /> -->
