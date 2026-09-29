@@ -32,4 +32,4 @@ sudo chmod 666 /dev/input/event* 2>/dev/null || true
 
 # Build workspace
 cd /ws
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON

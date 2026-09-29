@@ -41,6 +41,7 @@
                     "reportOptionalMemberAccess": "none"
                 },
                 "python.analysis.ignore": ["**/parameters_codegen.py"],
+                "C_Cpp.default.compileCommands": "/ws/build/compile_commands.json",
                 "search.exclude": {
                     "**/build": true,
                     "**/install": true,

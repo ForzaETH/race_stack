@@ -42,6 +42,7 @@ services:
       - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
       - MAPS_DIR=/ws/maps
       - PYTHONPYCACHEPREFIX=/ws/build/.pycache
+      - CMAKE_EXPORT_COMPILE_COMMANDS=ON
 
   zenoh_router:
     image: race_stack:humble_dev

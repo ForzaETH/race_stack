@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(ackermann_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -29,6 +30,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/CarState.msg"
   "msg/CarStateStamped.msg"
+  "msg/DriveCommand.msg"
   "msg/GapData.msg"
   "msg/LapData.msg"
   "msg/OTWpntArray.msg"
@@ -42,6 +44,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   DEPENDENCIES 
   "std_msgs"
   "geometry_msgs"
+  "ackermann_msgs"
  )
 
 install(
