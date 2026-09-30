@@ -11,6 +11,7 @@ python3-numpy
 python3-tk
 ros-humble-rmw-zenoh-cpp
 ros-humble-rviz2
+ros-humble-rqt
 ros-humble-asio-cmake-module
 ros-humble-realsense2-camera
 ros-humble-foxglove-bridge

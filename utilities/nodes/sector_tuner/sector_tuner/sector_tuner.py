@@ -111,7 +111,9 @@ class SectorTuner(Node):
         """
         hl_change = 10
 
-        if self.n_sectors > 1:
+        if self.n_sectors == 0:
+            return self.sectors_params['global_limit']
+        elif self.n_sectors > 1:
             for i in range(self.n_sectors):
                 if i == 0 :
                     if (s >= self.sectors_params[f'Sector{i}']['start']) and (s < self.sectors_params[f'Sector{i}']['start'] + hl_change):
