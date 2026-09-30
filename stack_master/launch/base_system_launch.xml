@@ -2,7 +2,7 @@
 <launch>
   <arg name="racecar" default="$(env RACECAR_VERSION)" description="'SIM' for the simulator, or the car name ('NUCx')" />
   <arg name="floor" default="dubi" />
-  <arg name="map_name" default="24-05-08-glc-v0" description="Map folder name in $MAPS_DIR" />
+  <arg name="map_name" default="latest" description="Map folder name in $MAPS_DIR" />
 
   <let name="sim" value="$(eval &quot;'$(var racecar)' == 'SIM'&quot;)" />
   <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
