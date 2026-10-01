@@ -45,8 +45,8 @@ services:
         <<: *user-args
         IMAGE: dustynv/ros:noetic-ros-base-l4t-r35.2.1
         PLATFORM: jet
-    container_name: forzaeth_devcontainer_jet
-    image: race_stack:humble_jet
+    container_name: forzaeth_devcontainer_jet_$USER
+    image: race_stack:humble_jet_$USER
     <<: *common-settings
     runtime: nvidia
     deploy:
@@ -64,8 +64,8 @@ services:
       args:
         <<: *user-args
         PLATFORM: x86
-    container_name: forzaeth_devcontainer_x86
-    image: race_stack:humble_x86
+    container_name: forzaeth_devcontainer_x86_$USER
+    image: race_stack:humble_x86_$USER
     <<: *common-settings
   arm:
     build:
@@ -74,6 +74,6 @@ services:
       args:
         <<: *user-args
         PLATFORM: arm
-    container_name: forzaeth_devcontainer_arm
-    image: race_stack:humble_arm
+    container_name: forzaeth_devcontainer_arm_$USER
+    image: race_stack:humble_arm_$USER
     <<: *common-settings
