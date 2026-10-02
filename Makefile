@@ -11,21 +11,9 @@ help:
 	@echo "Clones the external repositories into $(DEPS_DIR) (mounted as /ws/src in the container)."
 
 deps:
+	@command -v vcs >/dev/null
 	@mkdir -p $(DEPS_DIR)
-	@awk '/^    [^ ].*:$$/ {name = $$1; sub(/:$$/, "", name)} /url:/ {url = $$2} /version:/ {print name, url, $$2}' \
-		.install_utils/dependencies.repos | while read -r name url version; do \
-		if [ -d "$(DEPS_DIR)/$$name" ]; then echo "$$name: already cloned, skipped"; continue; fi; \
-		echo "Cloning $$name ($$version)..."; \
-		git clone --quiet "$$url" "$(DEPS_DIR)/$$name" \
-			&& git -C "$(DEPS_DIR)/$$name" checkout --quiet "$$version" \
-			&& git -C "$(DEPS_DIR)/$$name" submodule update --init --recursive --quiet \
-			|| exit 1; \
-	done
-	@# f1tenth_gym is a plain Python library that colcon cannot build (package_dir layout); it is
-	@# pip-installed in the container instead, so hide it from colcon (and from its own git status)
-	@touch $(DEPS_DIR)/f1tenth_gym/COLCON_IGNORE
-	@grep -qx COLCON_IGNORE $(DEPS_DIR)/f1tenth_gym/.git/info/exclude 2>/dev/null \
-		|| echo COLCON_IGNORE >> $(DEPS_DIR)/f1tenth_gym/.git/info/exclude
+	@vcs import --input .install_utils/dependencies.repos --skip-existing --recursive $(DEPS_DIR)
 
 setup: deps
 	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log

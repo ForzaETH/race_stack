@@ -1,8 +1,4 @@
 repositories:
-    f1tenth_gym:
-        type: git
-        url: https://github.com/ForzaETH/f1tenth_gym/
-        version: humble
     f1tenth_gym_ros:
         type: git
         url: https://github.com/ForzaETH/f1tenth_gym_ros/

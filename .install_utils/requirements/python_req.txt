@@ -1,6 +1,3 @@
-# --------------------------------------
-# Math and ML
-# --------------------------------------
 scikit-learn==1.3.2
 scikit-image==0.19.2
 opencv-python>=4.5.2
@@ -8,19 +5,12 @@ casadi
 pandas
 numpy==1.22.0
 scipy==1.7.3
-
-# --------------------------------------
-# Gym
-# --------------------------------------
+f110_gym @ git+https://github.com/ForzaETH/f1tenth_gym@3f1d03b405c0dc93bbf2533512351657a1135da5
 gymnasium==0.29.1
 Pillow>=12.2.0
 pyyaml>=5.3.1
 pyglet==1.5.20
 pyopengl
-
-# ==========================================
-# Other 
-# ==========================================
 pynput
 matplotlib~=3.5.1
 numba>=0.55.2

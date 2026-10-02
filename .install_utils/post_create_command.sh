@@ -17,9 +17,6 @@ sudo apt-get update
 rosdep update
 rosdep install --from-paths /ws/src --ignore-src -y
 
-# f110_gym is a plain Python library (ignored by colcon), install it editable so changes apply directly
-pip3 install --user --no-deps -e /ws/src/f1tenth_gym
-
 # Copy the sample maps into MAPS_DIR
 for map in /ws/src/race_stack/sample_maps/*/; do
 	name=$(basename "$map")
