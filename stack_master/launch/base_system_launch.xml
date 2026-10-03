@@ -3,6 +3,7 @@
   <arg name="racecar" default="$(env RACECAR_VERSION)" description="'SIM' for the simulator, or the car name ('NUCx')" />
   <arg name="floor" default="dubi" />
   <arg name="map" default="latest" description="Map folder name in $MAPS_DIR" />
+  <arg name="rviz" default="true" description="Start RViz in sim (CPU heavy in Docker on macOS; Lichtblick is a lighter alternative)" />
 
   <let name="sim" value="$(eval &quot;'$(var racecar)' == 'SIM'&quot;)" />
   <let name="map_path" value="$(env MAPS_DIR)/$(var map)" />
@@ -14,6 +15,7 @@
   <group if="$(var sim)">
     <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
       <arg name="map_yaml_path" value="$(var map_path)/$(var map).yaml" />
+      <arg name="rviz" value="$(var rviz)" />
     </include>
     <!-- only needed in sim -->
     <include file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml" />
