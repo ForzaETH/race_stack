@@ -2,10 +2,10 @@
 <launch>
   <arg name="racecar" default="$(env RACECAR_VERSION)" description="'SIM' for the simulator, or the car name ('NUCx')" />
   <arg name="floor" default="dubi" />
-  <arg name="map_name" default="latest" description="Map folder name in $MAPS_DIR" />
+  <arg name="map" default="latest" description="Map folder name in $MAPS_DIR" />
 
   <let name="sim" value="$(eval &quot;'$(var racecar)' == 'SIM'&quot;)" />
-  <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
+  <let name="map_path" value="$(env MAPS_DIR)/$(var map)" />
   <!-- ego TF frames: the simulator prefixes them with its ego_namespace (config/SIM/sim.yaml) -->
   <let name="base_frame" value="$(eval &quot;'car_state/base_link' if $(var sim) else 'base_link'&quot;)" />
   <let name="laser_frame" value="$(eval &quot;'car_state/laser' if $(var sim) else 'laser'&quot;)" />
@@ -13,7 +13,7 @@
   <!-- launch simulator -->
   <group if="$(var sim)">
     <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
-      <arg name="map_yaml_path" value="$(var map_path)/$(var map_name).yaml" />
+      <arg name="map_yaml_path" value="$(var map_path)/$(var map).yaml" />
     </include>
     <!-- only needed in sim -->
     <include file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml" />
@@ -33,7 +33,7 @@
     <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
       <arg name="racecar_version" value="$(var racecar)" />
       <arg name="mapping_bool" value="False" />
-      <arg name="map_name" value="$(var map_name)" />
+      <arg name="map_name" value="$(var map)" />
       <arg name="frenet_bool" value="True" />
     </include>
   </group>
