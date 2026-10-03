@@ -606,6 +606,7 @@ def create_wpnts_markers(trajectory: np.ndarray, d_right: np.ndarray, d_left: np
         A waypoint array and a marker array with all points of {trajectory}
     """
     max_vx_mps = max(trajectory[:, 5])
+    cmap = plt.get_cmap('inferno')
 
     global_wpnts = WpntArray()
     global_markers = MarkerArray()
@@ -630,15 +631,17 @@ def create_wpnts_markers(trajectory: np.ndarray, d_right: np.ndarray, d_left: np
         global_marker.type = global_marker.CYLINDER
         global_marker.scale.x = 0.1
         global_marker.scale.y = 0.1
-        global_marker.scale.z = global_wpnt.vx_mps / max_vx_mps
+        global_marker.scale.z = 0.01
+        r, g, b, _ = cmap(global_wpnt.vx_mps / max_vx_mps)
         global_marker.color.a = 1.0
-        global_marker.color.r = 1.0
-        global_marker.color.g = 1.0 if second_traj else 0.0
+        global_marker.color.r = r
+        global_marker.color.g = g
+        global_marker.color.b = b
 
         global_marker.id = i
         global_marker.pose.position.x = pnt[1]
         global_marker.pose.position.y = pnt[2]
-        global_marker.pose.position.z = global_wpnt.vx_mps / max_vx_mps / 2
+        global_marker.pose.position.z = 0.001 # global_wpnt.vx_mps / max_vx_mps / 2
         global_marker.pose.orientation.w = 1.0
         global_markers.markers.append(global_marker)
 
