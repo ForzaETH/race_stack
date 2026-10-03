@@ -34,5 +34,9 @@ setup(
         'console_scripts': [
             'global_parameter_node = stack_master.global_parameter_node:main',
         ],
+        # exposes custom launch actions (e.g. check_args) to YAML/XML launch files
+        'launch.frontend.launch_extension': [
+            'stack_master = stack_master.launch_extensions',
+        ],
     },
 )

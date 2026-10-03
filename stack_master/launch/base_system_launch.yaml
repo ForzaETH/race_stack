@@ -1,0 +1,151 @@
+launch:
+
+- arg:
+    name: "racecar"
+    default: "$(env RACECAR_VERSION)"
+    description: "Car version: NUCX (or SIM)"
+    choice:
+    - value: "SIM"
+    - value: "NUC2"
+    - value: "NUC4"
+    - value: "NUC5"
+    - value: "NUC6"
+    - value: "NUC7"
+    - value: "NUC10"
+
+- arg:
+    name: "tire_model"
+    default: "dubi"
+    description: "Tire model for the tire-floor combination"
+
+- arg:
+    name: "map"
+    default: "latest"
+    description: "Map name"
+
+- arg:
+    name: "rviz"
+    default: "true"
+    description: "Whether to render in RVIZ"
+    choice:
+    - value: "true"
+    - value: "false"
+
+# check if arguments the base_system does not accept are passed
+- check_args: {}
+
+# Variables
+- let:
+    name: "sim"
+    value: "$(eval \"'$(var racecar)' == 'SIM'\")"
+
+- let:
+    name: "map_path"
+    value: "$(env MAPS_DIR)/$(var map)"
+
+- let:
+    name: "base_frame"
+    value: "$(eval \"'car_state/base_link' if $(var sim) else 'base_link'\")"
+
+- let:
+    name: "laser_frame"
+    value: "$(eval \"'car_state/laser' if $(var sim) else 'laser'\")"
+
+# launch simulator
+- group:
+    if: "$(var sim)"
+    children:
+    - include:
+        file: "$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py"
+        arg:
+        - name: "map_yaml_path"
+          value: "$(var map_path)/$(var map).yaml"
+        - name: "rviz"
+          value: "$(var rviz)"
+
+    # only needed in sim
+    - include:
+        file: "$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml"
+
+    - node:
+        pkg: "tf2_ros"
+        exec: "static_transform_publisher"
+        name: "static_map_to_odom"
+        args: "--frame-id map --child-frame-id odom --ros-args --log-level warn"
+
+# launch real car system
+- group:
+    unless: "$(var sim)"
+    children:
+    # launch teleop stack
+    - include:
+        file: "$(find-pkg-share stack_master)/launch/teleop_launch.xml"
+        arg:
+        - name: "racecar_version"
+          value: "$(var racecar)"
+
+    # launch SE
+    - include:
+        file: "$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml"
+        arg:
+        - name: "racecar_version"
+          value: "$(var racecar)"
+        - name: "mapping_bool"
+          value: "False"
+        - name: "map_name"
+          value: "$(var map)"
+        - name: "frenet_bool"
+          value: "True"
+
+# launch global parameter node
+- node:
+    pkg: "stack_master"
+    exec: "global_parameter_node"
+    name: "global_parameters"
+    param:
+    - name: "racecar_version"
+      value: "$(var racecar)"
+    - name: "floor"
+      value: "$(var tire_model)"
+    - name: "sim"
+      value: "$(var sim)"
+    - name: "base_frame"
+      value: "$(var base_frame)"
+    - name: "laser_frame"
+      value: "$(var laser_frame)"
+    - name: "map_path"
+      value: "$(var map_path)"
+    # Fails with l1 params for some reason
+    # - from: "$(find-pkg-share stack_master)/config/$(var racecar)/l1_params.yaml"
+    - name: "use_sim_time"
+      value: "$(var sim)"
+
+# launch global trajectory republisher
+- include:
+    file: "$(find-pkg-share global_planner)/launch/global_trajectory_publisher_launch.xml"
+    arg:
+    - name: "map_path"
+      value: "$(var map_path)"
+
+# launch sector tuner
+- node:
+    pkg: "sector_tuner"
+    exec: "sector_tuner"
+    name: "sector_tuner"
+    param:
+    - from: "$(var map_path)/speed_scaling.yaml"
+
+# launch ot sector tuner
+- node:
+    pkg: "sector_tuner"
+    exec: "ot_interpolator"
+    name: "ot_interpolator"
+    param:
+    - from: "$(var map_path)/ot_sectors.yaml"
+
+# launch lap analyser
+- node:
+    pkg: "lap_analyser"
+    exec: "lap_analyser"
+    name: "lap_analyser"
+    output: "screen"
