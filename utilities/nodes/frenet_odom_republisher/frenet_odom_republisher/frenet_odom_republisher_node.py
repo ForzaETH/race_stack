@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
-from f110_msgs.msg import Wpnt, WpntArray
+from race_stack_interfaces.msg import Wpnt, WpntArray
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from frenet_conversion.frenet_converter import FrenetConverter

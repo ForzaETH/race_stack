@@ -8,7 +8,7 @@ from rclpy.parameter import Parameter
 import tf2_ros
 from tf_transformations import concatenate_matrices, translation_matrix, quaternion_matrix, euler_from_quaternion
 
-from f110_msgs.msg import OTWpntArray, Wpnt, WpntArray
+from race_stack_interfaces.msg import OTWpntArray, Wpnt, WpntArray
 from std_msgs.msg import Float32MultiArray, String
 from visualization_msgs.msg import Marker, MarkerArray
 

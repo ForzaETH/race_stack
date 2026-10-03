@@ -19,7 +19,7 @@ from rclpy.parameter import Parameter
 
 from std_msgs.msg import Float32
 from builtin_interfaces.msg import Time
-from f110_msgs.msg import Wpnt, WpntArray, ObstacleArray, Obstacle
+from race_stack_interfaces.msg import Wpnt, WpntArray, ObstacleArray, Obstacle
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, MarkerArray

@@ -12,7 +12,7 @@ from tf2_ros import Buffer, TransformListener
 import time
 import threading
 from frenet_conversion.frenet_converter import FrenetConverter
-from f110_msgs.msg import WpntArray, ObstacleArray, Obstacle as ObstacleMessage
+from race_stack_interfaces.msg import WpntArray, ObstacleArray, Obstacle as ObstacleMessage
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Point

@@ -1,7 +1,7 @@
 import yaml
 import rclpy
 from rclpy.node import Node
-from f110_msgs.msg import Wpnt, WpntArray
+from race_stack_interfaces.msg import Wpnt, WpntArray
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
 import os

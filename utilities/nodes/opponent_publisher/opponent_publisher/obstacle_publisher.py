@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PointStamped
-from f110_msgs.msg import ObstacleArray, Obstacle, WpntArray, OpponentTrajectory, OppWpnt
+from race_stack_interfaces.msg import ObstacleArray, Obstacle, WpntArray, OpponentTrajectory, OppWpnt
 from visualization_msgs.msg import Marker, MarkerArray
 from nav_msgs.msg import Odometry, OccupancyGrid
 import numpy as np

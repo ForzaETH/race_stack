@@ -4,7 +4,7 @@ from rclpy.qos import QoSProfile
 from rcl_interfaces.msg import FloatingPointRange, ParameterDescriptor, SetParametersResult, ParameterType
 from rclpy.parameter import Parameter
 
-from f110_msgs.msg import Obstacle, ObstacleArray, OTWpntArray, Wpnt, WpntArray
+from race_stack_interfaces.msg import Obstacle, ObstacleArray, OTWpntArray, Wpnt, WpntArray
 from geometry_msgs.msg import PointStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32

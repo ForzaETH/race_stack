@@ -17,7 +17,7 @@ from ament_index_python.packages import get_package_share_directory
 from visualization_msgs.msg import MarkerArray
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32
-from f110_msgs.msg import WpntArray
+from race_stack_interfaces.msg import WpntArray
 
 import trajectory_planning_helpers as tph
 from .readwrite_global_waypoints import write_global_waypoints

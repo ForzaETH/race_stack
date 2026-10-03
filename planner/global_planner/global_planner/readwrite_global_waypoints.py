@@ -7,7 +7,7 @@ from rosidl_runtime_py.convert import message_to_ordereddict
 from rosidl_runtime_py.set_message import set_message_fields
 
 from visualization_msgs.msg import MarkerArray
-from f110_msgs.msg import WpntArray
+from race_stack_interfaces.msg import WpntArray
 from std_msgs.msg import String, Float32
 from typing import Tuple, List, Dict
 

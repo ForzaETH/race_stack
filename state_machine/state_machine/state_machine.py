@@ -8,7 +8,7 @@ from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
-from f110_msgs.msg import WpntArray, OTWpntArray, ObstacleArray
+from race_stack_interfaces.msg import WpntArray, OTWpntArray, ObstacleArray
 from visualization_msgs.msg import Marker
 try:
     from vesc_msgs.msg import VescStateStamped

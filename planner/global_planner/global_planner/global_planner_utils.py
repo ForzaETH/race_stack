@@ -10,7 +10,7 @@ import trajectory_planning_helpers as tph
 from global_racetrajectory_optimization import helper_funcs_glob
 
 from geometry_msgs.msg import Point
-from f110_msgs.msg import Wpnt, WpntArray
+from race_stack_interfaces.msg import Wpnt, WpntArray
 from visualization_msgs.msg import Marker, MarkerArray
 
 

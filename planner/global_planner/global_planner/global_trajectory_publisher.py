@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Float32
-from f110_msgs.msg import WpntArray
+from race_stack_interfaces.msg import WpntArray
 from visualization_msgs.msg import MarkerArray
 
 # the `.` tells Python to look in the current directory at runtime

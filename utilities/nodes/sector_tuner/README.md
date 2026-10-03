@@ -52,7 +52,7 @@ An example is in `<race_stack folder>/stack_master/launch/base_system_launch.xml
 ```
 Each launched node provides the dynamic reconfigurable parameters, plus the scaled trajectory, with smooth interpolation between the sectors for speed scaling and overtaking respectively.
 
-The trajectory (as an [`f110_msgs/WpntArray`](../../../utilities/libraries/f110_msgs/msg/WpntArray.msg)) is published at the following topic
+The trajectory (as an [`race_stack_interfaces/WpntArray`](../../../race_stack_interfaces/msg/WpntArray.msg)) is published at the following topic
 ```
 /global_waypoints_scaled
 ```

@@ -3,7 +3,7 @@ This package contains a feature to analyse laps.
 ## Analyzer info
 ### Lap Analyser
 It provides information about completed laps.
-Specifically it provides the information in the custom message `f110_msgs/LapData`on the topic `lap_data`.
+Specifically it provides the information in the custom message `race_stack_interfaces/LapData`on the topic `lap_data`.
 The (self-explanatory) structure of the message is as follows:
 ```
 std_msgs/Header header

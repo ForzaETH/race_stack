@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from f110_msgs.msg import LapData, WpntArray
+from race_stack_interfaces.msg import LapData, WpntArray
 from std_msgs.msg import Float32, Empty
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose

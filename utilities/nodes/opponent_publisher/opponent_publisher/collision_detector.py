@@ -3,7 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Float32
 from nav_msgs.msg import Odometry, OccupancyGrid
 from geometry_msgs.msg import Pose
-from f110_msgs.msg import ObstacleArray, WpntArray  # Assuming f110_msgs are available in your ROS2 environment
+from race_stack_interfaces.msg import ObstacleArray, WpntArray  # Assuming race_stack_interfaces are available in your ROS2 environment
 from visualization_msgs.msg import Marker, MarkerArray
 import numpy as np
 from tf_transformations import quaternion_from_euler

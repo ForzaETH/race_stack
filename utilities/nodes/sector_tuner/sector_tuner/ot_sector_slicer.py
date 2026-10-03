@@ -1,7 +1,7 @@
 import yaml, os, subprocess, time
 import rclpy
 from rclpy.node import Node
-from f110_msgs.msg import WpntArray
+from race_stack_interfaces.msg import WpntArray
 import numpy as np
 from visualization_msgs.msg import MarkerArray
 import matplotlib.pyplot as plt

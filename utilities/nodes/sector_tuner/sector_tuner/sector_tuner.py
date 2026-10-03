@@ -1,7 +1,7 @@
 import rclpy
 from rcl_interfaces.msg import ParameterType, ParameterDescriptor, FloatingPointRange
 from rclpy.node import Node
-from f110_msgs.msg import WpntArray
+from race_stack_interfaces.msg import WpntArray
 import numpy as np
 from visualization_msgs.msg import MarkerArray, Marker
 from tf_transformations import quaternion_from_euler

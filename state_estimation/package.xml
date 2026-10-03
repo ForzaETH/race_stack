@@ -15,7 +15,7 @@
   <depend>ackermann_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf_transformations</depend>
-  <depend>f110_msgs</depend>
+  <depend>race_stack_interfaces</depend>
   <depend>frenet_conversion</depend>
   <depend>pbl_config</depend>
   <exec_depend>python3-numpy</exec_depend>

@@ -9,7 +9,7 @@ from rcl_interfaces.srv import GetParameters
 
 from ament_index_python import get_package_share_directory
 from ackermann_msgs.msg import AckermannDriveStamped
-from f110_msgs.msg import (CarStateStamped, GapData, ObstacleArray, PidData, Wpnt, WpntArray)
+from race_stack_interfaces.msg import (CarStateStamped, GapData, ObstacleArray, PidData, Wpnt, WpntArray)
 from geometry_msgs.msg import Point, PointStamped, Pose, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import Imu, LaserScan
