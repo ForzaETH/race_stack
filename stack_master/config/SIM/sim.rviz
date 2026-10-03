@@ -83,7 +83,7 @@ Visualization Manager:
     - Class: rviz_common/Group
       Displays:
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Centerline
           Namespaces:
             "": true
@@ -93,7 +93,7 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /centerline_waypoints/markers
-          Value: true
+          Value: false
         - Class: rviz_default_plugins/MarkerArray
           Enabled: true
           Name: Global Waypoints
@@ -107,7 +107,7 @@ Visualization Manager:
             Value: /global_waypoints/markers
           Value: true
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Lattice Viz
           Namespaces:
             {}
@@ -117,9 +117,9 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /lattice_viz
-          Value: true
+          Value: false
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Track Bounds
           Namespaces:
             "": true
@@ -129,9 +129,9 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /trackbounds/markers
-          Value: true
+          Value: false
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Overtaking Waypoints
           Namespaces:
             "": true
@@ -141,9 +141,9 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /global_waypoints/overtaking/markers
-          Value: true
+          Value: false
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Shortest Path
           Namespaces:
             "": true
@@ -153,7 +153,7 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /global_waypoints/shortest_path/markers
-          Value: true
+          Value: false
       Enabled: true
       Name: Map Markers
     - Class: rviz_common/Group
