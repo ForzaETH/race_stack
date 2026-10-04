@@ -21,7 +21,7 @@ launch:
 - arg:
     name: "map"
     default: "latest"
-    description: "Map name"
+    description: "Map at $MAPS_DIR/map"
 
 - arg:
     name: "rviz"
