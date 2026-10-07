@@ -1,6 +1,15 @@
 # Stack Master
 Here is the `stack_master`, it is intended to be the main interface between the user and the PBL ForzaETH F110 system.
 
+## Zenoh
+We use [zenoh](https://github.com/ros2/rmw_zenoh) as ros2 middleware. The zenoh router is started as a vscode task when you open the container. You can also start it manually with: `ros2 run rmw_zenoh_cpp rmw_zenohd` or the `zenoh` alias.
+If you have problems you may need to first stop the ros2 daemon: `ros2 daemon stop`
+
+### Connect to host
+If you now want to connect to this host (e.g. to stream topics to RViz on another computer) you can run the following command on the other computer: `export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/THE_CAR_IP:7447"]'`. You will need to run this command in each terminal with which you want to connect. You can also add the ips of the cars to `remote_car.sh` and run `scripz && source remote_car.sh YOUR_CAR`.
+
+
+
 ### Parameters
 There are two important parameters when running the base system or mapping:
  - racecar_version: This sets car related parameters such as TFs, lookup tables or Pacejka Parameters. By default this is written to the `.env` file in the installation progress.
