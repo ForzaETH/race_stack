@@ -24,7 +24,7 @@ class Carstate(Node):
         self.get_logger().info("Carstate node started")
 
         # ros params
-        self.declare_parameter('/carstate_node/odom_topic', "/early_fusion/odom")
+        self.declare_parameter('/carstate_node/odom_topic', "/state_estimation/odom")
         self.declare_parameter('/carstate_node/odom_out_topic', "/car_state/odom")
         self.declare_parameter('/carstate_node/pose_out_topic', "/car_state/pose")
         self.odom_in_topic = self.get_parameter('/carstate_node/odom_topic').value
