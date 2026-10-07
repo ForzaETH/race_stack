@@ -1,7 +1,7 @@
 #!/bin/bash
 COMPOSE_FILE="docker-compose.yaml"
 SERVICE_NAME="$1"
-CONTAINER_NAME="forzaeth_devcontainer_${SERVICE_NAME}"
+CONTAINER_NAME="forzaeth_devcontainer_${SERVICE_NAME}_$USER"
 
 if [ -z "$SERVICE_NAME" ]; then
     echo "Error: Service name not provided."
