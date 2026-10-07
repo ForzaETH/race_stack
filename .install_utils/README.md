@@ -16,18 +16,30 @@ The docker image is defined with the [Dockerfile](../.devcontainer/Dockerfile).
 Setting up a static ip at this moment will allow you to set extra computers (that can ping such IP) to listen to the ROS messags on the robot, enabling fast and quick development. 
 
 
-## How to use (docker container)
-**Note 1**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
-
-**Step 1/2: Build the container**
+## Build
+**Note**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
 The build process is managed by the Makefile. The command `default_setup` creates a cache folder (`setup_cache`) and a .env file (`export_env`) before it builds the container (`build`). It also detects if you are on a x86 or arm machine and builds the correct image. 
 
 ```bash
 make default_setup
 ```
 
+## How to use (VSCode devcontainer)
 
-**Step 2/2: Set up X forwarding and launch the container**
+**Open the devcontainer**
+**Note** this step must be done strictly after the completion of build step, as otherwise the permission file mounted in the devcontainer might be wrong.
+Open the devcontainer on the car, first by opening up VSCode, then connecting to the car with the remote connection button to the bottom left (Connect to Host...), then open the race stack folder, and reopen in the devcontainer. On your laptop you can directly click reopen in devcontainer.
+
+
+Once in the devcontainer, open a terminal and export the `DISPLAY` variable number. For example:
+```bash
+export DISPLAY=localhost:10.0
+```
+
+You can now enjoy a terminal with GUI forwarding! If you need multiple GUI applications, make sure to export the `DISPLAY` variable in each terminal you want to use GUI applications in.
+
+## How to use (docker container)
+**Set up X forwarding and launch the container**
 To get GUI application properly forwarded, run the additional setup script that sets up the xauth file for the container. The launch command does this automatically. If you are on an arm machine (such as a macbook) this step is omitted. It is recommended to use [this](https://github.com/ETH-PBL/remote-novnc) for display support. To launch the container you can then run:
 
 ```bash
@@ -37,24 +49,6 @@ make launch
 This spins up the container and runs some post installation steps. This is only done the first time and the next time the script will detect the correct container and restarts it. After the post installation finished you can run `make launch` again to attach a terminal to the container.
 
 
-## How to use (VSCode devcontainer)
-
-**Note**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
-
-**Step 1/2: Building** 
- The build step is the same as above for a docker container.
-
-**Step 2/2: Open the devcontainer**
-
-**Note** this step must be done strictly after the completion of step 1, as otherwise the permission file mounted in the devcontainer might be wrong.
-
-Open the devcontainer on the car, first by opening up VSCode, then connecting to the car with the remote connection button to the bottom left (Connect to Host...), then open the race stack folder, and reopen in the devcontainer.
-Once in the devcontainer, open a terminal and export the `DISPLAY` variable number. For example:
-```bash
-export DISPLAY=localhost:10.0
-```
-
-You can now enjoy a terminal with GUI forwarding! If you need multiple GUI applications, make sure to export the `DISPLAY` variable in each terminal you want to use GUI applications in.
 
 ## How to use GUI applications with the container
 To have more information on how to use GUI applications with remote containers, please refer to the [GUI applications documentation](./README_GUI.md).
