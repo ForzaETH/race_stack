@@ -11,9 +11,14 @@ help:
 	@echo "Clones the external repositories into $(DEPS_DIR) (mounted as /ws/src in the container)."
 
 deps:
-	@command -v vcs >/dev/null
 	@mkdir -p $(DEPS_DIR)
-	@vcs import --input .install_utils/dependencies.repos --skip-existing --recursive $(DEPS_DIR)
+	@while read -r name url version; do \
+		[ -d $(DEPS_DIR)/$$name ] || { \
+			git clone -q $$url $(DEPS_DIR)/$$name && \
+			git -C $(DEPS_DIR)/$$name checkout -q $$version && \
+			git -C $(DEPS_DIR)/$$name submodule update -q --init --recursive; \
+		} || exit 1; \
+	done < .install_utils/dependencies.txt
 
 setup: deps
 	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log

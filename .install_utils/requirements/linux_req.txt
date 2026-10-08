@@ -6,7 +6,6 @@ joystick
 x11-apps
 python3-pip
 python3-colcon-clean
-python3-vcstool
 python3-numpy
 python3-tk
 ros-humble-rmw-zenoh-cpp
