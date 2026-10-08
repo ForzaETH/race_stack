@@ -34,7 +34,7 @@ x-common-settings: &common-settings
     - RCUTILS_COLORIZED_OUTPUT=1
     - TERM=xterm-256color
     - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-    - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
+    - RACECAR_VERSION=${RACECAR_VERSION:-NUC5}
 
 services:
   jet:
