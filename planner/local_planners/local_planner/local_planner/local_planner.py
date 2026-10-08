@@ -494,6 +494,10 @@ class LocalPlanner(Node):
                 self.avoidance_wpnts = WpntArray()
                 self.splini_ttl_counter = -1
 
+        # refresh last_valid_avoidance_wpnts so the spliner Overtaking/Trailing paths can use it
+        if self.params.ot_planner in ("spliner", "predictive_spliner"):
+            self._check_availability_splini_wpts()
+
         # get the proper local waypoints based on the new state
         self.local_wpnts.wpnts = self.state_functions[self.cur_state]()
         self._pub_local_wpnts(self.local_wpnts)
