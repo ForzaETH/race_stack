@@ -229,7 +229,7 @@ class single_track_model:
         F_zr = self.p['m'] * (accel * self.p['h_cg'] + 9.81 * self.p['l_f']) / (self.p['l_f'] + self.p['l_r'])
 
         eps = 1e-4
-        v_safe = vx + ca.if_else(ca.fabs(vx) >= 0, eps, -eps)  # prevent division by 0 later
+        v_safe = vx + ca.if_else(vx >= 0, eps, -eps)  # prevent division by 0 later
 
         alpha_f = ca.atan2((-vy - self.p['l_f'] * omega), v_safe) + steer
         alpha_r = ca.atan2((-vy + self.p['l_r'] * omega), v_safe)
