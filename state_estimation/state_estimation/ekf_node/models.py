@@ -257,7 +257,8 @@ class single_track_model:
         )
 
         # kinematic bicycle model uses overall velocity not vx and vy (1e-6 to prevent division by 0 later)
-        speed = ca.sqrt(vx**2 + vy**2 + 1e-6)
+        speed_mag = ca.sqrt(vx**2 + vy**2 + 1e-6)
+        speed = ca.sign(vx) * speed_mag
         fxu_kin = ca.vertcat(
             x + vx * ca.cos(theta) * dt,
             y + vx * ca.sin(theta) * dt,
@@ -268,10 +269,10 @@ class single_track_model:
         )
 
         # mixing weights
-        v_b = 2.05  # empiricaly tuned variable
+        v_b = 2.05  # empirically tuned variable
         v_s = 1
-        w_std = 0.5 * (1 + ca.tanh((speed - v_b) / v_s))
-        w_std = ca.if_else(speed < (v_b - 2 * v_s), 0.0, w_std)
+        w_std = 0.5 * (1 + ca.tanh((speed_mag - v_b) / v_s))
+        w_std = ca.if_else(speed_mag < (v_b - 2 * v_s), 0.0, w_std)
 
         f_mixed = w_std * fxu_dyn + (1 - w_std) * fxu_kin
 
