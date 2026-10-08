@@ -23,6 +23,5 @@
     "editor.rulers": [
         120
     ],
-    "editor.renderWhitespace": "trailing",
-    "cmake.sourceDirectory": "/home/race_crew/ws/src/race_stack/utilities/libraries/f110_msgs",
+    "editor.renderWhitespace": "trailing"
 }
