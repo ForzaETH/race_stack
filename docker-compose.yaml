@@ -10,9 +10,9 @@ services:
         IMAGE: ros:humble-ros-base
     container_name: forzaeth_devcontainer
     image: race_stack:humble_dev
-    hostname: ${RACECAR_VERSION:-NUC1}
+    hostname: ${RACECAR_VERSION:-SIM}
     extra_hosts:
-      - "${RACECAR_VERSION:-NUC1}:127.0.1.1"
+      - "${RACECAR_VERSION:-SIM}:127.0.1.1"
     env_file:
       - .env
     network_mode: host
@@ -21,7 +21,8 @@ services:
     shm_size: "1gb"
     stdin_open: true
     tty: true
-    command: tail -f /dev/null
+    # Named volumes keep the owner they were created with; re-own them to the current UID
+    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; exec tail -f /dev/null"
     init: true
     volumes:
       - /dev:/dev:rw
@@ -40,7 +41,7 @@ services:
       - RCUTILS_COLORIZED_OUTPUT=1
       - TERM=xterm-256color
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-      - RACECAR_VERSION=${RACECAR_VERSION:-NUC1}
+      - RACECAR_VERSION=${RACECAR_VERSION:-SIM}
       - MAPS_DIR=/ws/maps
       - PYTHONPYCACHEPREFIX=/ws/build/.pycache
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -51,7 +52,7 @@ services:
     depends_on:
       - race_stack
     container_name: forzaeth_zenoh_router
-    hostname: ${RACECAR_VERSION:-NUC1}
+    hostname: ${RACECAR_VERSION:-SIM}
     env_file:
       - .env
     network_mode: host

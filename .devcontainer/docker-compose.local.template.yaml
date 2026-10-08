@@ -17,6 +17,9 @@ services:
     #   # Example: keep Claude Code login and chat history across rebuilds
     #   - CLAUDE_CONFIG_DIR=/home/race_crew/.persist/claude
 
+# Named per host user, so users sharing a machine never share volumes
 volumes:
   vscode-extensions:
+    name: race_stack_vscode_extensions_${HOST_UID:-1000}
   persist:
+    name: race_stack_persist_${HOST_UID:-1000}

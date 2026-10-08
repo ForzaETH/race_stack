@@ -26,7 +26,7 @@ setup: deps
 
 	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env
-	@printf "Enter RACECAR_VERSION [NUC1]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-NUC1}" >> .env
+	@printf "Enter RACECAR_VERSION (SIM for laptops, NUCx for cars)[SIM]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-SIM}" >> .env
 	@echo "HOST_UID=$$(id -u)" >> .env
 	@echo "HOST_GID=$$(id -g)" >> .env
 
