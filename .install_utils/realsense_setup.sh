@@ -1,5 +1,5 @@
 #! /bin/bash
-set -e
+set -eo pipefail
 
 ARCH=$(dpkg --print-architecture)
 if [ "$ARCH" != "amd64" ] && [ "$ARCH" != "arm64" ]; then
