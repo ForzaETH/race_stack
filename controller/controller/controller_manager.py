@@ -257,7 +257,7 @@ class Controller(Node):
 
         # get wheelbase
         if self.sim:
-            config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'sim_params.yaml')
+            config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'car_model.yaml')
             with open(config_path, 'r') as f:
                 car_params = yaml.safe_load(f)
                 self.wheelbase = car_params['lr'] + car_params['lf']
