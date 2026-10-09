@@ -22,7 +22,7 @@ class StateMachineParams:
         config_path = os.path.join(stack_master_path, 'config', 'state_machine_params.yaml')
         with open(config_path, 'r') as f:
             self.param_dict = yaml.safe_load(f)
-            self.param_dict = self.param_dict['state_machine']['ros__parameters']
+            self.param_dict = self.param_dict['/**/state_machine']['ros__parameters']
 
         descriptor = ParameterDescriptor(
             description="Rate at which the state machine should run in Hz\n",
