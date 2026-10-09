@@ -27,7 +27,7 @@ def generate_launch_description():
                             'racecar_version': LaunchConfiguration('racecar_version'),
                             'model_type': LaunchConfiguration('model_type'),
                             'odom_topic': LaunchConfiguration('odom_topic'),
-                            'imu_topic': '/imu',
+                            'imu_topic': LaunchConfiguration('imu_topic'),
                             'vesc_topic': LaunchConfiguration('odom_vesc_topic'),
                             'vio_topic': '/basalt/odom',
                             'floor': LaunchConfiguration('floor'),

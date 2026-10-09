@@ -266,8 +266,8 @@ class EkfNode(Node):
         twist_cov[5, 0:2] = self.ekf.P[5, 3:5]
         twist_cov[5, 5] = self.ekf.P[5, 5]
         odom.twist.covariance = twist_cov.flatten().tolist()
-        
-        
+
+
         t = TransformStamped()
         t.header.stamp = odom.header.stamp
         t.header.frame_id = 'odom'  # 'odom'
@@ -275,12 +275,12 @@ class EkfNode(Node):
 
         t.transform.translation.x = float(state[0])
         t.transform.translation.y = float(state[1])
-        t.transform.translation.z = float(state[2])
+        t.transform.translation.z = 0.0
         t.transform.rotation.x = float(q[0])
         t.transform.rotation.y = float(q[1])
         t.transform.rotation.z = float(q[2])
         t.transform.rotation.w = float(q[3])
-        
+
         if self.send_transform:
             self.tf_broadcaster.sendTransform(t)
 
