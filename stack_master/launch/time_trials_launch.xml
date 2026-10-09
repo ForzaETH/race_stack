@@ -1,8 +1,8 @@
 <launch>
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
-    <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="ctrl_algo" default="MAP" />
     <arg name="measure" default="False" />
+    <arg name="sim_opp" default="False" description="True to run the time trials stack as the simulated opponent (remaps topics to the opponent ones)" />
 
     <!-- TODO feed this somewhere-->
     <let name="param_file"
@@ -11,9 +11,7 @@
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
         <arg name="mode" value="$(var ctrl_algo)" />
-        <arg name="param_file"
-            value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
-        <arg name="mapping" value="False" />
+        <arg name="sim_opp" value="$(var sim_opp)" />
     </include>
 
     <!-- launch state machine -->
@@ -22,8 +20,19 @@
             value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
         <arg name="mode" value="timetrials" />
         <arg name="overtake_mode" value="dummy" />
+        <arg name="sim_opp" value="$(var sim_opp)" />
     </include>
 
-    <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml" />
+    <!-- frenet odom of the sim opponent, the ego one comes from base_system -->
+    <node pkg="frenet_odom_republisher" exec="frenet_odom_republisher_node" name="opp_frenet_odom_republisher"
+        output="screen" if="$(var sim_opp)">
+        <remap from="/car_state/odom" to="/opp_racecar/odom" />
+        <remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" />
+        <remap from="/car_state/frenet/pose" to="/opp_racecar/frenet/pose" />
+    </node>
+
+    <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml">
+        <arg name="sim_opp" value="$(var sim_opp)" />
+    </include>
 
 </launch>

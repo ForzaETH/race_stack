@@ -2,11 +2,22 @@
 <launch>
   <arg name="LU_table" default="NUC5_hangar_pacejka"/>
   <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented"/> <!-- TODO implement PP and MAPPING -->
+  <arg name="sim_opp" default="False" description="True to remap topics to the simulated opponent ones" />
 
   <!--  launch L1 controller -->
-  <node pkg="controller" name="controller" exec="controller">
-      <param name="mode" value="$(var mode)"/>
-      <param name="LU_table" value="$(var LU_table)"/>
-  </node>
+  <group>
+    <set_remap from="/drive" to="/opp_drive" if="$(var sim_opp)" />
+    <set_remap from="/scan" to="/opp_scan" if="$(var sim_opp)" />
+    <set_remap from="/car_state/odom" to="/opp_racecar/odom" if="$(var sim_opp)" />
+    <set_remap from="/car_state/pose" to="/opp_racecar/pose" if="$(var sim_opp)" />
+    <set_remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" if="$(var sim_opp)" />
+    <set_remap from="/state" to="/opp_racecar/state" if="$(var sim_opp)" />
+    <set_remap from="/local_waypoints" to="/opp_racecar/local_waypoints" if="$(var sim_opp)" />
+    <set_remap from="/perception/obstacles" to="/opp_racecar/perception/obstacles" if="$(var sim_opp)" />
+    <node pkg="controller" name="controller" exec="controller">
+        <param name="mode" value="$(var mode)"/>
+        <param name="LU_table" value="$(var LU_table)"/>
+    </node>
+  </group>
 
 </launch>

@@ -1,11 +1,19 @@
 <launch>
     <arg name="mode" default="timetrials" description="choose between: dummy / timetrials / (headtohead). Methods in brackets are not implemented" /> <!--  TODO implement head to head-->
     <arg name="log-level" default="debug"/>
+    <arg name="sim_opp" default="False" description="True to remap topics to the simulated opponent ones" />
 
     <!-- launch state machine -->
-    <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen">
-        <param from="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
-        <param name="mode" value="$(var mode)"/>
-    </node>
+    <group>
+        <set_remap from="/car_state/pose" to="/opp_racecar/pose" if="$(var sim_opp)" />
+        <set_remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" if="$(var sim_opp)" />
+        <set_remap from="/state" to="/opp_racecar/state" if="$(var sim_opp)" />
+        <set_remap from="/state_marker" to="/opp_racecar/state_marker" if="$(var sim_opp)" />
+        <set_remap from="/perception/obstacles" to="/opp_racecar/perception/obstacles" if="$(var sim_opp)" />
+        <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen">
+            <param from="$(find-pkg-share stack_master)/config/state_machine_params.yaml"/>
+            <param name="mode" value="$(var mode)"/>
+        </node>
+    </group>
 
 </launch>
