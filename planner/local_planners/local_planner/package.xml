@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>local_planner</name>
+  <version>0.0.0</version>
+  <description>The local_planner package</description>
+  <maintainer email="maurice.brunner@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf_transformations</exec_depend>
+  <exec_depend>stack_master</exec_depend>
+  <depend>rclpy</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

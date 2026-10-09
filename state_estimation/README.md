@@ -60,6 +60,20 @@ $$
 \end{bmatrix}
 $$
 
+## EKF / UKF Velocity Estimation Nodes ##
+
+In addition to the `robot_localization`-based EKF above, the package ships its own `ekf_node` and `ukf_node` executables (Extended/Unscented Kalman Filter, using [FilterPy](https://github.com/rlabbe/filterpy)). They fuse IMU and VESC odometry (with Ackermann drive commands as control input for some models) into a local pose/odometry estimate. Sensors can be de-weighted by inflating their covariance instead of removing them, keeping the node structure generic.
+
+Motion models are implemented as interchangeable classes with a common interface:
+- `state_estimation/ekf_node/models.py` — point-mass, kinematic bicycle, and single-track models
+- `state_estimation/ukf_node/models.py` — single-track model
+
+Each node is launched standalone via its own launch file, both part of this package:
+```
+ros2 launch state_estimation ekf_node_launch.py
+ros2 launch state_estimation ukf_node_launch.py
+```
+
 ## Localization ##
 
 With the ROS2 race-stack, you can currently only use Google's *cartographer* localization framework outlined [here](https://google-cartographer-ros.readthedocs.io/en/latest/) [see our paper for reference]. 

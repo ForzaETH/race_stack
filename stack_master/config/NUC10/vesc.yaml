@@ -1,0 +1,61 @@
+/**:
+  # general parameters shared by all vesc-related nodes
+  ros__parameters:
+    # erpm (electrical rpm) = speed_to_erpm_gain * speed (meters / second) + speed_to_erpm_offset
+    speed_to_erpm_gain: 4800.0
+    speed_to_erpm_offset: 0.0
+
+    # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
+    # Includes the former x1.3 steering correction from ackermann_mux.
+    steering_angle_to_servo_gain: 0.87
+    steering_angle_to_servo_offset: 0.6
+
+    port: /dev/sensors/vesc
+    duty_cycle_min: 0.0
+    duty_cycle_max: 0.0
+    current_min: 0.0
+    current_max: 100.0
+    brake_min: -20000.0
+    brake_max: 200000.0
+    speed_min: -69000.0
+    speed_max: 69000.0
+    position_min: 0.0
+    position_max: 0.0
+    servo_min: 0.20
+    servo_max: 0.90
+
+ackermann_to_vesc_node:
+  ros__parameters:
+    ackermann_input_topic: ackermann_cmd_applied
+    motor_output_topic: commands/motor/speed
+    servo_output_topic: commands/servo/position
+
+actuation_manager:
+  ros__parameters:
+    speed_min: -14.375
+    speed_max: 14.375
+    max_acceleration: 2.5
+    max_deceleration: 2.5
+    steering_min: -0.3271441202
+    steering_max: 0.2917771883
+    max_steering_rate: 2.4615384615
+    output_rate: 75.0
+    command_timeout: 0.2
+    joy_timeout: 0.2
+    human_deadman_button: 4
+    autonomous_deadman_button: 5
+
+vesc_driver_node:
+  ros__parameters:
+    # Stop and centre if either final actuator stream becomes stale.
+    command_timeout: 0.2
+
+vesc_to_odom_node:
+  ros__parameters:
+    odom_frame: odom
+    base_frame: base_link
+    # publish odom to base link tf
+    publish_tf: false
+    use_servo_cmd_to_calc_angular_velocity: true
+    # car wheelbase is about 25cm
+    wheelbase: .321

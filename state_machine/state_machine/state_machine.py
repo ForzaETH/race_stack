@@ -1,19 +1,15 @@
-import os
-import yaml
 import rclpy
 import numpy as np
 from builtin_interfaces.msg import Time
 from rclpy.node import Node
 from scipy.spatial.transform import Rotation
-from rcl_interfaces.msg import SetParametersResult, ParameterDescriptor
 from rcl_interfaces.srv import GetParameters
 from rclpy.parameter import Parameter
-from ament_index_python import get_package_share_directory
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
 from f110_msgs.msg import WpntArray, OTWpntArray, ObstacleArray
-from visualization_msgs.msg import Marker, MarkerArray
+from visualization_msgs.msg import Marker
 try:
     from vesc_msgs.msg import VescStateStamped
 except:
@@ -21,7 +17,6 @@ except:
 
 from state_machine.transitions import dummy_transition, timetrials_transition, head_to_head_transition
 from state_machine.state_types import StateType
-from state_machine.states import DefaultStateLogic
 from stack_master.parameter_event_handler import ParameterEventHandler
 from state_machine.state_machine_params import StateMachineParams
 
@@ -95,7 +90,6 @@ class StateMachine(Node):
         # INITIALIZATIONS        
         self.waypoints_dist = 0.1
         self.state = StateType(self.params.initial_state)
-        self.local_waypoints = WpntArray()
         self.first_visualization = True
         self.x_viz = 0
         self.y_viz = 0
@@ -110,15 +104,11 @@ class StateMachine(Node):
         else:
             raise NotImplementedError(f"Mode {self.params.mode} not recognized")
                 
-        # choose what to do in the different states
-        self.state_logic = DefaultStateLogic
             
         # PUBLICATIONS
         self.state_pub = self.create_publisher(String, 'state', 10)
         self.state_marker_pub = self.create_publisher(Marker, 'state_marker', 10)
-        self.loc_wpnt_pub = self.create_publisher(WpntArray, 'local_waypoints', 10)
-        self.vis_loc_wpnt_pub = self.create_publisher(MarkerArray, 'local_waypoints/markers', 10)
-        
+
         # main loop
         self.main_loop = self.create_timer(1/self.params.rate_hz, self.main_loop_callback)
 
@@ -143,8 +133,6 @@ class StateMachine(Node):
         self.glb_wpnts = data.wpnts[:-1]  # exclude last point (because last point == first point)
         self.num_glb_wpnts = len(self.glb_wpnts)
         self.track_length = data.wpnts[-1].s_m
-        # Get spacing between wpnts for rough approximations
-        self.wpnt_dist = data.wpnts[1].s_m - data.wpnts[0].s_m
         self.gb_max_idx = data.wpnts[-1].id
 
     def glb_wpnts_cb(self, data: WpntArray):
@@ -263,15 +251,6 @@ class StateMachine(Node):
         return gb_free
 
     @property
-    def _check_enemy_in_front(self) -> bool:
-        horizon = self.params.gb_horizon_m  # Horizon in front of cur_s [m]
-        for obs in self.obstacles:
-            gap = (obs.s_start - self.cur_s) % self.track_length
-            if gap < horizon:
-                return True
-        return False
-
-    @property
     def _check_availability_splini_wpts(self) -> bool:
         if self.avoidance_wpnts is None:
             return False
@@ -307,70 +286,9 @@ class StateMachine(Node):
             else:
                 return False
 
-    @property
-    def _check_emergency_break(self) -> bool:
-        # NOTE: unused flag, but could be useful
-        emergency_break = False
-        if self.obstacles != []:
-            horizon = self.emergency_break_horizon # Horizon in front of cur_s [m]
-
-            for obs in self.obstacles:
-                # Wrapping madness to check if infront
-                dist_to_obj = (obs.s_center - self.cur_s) % self.track_length
-                if dist_to_obj < horizon:
-            
-                    # Get d wrt to mincurv from the overtaking line
-                    local_wpnt_idx = np.argmin(
-                        np.array([abs(avoid_s.s_m - obs.s_center) for avoid_s in self.local_waypoints.wpnts])
-                    )
-                    ot_d = self.local_waypoints.wpnts[local_wpnt_idx].d_m
-                    ot_obs_dist = ot_d - obs.d_center
-                    if abs(ot_obs_dist) < self.params.lateral_width_ot_m:
-                        emergency_break = True
-                        self.get_logger().info("emergency break")
-        else:
-            emergency_break = False
-        return emergency_break
     ###########
     # HELPERS #
     ###########
-    def get_splini_wpts(self) -> WpntArray:
-        """Obtain the waypoints by fusing those obtained by spliner with the
-        global ones.
-        """
-        splini_glob = self.glb_wpnts.copy()
-
-        # Handle wrapping
-        if self.last_valid_avoidance_wpnts is not None:
-            if self.last_valid_avoidance_wpnts[-1].s_m > self.last_valid_avoidance_wpnts[0].s_m:
-                splini_idxs = [
-                    s
-                    for s in range(
-                        int(self.last_valid_avoidance_wpnts[0].s_m / self.waypoints_dist + 0.5),
-                        int(self.last_valid_avoidance_wpnts[-1].s_m / self.waypoints_dist + 0.5),
-                    )
-                ]
-            else:
-                splini_idxs = [
-                    int(s % (self.track_length / self.waypoints_dist) + 0.5)
-                    for s in range(
-                        int(self.last_valid_avoidance_wpnts[0].s_m / self.waypoints_dist + 0.5),
-                        int((self.track_length + self.last_valid_avoidance_wpnts[-1].s_m) / self.waypoints_dist + 0.5),
-                    )
-                ]
-
-            # with self.lock:  # was needed in ROS1 but hopefuly in ROS2 were fine
-            for i, s in enumerate(splini_idxs):
-                # splini_glob[s] = self.last_valid_avoidance_wpnts[i]
-                splini_glob[s] = self.last_valid_avoidance_wpnts[min(i, len(self.last_valid_avoidance_wpnts) - 1)]
-
-        # If the last valid points have been reset, then we just pass the global waypoints
-        else:
-            self.get_logger().warn(f"No valid avoidance waypoints, passing global waypoints")
-            pass
-
-        return splini_glob
-
     def init_ot_params(self):
         """Obtain the initial overtaking parameters from the parameter server.
         Then instantiate a parameter event handler to get the updates on those parameters.
@@ -429,57 +347,9 @@ class StateMachine(Node):
         changed_sector_int = int(p.name.split('.')[0][-1]) # TODO ultra hardcoded ugliness
         self.ot_sectors[changed_sector_int]['ot_flag'] = p.value.bool_value # TODO careful with this types, TY util could be better
 
-    def get_ot_params(self):
-        # the first time we need to get the number of sectors
-        self.get_logger().info(f'Getting only ot flags params')
-        # otherwise we only update the flags
-        request = GetParameters.Request()
-        request.names = self.ot_param_names
-        future = self.parameter_client.call_async(request)
-        self.executor.spin_until_future_complete(future)
-        if future.result() is not None:
-            for i in range(self.n_ot_sectors):
-                self.ot_sectors[i]['ot_flag'] = future.result().values[i].bool_value
-        else:
-            self.get_logger().error(f'Service call failed {future.exception()}')
-
-        self.get_logger().info(f'OT sectors: {self.ot_sectors}')
-
     ###############
     # PUB HELPERS #
     ###############
-    def _pub_local_waypoints(self, wpts: WpntArray):
-        loc_markers = MarkerArray()
-        loc_wpnts = wpts
-        # set stamp to now         
-        loc_wpnts.header.stamp = self.get_clock().now().to_msg()
-        loc_wpnts.header.frame_id = "map"
-
-        for i, wpnt in enumerate(loc_wpnts.wpnts):
-            mrk = Marker()
-            mrk.header.frame_id = "map"
-            mrk.type = mrk.SPHERE
-            mrk.scale.x = 0.15
-            mrk.scale.y = 0.15
-            mrk.scale.z = 0.15
-            mrk.color.a = 1.0
-            mrk.color.g = 1.0
-
-            mrk.id = i
-            mrk.pose.position.x = wpnt.x_m
-            mrk.pose.position.y = wpnt.y_m
-            mrk.pose.position.z = wpnt.vx_mps / self.max_speed  # Visualise speed in z dimension
-            mrk.pose.orientation.w = 1.0
-            loc_markers.markers.append(mrk)
-
-        # ...
-
-        if len(loc_wpnts.wpnts) == 0:
-            self.get_logger().warn("No local waypoints published...")
-        else:
-            self.loc_wpnt_pub.publish(loc_wpnts)
-
-        self.vis_loc_wpnt_pub.publish(loc_markers)
     
     def visualize_state(self, state: StateType):
         """
@@ -547,20 +417,10 @@ class StateMachine(Node):
         else:
             self.state = self.state_transition(self)
         msg = String()
-        msg.data = str(self.state)
+        msg.data = self.state.value
         self.state_pub.publish(msg)
         self.visualize_state(state=self.state)
 
-        self.local_waypoints.wpnts = self.state_logic(self)
-        self._pub_local_waypoints(self.local_waypoints)
-
-        if self.params.mode=="head_to_head" and self.params.overtake_mode == "spliner":
-            self.splini_ttl_counter -= 1
-            # Once ttl has reached 0 we overwrite the avoidance waypoints with the empty waypoints
-            if self.splini_ttl_counter <= 0:
-                self.last_valid_avoidance_wpnts = None
-                self.avoidance_wpnts = WpntArray()
-                self.splini_ttl_counter = -1
 
 # defined as entry point in setup.py:
 def main(args=None):

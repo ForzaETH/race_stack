@@ -58,3 +58,5 @@ sysid_bags/
 .vscode/c_cpp_properties.json
 
 .env
+
+bags/

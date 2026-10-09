@@ -1,6 +1,7 @@
 <!-- -*- mode: XML -*- -->
 <launch>
   <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
+  <arg name="floor" default="dubi" />
   <arg name="map_name" default="latest" description="Map name in stack_master/maps" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
@@ -37,6 +38,7 @@
   <!-- launch global parameter node -->
   <node pkg="stack_master" name="global_parameters" exec="global_parameter_node">
     <param name="racecar_version" value="$(var racecar_version)" />
+    <param name="floor" value="$(var floor)" />
     <param name="sim" value="$(var sim)" />
     <param name="map_path" value="$(var map_path)" />
     <!-- Fails with l1 params for some reason

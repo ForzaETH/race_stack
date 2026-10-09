@@ -1,0 +1,55 @@
+# RealSense D400-series config, converted from the original ROS1 XML defaults.
+# Loaded by realsense_launch.py via `--params-file`.
+#
+# Node parameter namespace must match: /<camera_name>/<camera_name>
+# (ROS2 convention: the realsense2_camera_node is both named and
+# namespaced with the camera name, e.g. "camera").
+camera:
+  camera:
+    ros__parameters:
+      # --- device selection ---
+      serial_no: ""
+      usb_port_id: ""
+      device_type: ""
+
+      # --- depth stream ---
+      enable_depth: false
+      depth_module.profile: 640x360x30
+
+      # --- color stream ---
+      enable_color: false
+      rgb_camera.profile: 640x360x30
+
+      # --- infra streams ---
+      enable_infra1: true
+      enable_infra2: true
+      # infra profile shares depth_module.profile in recent realsense-ros;
+      # set depth_module width/height/fps to control both.
+
+      # --- imu ---
+      enable_gyro: true
+      enable_accel: true
+      unite_imu_method:
+        1 # 0=none, 1=copy, 2=linear_interpolation
+        # (some versions want the string name instead)
+
+      # --- sync / alignment / tf ---
+      enable_sync: true
+      align_depth.enable: false
+      publish_tf: true
+      tf_publish_rate: 0.0
+
+      # --- misc device behavior ---
+      initial_reset: false
+      reconnect_timeout: 6.0
+      wait_for_device_timeout: -1.0
+      clip_distance: -2.0
+
+      # --- fixed manual exposure/gain for VIO ---
+      # equivalent of the old ROS1 "camera_dynparam" nodelet call that forced
+      # IR emitter off and locked exposure/gain for visual-inertial odometry.
+      depth_module.emitter_enabled: 0
+      depth_module.enable_auto_exposure: false
+      depth_module.exposure: 3000
+      depth_module.gain: 16
+      rgb_camera.power_line_frequency: 0

@@ -10,6 +10,7 @@ numba
 filterpy
 tqdm
 transforms3d>0.4
+pydantic
 
 # Gym requirements
 gymnasium==0.29.1
