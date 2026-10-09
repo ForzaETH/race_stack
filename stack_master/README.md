@@ -40,7 +40,7 @@ Be careful as once a sector is chosen it cannot be further subdivided.
 
 ### Base System
 ```shell
-ros2 launch stack_master base_system_launch.xml map_name:=<name of mapped track> sim:=<true/fasle> racecar_version:=<NUCX used>
+ros2 launch stack_master base_system_launch.xml map_name:=<name of mapped track> sim:=<true/false> racecar_version:=<NUCX used>
 ```
   - `<name of mapped track>` is the name of the track you want to run on. It must belong to the list of maps available in the `stack_master/maps` folder or be omitted. Then the map called `latest` is used. 
   - `<true/false>` is a boolean value that indicates if you want to run the simulation or the real car. 
@@ -62,3 +62,49 @@ ros2 launch stack_master head_to_head_launch.xml racecar_version:=<NUCx used> LU
 - `<Look-Up Table name>` is the name of the Look-Up Table you want to use. It must belong to the list of Look-Up Tables available in the `systm_identification/steering_lookup/cfg` folder.
 - `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP.
 - `<overtake_mode>` is the mode you want to use for overtaking. `spliner` is the only current possibility.
+
+### Simulation with Opponent
+It is possible to add a steerable opponent to the simulation by changing the following parameter in [stack_master/config/SIM/sim.yaml](./config/SIM/sim.yaml):
+```yaml
+    # opponent parameters
+    num_agent: 2
+
+    # opp starting pose on map
+    sx1: 2.0
+    sy1: 0.5
+    stheta1: 0.0
+```
+and then launching the the simulator normally, eg:
+```shell
+ros2 launch stack_master base_system_launch.xml map_name:=glc_ot_ez sim:=true
+```
+
+Then, using the `sim_opp` flag, time trials can be rerouted to control the opponent:
+```shell
+# launch the ego car first!
+ros2 launch stack_master time_trials_launch.xml ctrl_algo:=PP
+
+# then you can control the opponent
+ros2 launch stack_master time_trials_launch.xml ctrl_algo:=PP sim_opp:=true
+```
+
+The opponent exposes the following topics:
+```
+# simulator (gym_bridge)
+/opp_drive                         # AckermannDriveStamped, opponent drive commands
+/opp_scan                          # LaserScan, opponent lidar (sees the ego car)
+/opp_racecar/odom                  # Odometry, opponent odometry
+/opp_racecar/pose                  # PoseStamped, opponent pose
+/opp_racecar/opp_odom              # Odometry, ego odometry as seen by the opponent
+/car_state/opp_odom                # Odometry, opponent odometry as seen by the ego
+/goal_pose                         # PoseStamped, resets the opponent pose (2D Goal Pose in RViz)
+
+# time trials stack with sim_opp:=true
+/opp_racecar/frenet/odom           # Odometry, opponent frenet odometry
+/opp_racecar/frenet/pose           # PoseStamped, opponent frenet pose
+/opp_racecar/state                 # opponent state machine state
+/opp_racecar/state_marker          # opponent state machine marker
+/opp_racecar/local_waypoints       # opponent local waypoints
+/opp_racecar/local_waypoints/markers
+/opp_racecar/perception/obstacles  # opponent obstacle input
+```
