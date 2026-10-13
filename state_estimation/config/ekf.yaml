@@ -45,7 +45,7 @@ ekf_filter_node:
                 publish_acceleration: false
 
                 # Whether to broadcast the transformation over the /tf topic. Defaults to true if unspecified.
-                publish_tf: false # needs to be set to true when cartrographer frame is changed
+                publish_tf: true # needs to be set to true when cartrographer frame is changed
 
                 # REP-105 (http://www.ros.org/reps/rep-0105.html) specifies four principal coordinate frames: base_link, odom, map, and
                 # earth. base_link is the coordinate frame that is affixed to the robot. Both odom and map are world-fixed frames.
