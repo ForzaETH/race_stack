@@ -23,11 +23,20 @@ ros2 launch stack_master mapping_launch.xml map_name:=<map name of choice>
   - `<map name of choice>` can be any name with no white space. Conventionally we use the location name (eg, 'hangar', 'ETZ', 'icra') followed by the day of the month followed by an incremental version number. For instance, `hangar_12_v0`. You can also omit this argument. Then a map called `latest` is created. If there already is such a map it is copied to `backup`.
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). If you have exported a `.env` file during the build process this is read from the env variables and does not have to be set.
 
-After completing a lap, a GUI will popup and pressing the requested button will start the global raceline generation. 
-Then two GUIs will be shown, and within them a slider can be used to select the sectors. 
-Be careful as once a sector is chosen it cannot be further subdivided. 
+If you have a display connected (we recommend [this tool](https://github.com/ETH-PBL/remote-novnc)) an image will pop up showing you the current map. In the image you can press a button to save it. If you have no display you can do that via the terminal by pressing `y`, once you are satisfied by the map.
 
-A ROS resourcing will be needed from here on. 
+
+
+### Global Planner (on the real car)
+After mapping we can run the global planner. Before you can check the saved png and edit it with your favorite image editing software. This allows you to remove mapping artefacts or add new virtual chicanes to the map.
+Then you can run the global planner:
+```shell
+ros2 launch stack_master planner_launch.xml map_name:=<map name of choice>
+```
+ - `<map_name_of_choice` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
+
+A GUI will popup showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
+Be careful as once a sector is chosen it cannot be further subdivided. 
 
 ### Base System
 ```shell

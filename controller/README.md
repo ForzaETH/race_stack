@@ -11,10 +11,11 @@ The `controller_manager` implemented in `controller_manager.py` initializes the 
 ## Input/Output Topic Signature
 This nodes subscribes to:
 - `/perception/obstacles`: Subscribes to the obstacle array.
-- `/car_state/odom`: Reads the car's state
-- `/car_state/pose`: Reads the car's state
-- `/car_state/frenet/odom`: Reads the car's state
-- `/global_waypoints`: Subscribes to local waypoints.
+- `/state_estimation/odom`: Reads the car's velocity.
+- `/car_state/frenet/odom`: Reads the car's state in the Frenet frame.
+- `/global_waypoints`: Subscribes to global waypoints.
+- `/local_waypoints`: Subscribes to local waypoints.
+- `/state`: Current state from the state machine.
 - `/vesc/sensors/imu/raw`: Reads the IMU measurements.
 - `/scan`: Reads the LiDAR scans.
 - `/l1_param_cb`: Listens to the L1 parameters.

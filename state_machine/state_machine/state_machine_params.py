@@ -57,15 +57,6 @@ class StateMachineParams:
         node.set_descriptor("mode", descriptor=descriptor)
         self.mode: str = node.get_parameter("mode").value
         
-        descriptor = ParameterDescriptor(
-            description="Number of local waypoints\n",
-            type=ParameterType.PARAMETER_INTEGER,
-            read_only=False,
-            integer_range=[IntegerRange(from_value=40, to_value=200, step=5)]
-        )
-        node.set_descriptor("n_loc_wpnts", descriptor=descriptor)
-        self.n_loc_wpnts: int = node.get_parameter("n_loc_wpnts").value
-        
         self.overtake_mode = "spliner"
         """Overtake mode\nOnly spliner is supported at the moment"""
         

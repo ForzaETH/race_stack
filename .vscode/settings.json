@@ -23,5 +23,5 @@
     "editor.rulers": [
         120
     ],
-    "editor.renderWhitespace": "trailing",
+    "editor.renderWhitespace": "trailing"
 }

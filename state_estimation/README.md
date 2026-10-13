@@ -1,9 +1,15 @@
 # State Estimation
 ![State Estimation Architecture](./misc/state_estimation_arch.png)
 
-This directory contains the all required files to launch the state estimation submodule, including Google's *cartographer* localization framework, the Extended Kalan Filter for velocity estimation, and the car state aggregator (*carstate_node*). This includes the relevant launchers, configuration files, and scripts. 
+This directory contains the all required files to launch the state estimation submodule, including Google's *cartographer* localization framework, the Extended Kalan Filter for velocity estimation. This includes the relevant launchers, configuration files, and scripts. 
 
 The main launcher for the state estimation components can be found in `state_estimation/launch/state_estimation_launch.xml`. 
+
+The resulting car state is exposed as:
+- TF `map -> base_link` (and the alias `car_state/base_link`): the car pose from localization.
+- `/car_state/pose`: the same pose as `PoseStamped`, published by `carstate_node` on the physical car (the simulator publishes it directly).
+- `/state_estimation/odom`: velocity estimate from the EKF (twist in the `base_link` frame).
+- `/car_state/frenet/odom`: pose and velocity in the Frenet frame, published by the `frenet_odom_republisher` node (`utilities/nodes/frenet_odom_republisher`), which combines the TF pose with `/state_estimation/odom`. Launched for both simulation and the physical car by `stack_master/launch/base_system_launch.xml`.
 
 ## Kalman Filter ##
 
@@ -59,6 +65,20 @@ $$
     \verb|false| & \verb|false| & \verb|false| \\
 \end{bmatrix}
 $$
+
+## EKF / UKF Velocity Estimation Nodes ##
+
+In addition to the `robot_localization`-based EKF above, the package ships its own `ekf_node` and `ukf_node` executables (Extended/Unscented Kalman Filter, using [FilterPy](https://github.com/rlabbe/filterpy)). They fuse IMU and VESC odometry (with Ackermann drive commands as control input for some models) into a local pose/odometry estimate. Sensors can be de-weighted by inflating their covariance instead of removing them, keeping the node structure generic.
+
+Motion models are implemented as interchangeable classes with a common interface:
+- `state_estimation/ekf_node/models.py` — point-mass, kinematic bicycle, and single-track models
+- `state_estimation/ukf_node/models.py` — single-track model
+
+Each node is launched standalone via its own launch file, both part of this package:
+```
+ros2 launch state_estimation ekf_node_launch.py
+ros2 launch state_estimation ukf_node_launch.py
+```
 
 ## Localization ##
 

@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="local_planner" name="local_planner" exec="local_planner" output="screen">
+        <param from="$(find-pkg-share stack_master)/config/local_planner_params.yaml"/>
+    </node>
+</launch>

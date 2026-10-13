@@ -29,7 +29,7 @@
         }
     },
     "containerEnv": {
-        "DISPLAY": ":501",
+        "DISPLAY": "${localEnv:DISPLAY}"
     },
     "postCreateCommand": "~/ws/src/race_stack/.install_utils/post_create_command.sh"
 }

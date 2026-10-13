@@ -1,0 +1,26 @@
+m: 3.39
+lf: 0.168
+lr: 0.167
+wheelbase: 0.335 # this is not a free parameter, it is lf + lr
+width_m: 0.228
+
+Iz: 0.05797
+h_cg: 0.014
+a_max: 3
+a_min: -3
+v_max: 10.0
+v_min: -5.0
+
+C_0d: 0.48
+C_d: -1.1
+C_acc: 8.29
+C_dec: 5.77
+C_R: 2.03
+C_0v: 100
+C_v: 20
+
+tau_steer: 0.0502 # 0.15779476
+max_steering_angle: 0.4189 # Probably not used in stmpc (single_track_mpc_params.yaml) instead only in sim?
+min_radius_curv_m: 0.75 # this is technically not a free parameter, it should be wheelbase / tan(max_steering_angle)
+max_steering_velocity: 3.2
+racecar_version: NUC6
