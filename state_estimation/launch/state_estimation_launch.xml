@@ -2,7 +2,6 @@
 <launch>
     <arg name="mapping_bool" default="True" />
     <arg name="map_name" default="hangar" />
-    <arg name="frenet_bool" default="False" />
     <arg name="skip_early_fusion" default="False" />
     <arg name="use_sim_time" default="False" />
     <arg name="use_vio" default="False" />
@@ -84,10 +83,8 @@
         <arg name="racecar_version" value="$(var racecar_version)" />
     </include>
 
-    <!-- Carstate Node -->
-    <node name="carstate_node" pkg="state_estimation" exec="carstate_node" args="" output='screen'>
-        <remap from="/odom_out" to="/car_state/odom" />
-        <param name="frenet_bool" value="$(var frenet_bool)" />
+    <!-- Carstate Node: /car_state/pose from TF -->
+    <node name="carstate_node" pkg="state_estimation" exec="carstate_node" output="screen">
         <param name="use_sim_time" value="$(var use_sim_time)" />
     </node>
 

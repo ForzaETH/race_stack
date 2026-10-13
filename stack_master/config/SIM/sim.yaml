@@ -25,7 +25,7 @@ bridge:
     # topics and namespaces
     ego_namespace: 'car_state'
     ego_scan_topic: 'scan'
-    ego_odom_topic: 'odom'
+    ego_odom_topic: '/state_estimation/odom'
     ego_pose_topic: 'pose' 
     ego_opp_odom_topic: 'opp_odom'
     ego_drive_topic: 'drive'

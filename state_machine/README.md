@@ -25,7 +25,6 @@ A simplified version of the state machine is shown in the figure below.
 
 ## Input/Output topic signature
 The node subscribes to:
-- `/car_state/pose`: Car's pose in the map frame, Cartesian coordinates.
 - `/car_state/frenet/odom`: Car's state in the frenet frame.
 - `/global_waypoints`: Global waypoints.
 - `/global_waypoints_scaled`: Scaled global waypoints.

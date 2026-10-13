@@ -2,12 +2,10 @@ import rclpy
 import numpy as np
 from builtin_interfaces.msg import Time
 from rclpy.node import Node
-from scipy.spatial.transform import Rotation
 from rcl_interfaces.srv import GetParameters
 from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
 from f110_msgs.msg import WpntArray, OTWpntArray, ObstacleArray
 from visualization_msgs.msg import Marker
 try:
@@ -66,13 +64,6 @@ class StateMachine(Node):
             rclpy.spin_once(self)
 
         if self.params.mode == 'head_to_head':
-            self.current_position = None
-            self.create_subscription(PoseStamped, '/car_state/pose', self.car_state_cb, 10)
-            while self.current_position is None:
-                self.get_logger().info("Waiting for car state pose message", throttle_duration_sec=0.5)
-                rclpy.spin_once(self)
-
-
             self.last_valid_avoidance_wpnts = None
             self.splini_ttl_counter = 0
             self.avoidance_wpnts = None
@@ -156,16 +147,6 @@ class StateMachine(Node):
             self.obstacles = data.obstacles
         else:
             self.obstacles = []
-    
-    def car_state_cb(self, data: PoseStamped):
-        x = data.pose.position.x
-        y = data.pose.position.y
-        rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y, 
-                                       data.pose.orientation.z, data.pose.orientation.w])
-        rot_euler = rot.as_euler('xyz', degrees=False)
-        theta = rot_euler[2]
-
-        self.current_position = [x, y, theta]
     
     ### Properties to evaulate state transitions
     @property

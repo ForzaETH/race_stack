@@ -15,7 +15,7 @@ class CollisionDetector(Node):
         self.glb_waypoints = None
         
         self.sub_obstacles = self.create_subscription(ObstacleArray, "/perception/obstacles", self.od_cb, 10)
-        self.sub_odom = self.create_subscription(Odometry, "/car_state/odom_frenet", self.odom_cb, 10)
+        self.sub_odom = self.create_subscription(Odometry, "/car_state/frenet/odom", self.odom_cb, 10)
         self.sub_global_waypoints = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, 10)
         self.pub_collision = self.create_publisher(Bool, "/opponent_collision", 10)
         self.pub_distance = self.create_publisher(Float32, "/opponent_dist", 10)
