@@ -3,6 +3,7 @@
 declare -A machines=(
     [nuc1]="192.168.192.1"
     [nuc2]="192.168.192.4"
+    [NUC6]="nuc6.robo.pbl"
 )
 
 set_local() {
@@ -10,8 +11,6 @@ set_local() {
     unset ZENOH_CONFIG_OVERRIDE
     ROS_LOCALHOST_ONLY=1
 }
-
-
 # parse first argument to check which nuc has been selected
 # check that first three characters are exactly "NUC"
 if [ "${1:0:3}" != "NUC" ]; then
