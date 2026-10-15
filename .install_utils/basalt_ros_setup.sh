@@ -4,18 +4,16 @@
 # into it at image-build time. Runs at `docker compose build` (make build).
 set -e
 
-grep -rlE "packages\.ros\.org" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null \
-  | xargs -r rm -f
-
 # Bootstrap tools (other repos still work, so this update succeeds)
-apt-get update
-apt-get install -y --no-install-recommends curl ca-certificates gnupg
+if [ -f /etc/nv_tegra_release ] || grep -qiE "nvidia|tegra" /proc/device-tree/model 2>/dev/null; then
 
-# Fresh key + fresh source entry
-curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-  -o /usr/share/keyrings/ros-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
-  > /etc/apt/sources.list.d/ros2.list
+	grep -rlE "packages\.ros\.org" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null | xargs -r rm -f
+	apt update
+	apt install -y --no-install-recommends curl ca-certificates gnupg
+	# Fresh key + fresh source entry
+	curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+	echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" > /etc/apt/sources.list.d/ros2.list
+fi
 
 BASALT_REPO_URL=https://github.com/ForzaETH/basalt_ros.git
 BASALT_WS=/opt/basalt_ws
