@@ -86,8 +86,8 @@ class kinematic_bicycle_model:
 
     """
 
-    def __init__(self, config, Q):
-        self.p = config
+    def __init__(self, car, Q):
+        self.car = car
 
         ################
         # System Model #
@@ -122,8 +122,8 @@ class kinematic_bicycle_model:
             y + v * ca.sin(theta) * dt,
             steer_cmd,
             v + accel * dt,
-            theta + v * ca.tan(steer) / self.p['wheelbase'] * dt,
-            v * ca.tan(steer) / self.p['wheelbase'],
+            theta + v * ca.tan(steer) / self.car.wheelbase * dt,
+            v * ca.tan(steer) / self.car.wheelbase,
             ca.MX(0.0)
         )
 
@@ -194,8 +194,9 @@ class single_track_model:
 
     """
 
-    def __init__(self, config, Q):
-        self.p = config
+    def __init__(self, car, tires, Q):
+        self.car = car
+        self.tires = tires
 
         ################
         # System Model #
@@ -225,35 +226,35 @@ class single_track_model:
         steer = u[1]
 
         # Compute Forces used in Model (math coppied from original model definition)
-        F_zf = self.p['m'] * (-accel * self.p['h_cg'] + 9.81 * self.p['l_r']) / (self.p['l_f'] + self.p['l_r'])
-        F_zr = self.p['m'] * (accel * self.p['h_cg'] + 9.81 * self.p['l_f']) / (self.p['l_f'] + self.p['l_r'])
+        F_zf = self.car.m * (-accel * self.car.h_cg + 9.81 * self.car.lr) / (self.car.lf + self.car.lr)
+        F_zr = self.car.m * (accel * self.car.h_cg + 9.81 * self.car.lf) / (self.car.lf + self.car.lr)
 
         eps = 1e-4
         v_safe = vx + ca.if_else(vx >= 0, eps, -eps)  # prevent division by 0 later
 
-        alpha_f = ca.atan2((-vy - self.p['l_f'] * omega), v_safe) + steer
-        alpha_r = ca.atan2((-vy + self.p['l_r'] * omega), v_safe)
+        alpha_f = ca.atan2((-vy - self.car.lf * omega), v_safe) + steer
+        alpha_r = ca.atan2((-vy + self.car.lr * omega), v_safe)
 
-        Fyf = self.p['mu'] * self.p['Df'] * F_zf * ca.sin(
-            self.p['Cf'] * ca.atan(
-                self.p['Bf'] * alpha_f - self.p['Ef'] * (self.p['Bf'] * alpha_f - ca.atan(
-                    self.p['Bf'] * alpha_f))))
-        Fyr = self.p['mu'] * self.p['Dr'] * F_zr * ca.sin(
-            self.p['Cr'] * ca.atan(
-                self.p['Br'] * alpha_r - self.p['Er'] * (self.p['Br'] * alpha_r - ca.atan(
-                    self.p['Br'] * alpha_r))))
+        Fyf = self.tires.friction_coeff * self.tires.Df * F_zf * ca.sin(
+            self.tires.Cf * ca.atan(
+                self.tires.Bf * alpha_f - self.tires.Ef * (self.tires.Bf * alpha_f - ca.atan(
+                    self.tires.Bf * alpha_f))))
+        Fyr = self.tires.friction_coeff * self.tires.Dr * F_zr * ca.sin(
+            self.tires.Cr * ca.atan(
+                self.tires.Br * alpha_r - self.tires.Er * (self.tires.Br * alpha_r - ca.atan(
+                    self.tires.Br * alpha_r))))
 
-        Fxr = accel * self.p['m']
+        Fxr = accel * self.car.m
         Fxf = ca.MX(0.0)
 
         fxu_dyn = ca.vertcat(
             x + dt * (vx * ca.cos(theta) - vy * ca.sin(theta)),
             y + dt * (vx * ca.sin(theta) + vy * ca.cos(theta)),
             theta + dt * omega,
-            vx + dt * ((Fxr + Fxf * ca.cos(steer) - Fyf * ca.sin(steer) + self.p['m'] * vy * omega) / self.p['m']),
-            vy + dt * ((Fyr + Fxf * ca.sin(steer) + Fyf * ca.cos(steer) - self.p['m'] * vx * omega) / self.p['m']),
-            omega + dt * ((Fyf * self.p['l_f'] * ca.cos(steer) + Fxf * self.p['l_f']
-                          * ca.sin(steer) - Fyr * self.p['l_r']) / self.p['I_z'])
+            vx + dt * ((Fxr + Fxf * ca.cos(steer) - Fyf * ca.sin(steer) + self.car.m * vy * omega) / self.car.m),
+            vy + dt * ((Fyr + Fxf * ca.sin(steer) + Fyf * ca.cos(steer) - self.car.m * vx * omega) / self.car.m),
+            omega + dt * ((Fyf * self.car.lf * ca.cos(steer) + Fxf * self.car.lf
+                          * ca.sin(steer) - Fyr * self.car.lr) / self.car.Iz)
         )
 
         # kinematic bicycle model uses overall velocity not vx and vy (1e-6 to prevent division by 0 later)
@@ -262,10 +263,10 @@ class single_track_model:
         fxu_kin = ca.vertcat(
             x + vx * ca.cos(theta) * dt,
             y + vx * ca.sin(theta) * dt,
-            theta + (speed * ca.tan(steer) / self.p['wheelbase']) * dt,
+            theta + (speed * ca.tan(steer) / self.car.wheelbase) * dt,
             vx + accel * dt,
             ca.MX(0.0),
-            speed * ca.tan(steer) / self.p['wheelbase']
+            speed * ca.tan(steer) / self.car.wheelbase
         )
 
         # mixing weights
@@ -282,8 +283,8 @@ class single_track_model:
         #####################
         # Measurement Model #
         #####################
-        ax_dyn = (Fxr + Fxf * ca.cos(steer) - Fyf * ca.sin(steer)) / self.p['m']
-        ay_dyn = (Fyr + Fxf * ca.sin(steer) + Fyf * ca.cos(steer)) / self.p['m']
+        ax_dyn = (Fxr + Fxf * ca.cos(steer) - Fyf * ca.sin(steer)) / self.car.m
+        ay_dyn = (Fyr + Fxf * ca.sin(steer) + Fyf * ca.cos(steer)) / self.car.m
         ax_kin = accel
         ay_kin = 0.0
 

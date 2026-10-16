@@ -82,6 +82,6 @@ def load_car_config_ros(racecar_version: str) -> CarConfig:
                 else:
                     print(f"Error loading the {relative_path} file. Please contact support (edo) with this traceback.")
                     raise e
-            return None
+            raise
 
     return config

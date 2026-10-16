@@ -48,17 +48,17 @@ ros2 launch stack_master base_system_launch.xml map_name:=<name of mapped track>
 
 ### Time trials 
 ```shell
-ros2 launch stack_master time_trials_launch.xml racecar_version:=<NUCx used> LU_table:=<Look-Up Table name> ctrl_algo:=<control algorithm> 
+ros2 launch stack_master time_trials_launch.xml racecar_version:=<NUCx used> ctrl_algo:=<control algorithm> 
 ```
   - `<NUCx>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). If you omit this the one set in base_system is used. 
-  - `<Look-Up Table name>` is the name of the Look-Up Table you want to use. It must belong to the list of Look-Up Tables available in the `systm_identification/steering_lookup/cfg` folder.
+  - The MAP controller uses the steering Look-Up Table `stack_master/config/<NUCx>/LUT/<floor>/default.csv`, where `floor` is set when launching base_system.
   - `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP.
 
 ### Head to Head
 ```shell
-ros2 launch stack_master head_to_head_launch.xml racecar_version:=<NUCx used> LU_table:=<Look-Up Table name> ctrl_algo:=<control algorithm> overtake_mode:=spliner
+ros2 launch stack_master head_to_head_launch.xml racecar_version:=<NUCx used> ctrl_algo:=<control algorithm> overtake_mode:=spliner
 ```
 - `<NUCx>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car).
-- `<Look-Up Table name>` is the name of the Look-Up Table you want to use. It must belong to the list of Look-Up Tables available in the `systm_identification/steering_lookup/cfg` folder.
+- The MAP controller uses the steering Look-Up Table `stack_master/config/<NUCx>/LUT/<floor>/default.csv`, where `floor` is set when launching base_system.
 - `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP.
 - `<overtake_mode>` is the mode you want to use for overtaking. `spliner` is the only current possibility.
