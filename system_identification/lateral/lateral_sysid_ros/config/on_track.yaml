@@ -1,0 +1,14 @@
+on_track_sysid:
+  ros__parameters:
+    odom_topic: /state_estimation/odom
+    drive_topic: /drive
+    data_duration: 50.0   # [s] of driving above min_speed; more helps when time allows
+    min_speed: 1.0        # [m/s]
+    num_of_iterations: 6  # increase if the model has not converged after the last iteration
+    num_of_epochs: 100    # per iteration
+    lr: 0.0005
+    weight_decay: 0.0
+    equal_tires: false    # fit one model for front and rear; discouraged
+    plot_model: true      # fit plots go to stack_master/config/<car>/pacejka/<floor>/data
+    save_raw_data: false  # same folder
+    update_latest: true   # point default.yaml / default.csv at the new results

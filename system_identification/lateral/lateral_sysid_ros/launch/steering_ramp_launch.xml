@@ -1,0 +1,9 @@
+<launch>
+    <!-- Drives the car: constant speed, slow steering ramp. Record a bag meanwhile and run
+         `ros2 run lateral_sysid_ros steady_state_from_bag` on it afterwards -->
+    <arg name="param_file" default="$(find-pkg-share lateral_sysid_ros)/config/steering_ramp.yaml" />
+
+    <node pkg="lateral_sysid_ros" exec="steering_ramp_node" name="steering_ramp" output="screen">
+        <param from="$(var param_file)" />
+    </node>
+</launch>
