@@ -38,9 +38,9 @@ class Controller(Node):
                          automatically_declare_parameters_from_overrides=True)
 
         # remote parameters
-        self.map_path = get_remote_parameter(self, 'global_parameters', 'map_path')
-        self.racecar_version = get_remote_parameter(self, 'global_parameters', 'racecar_version')
-        self.sim = get_remote_parameter(self, 'global_parameters', 'sim')
+        self.map_path = get_remote_parameter(self, '/global_parameters', 'map_path')
+        self.racecar_version = get_remote_parameter(self, '/global_parameters', 'racecar_version')
+        self.sim = get_remote_parameter(self, '/global_parameters', 'sim')
         self.state_machine_rate = get_remote_parameter(self, 'state_machine', 'rate_hz')
 
         # variables
@@ -324,7 +324,7 @@ class Controller(Node):
         Notices the change in the parameters and alters the spline params accordingly
         """
 
-        if parameter_event.node != "/controller" or self.mode == "FTG":
+        if parameter_event.node != self.get_fully_qualified_name() or self.mode == "FTG":
             return
 
         if self.mode == "MAP":

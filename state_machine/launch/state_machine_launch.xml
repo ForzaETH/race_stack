@@ -8,6 +8,7 @@
         <set_remap from="/car_state/pose" to="/opp_racecar/pose" if="$(var sim_opp)" />
         <set_remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" if="$(var sim_opp)" />
         <set_remap from="/state" to="/opp_racecar/state" if="$(var sim_opp)" />
+        <set_remap from="/global_waypoints_scaled" to="/opp_racecar/global_waypoints_scaled" if="$(var sim_opp)" />
         <set_remap from="/state_marker" to="/opp_racecar/state_marker" if="$(var sim_opp)" />
         <set_remap from="/perception/obstacles" to="/opp_racecar/perception/obstacles" if="$(var sim_opp)" />
         <node pkg="state_machine" name="state_machine" exec="state_machine" output="screen">

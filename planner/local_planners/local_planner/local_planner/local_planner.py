@@ -422,7 +422,7 @@ class LocalPlanner(Node):
     def update_pose_from_tf(self) -> bool:
         """Updates current_position from TF. Returns False if the transform is unavailable."""
         try:
-            tf = self.tf_buffer.lookup_transform("map", "car_state/base_link", Time())
+            tf = self.tf_buffer.lookup_transform("map", self.get_parameter("base_frame").value, Time())
         except tf2_ros.TransformException as e:
             self.get_logger().warn(f"[Local Planner] map->base_link lookup failed: {e}", throttle_duration_sec=1.0)
             return False
