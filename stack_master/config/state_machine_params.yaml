@@ -1,4 +1,4 @@
-state_machine:
+/**/state_machine:  # any namespace, e.g. the sim opponent
   ros__parameters:
     rate_hz: 40  # [hz]
     initial_state: 'GB_TRACK'  # "GB_TRACK", ...

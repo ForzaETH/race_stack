@@ -7,7 +7,7 @@
   <group>
     <set_remap from="/drive" to="/opp_drive" if="$(var sim_opp)" />
     <set_remap from="/scan" to="/opp_scan" if="$(var sim_opp)" />
-    <set_remap from="/car_state/odom" to="/opp_racecar/odom" if="$(var sim_opp)" />
+    <set_remap from="/state_estimation/odom" to="/opp_racecar/odom" if="$(var sim_opp)" />
     <set_remap from="/car_state/pose" to="/opp_racecar/pose" if="$(var sim_opp)" />
     <set_remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" if="$(var sim_opp)" />
     <set_remap from="/state" to="/opp_racecar/state" if="$(var sim_opp)" />

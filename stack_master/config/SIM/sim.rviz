@@ -351,6 +351,44 @@ Visualization Manager:
             Expand Link Details: false
             Expand Tree: false
             Link Tree Style: Links in Alphabetic Order
+            opp_racecar/back_left_wheel:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            opp_racecar/back_right_wheel:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            opp_racecar/base_link:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            opp_racecar/front_left_hinge:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            opp_racecar/front_left_wheel:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            opp_racecar/front_right_hinge:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+            opp_racecar/front_right_wheel:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
+            opp_racecar/laser:
+              Alpha: 1
+              Show Axes: false
+              Show Trail: false
+              Value: true
           Mass Properties:
             Inertia: false
             Mass: false
@@ -495,40 +533,35 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 12.151151657104492
+      Angle: 0
+      Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: 1.2561830282211304
-        Y: 2.806946039199829
-        Z: 1.4169552326202393
-      Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5397963523864746
+      Scale: 31.058486938476562
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 4.733580589294434
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 1.2561830282211304
+      Y: 2.806946039199829
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
   Height: 1016
   Hide Left Dock: false
-  Hide Right Dock: false
+  Hide Right Dock: true
   QMainWindow State: 000000ff00000000fd000000040000000000000156000003a2fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b000003a2000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000003a2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000003a2000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005dc000003a200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:
     collapsed: false
   Views:
-    collapsed: false
+    collapsed: true
   Width: 1848
-  X: 72
+  X: 62
   Y: 27

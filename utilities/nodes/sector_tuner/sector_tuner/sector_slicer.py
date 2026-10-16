@@ -165,7 +165,7 @@ class SectorSlicer(Node):
             dict_file['Sector' + str(i)].update({'only_FTG': False})
             #Add no_FTG field to sector
             dict_file['Sector' + str(i)].update({'no_FTG': False})
-        ros_yaml_preamble = {'sector_tuner': {'ros__parameters': dict_file}}
+        ros_yaml_preamble = {'/**/sector_tuner': {'ros__parameters': dict_file}}  # any namespace, e.g. the sim opponent
         
         #Save yaml to the respective maps folder 
         yaml_path = os.path.join(self.yaml_dir, 'speed_scaling.yaml')
