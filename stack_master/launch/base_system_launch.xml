@@ -15,8 +15,6 @@
     <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
       <arg name="map_yaml_path" value="$(var map_path)/$(var map_name).yaml" />
     </include>
-    <!-- only needed in sim -->
-    <include file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml" />
   </group>
 
   <!-- launch real car system -->
@@ -31,9 +29,13 @@
       <arg name="racecar_version" value="$(var racecar_version)" />
       <arg name="mapping_bool" value="False" />
       <arg name="map_name" value="$(var map_name)" />
-      <arg name="frenet_bool" value="True" />
     </include>
   </group>
+
+  <!-- launch frenet odom republisher (pose from TF, velocity from /state_estimation/odom) -->
+  <include file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml">
+    <arg name="use_sim_time" value="$(var sim)" />
+  </include>
 
   <!-- launch global parameter node -->
   <node pkg="stack_master" name="global_parameters" exec="global_parameter_node">

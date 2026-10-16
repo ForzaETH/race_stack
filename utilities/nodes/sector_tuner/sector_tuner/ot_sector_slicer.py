@@ -1,5 +1,6 @@
 import yaml, os, subprocess, time
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from f110_msgs.msg import WpntArray
 import numpy as np
@@ -34,9 +35,9 @@ class OvertakingSectorSlicer(Node):
         self.glob_slider_s = 0
         self.sector_pnts = [0] #Sector always has tostart at 0
 
-        self.wpnt_sub = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, 10)
-        self.wpnt_sub_sp = self.create_subscription(WpntArray, '/global_waypoints/shortest_path', self.glb_sp_wpnts_cb, 10)
-        self.bounds_sub = self.create_subscription(MarkerArray, '/trackbounds/markers', self.bounds_cb, 10)
+        self.wpnt_sub = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, LATCHED_QOS)
+        self.wpnt_sub_sp = self.create_subscription(WpntArray, '/global_waypoints/shortest_path', self.glb_sp_wpnts_cb, LATCHED_QOS)
+        self.bounds_sub = self.create_subscription(MarkerArray, '/trackbounds/markers', self.bounds_cb, LATCHED_QOS)
         
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)

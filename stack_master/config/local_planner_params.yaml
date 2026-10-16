@@ -3,6 +3,7 @@ local_planner:
     rate_hz: 40  # [hz]
     n_loc_wpnts: 80  # number of local waypoints published, 1 waypoint every 0.1 meter
 
+    raceline: 'mincurv'  # line to track: mincurv, shortest_path, centerline (frenet + sector scaling always on mincurv) -> overridden by launch arg
     ot_planner: 'frenet'  # choose between: frenet, spliner, predictive_spliner, graph_based
 
     gb_ego_width_m: 0.4  # [m], distance from gb path for rejoining -> dynamically overridden from state_machine

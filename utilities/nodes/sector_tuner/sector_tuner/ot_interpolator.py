@@ -1,5 +1,6 @@
 import yaml
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from f110_msgs.msg import Wpnt, WpntArray
 import numpy as np
@@ -46,12 +47,12 @@ class OvertakingInterpolator(Node):
         self.callback_handle = self.handler.add_parameter_event_callback(
             callback=self.dyn_param_cb,
         )
-        self.glb_wpnt_scaled_sub = self.create_subscription(WpntArray, self.glb_wpnts_name, self.glb_wpnts_cb, 10)
-        self.glb_wpnt_og_sub = self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, 10)
-        self.glb_wpnt_sp_sub = self.create_subscription(WpntArray, self.glb_wpnts_sp_name, self.glb_wpnts_sp_cb, 10)
+        self.glb_wpnt_scaled_sub = self.create_subscription(WpntArray, self.glb_wpnts_name, self.glb_wpnts_cb, LATCHED_QOS)
+        self.glb_wpnt_og_sub = self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED_QOS)
+        self.glb_wpnt_sp_sub = self.create_subscription(WpntArray, self.glb_wpnts_sp_name, self.glb_wpnts_sp_cb, LATCHED_QOS)
 
         # new glb_waypoints
-        self.ot_points_pub = self.create_publisher(WpntArray, "/global_waypoints/overtaking", 10)
+        self.ot_points_pub = self.create_publisher(WpntArray, "/global_waypoints/overtaking", LATCHED_QOS)
         self.ot_markers_pub = self.create_publisher(MarkerArray, "/global_waypoints/overtaking/markers", 10)
         self.sector_pub = self.create_publisher(MarkerArray, '/ot_sector_markers', 10)
 
@@ -82,6 +83,7 @@ class OvertakingInterpolator(Node):
         Saves the global waypoints (minimum curvature)
         """
         self.glb_wpnts_scaled = data
+        self.need_to_reinterpolate = True
         coords = np.array(
             [[wpnt.s_m, wpnt.x_m, wpnt.y_m] for wpnt in data.wpnts]
         )
@@ -119,10 +121,6 @@ class OvertakingInterpolator(Node):
         self.wait_for_message_timer = self.create_timer(timer_period, self.loop_cb)
         
     def dyn_param_cb(self, parameter_event):
-        if(parameter_event.node == '/sector_tuner'):
-            self.need_to_reinterpolate = True
-            self.glb_wpnts_scaled = None
-            return
         if(parameter_event.node == '/ot_interpolator'):
             """
             Notices the change in the parameters and scales the global waypoints
@@ -344,7 +342,8 @@ class OvertakingInterpolator(Node):
             self.recalculate_ot_s()
 
             self.need_to_reinterpolate = False
-        pass
+            return True
+        return False
 
     def publish_spline_markers(self):
         max_vx_mps = self.max_gb_speed
@@ -428,8 +427,8 @@ class OvertakingInterpolator(Node):
         self.sector_pub.publish(sec_markers)    
 
     def loop_cb(self):
-        self.interpolate_points()
-        self.ot_points_pub.publish(self.interp_wpnt)
+        if self.interpolate_points():
+            self.ot_points_pub.publish(self.interp_wpnt)
         self.publish_spline_markers()
         self.publish_sector_markers()
 

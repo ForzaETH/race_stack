@@ -49,7 +49,7 @@ camera:
       # equivalent of the old ROS1 "camera_dynparam" nodelet call that forced
       # IR emitter off and locked exposure/gain for visual-inertial odometry.
       depth_module.emitter_enabled: 0
-      depth_module.enable_auto_exposure: false
+      depth_module.enable_auto_exposure: true
       depth_module.exposure: 3000
       depth_module.gain: 16
       rgb_camera.power_line_frequency: 0

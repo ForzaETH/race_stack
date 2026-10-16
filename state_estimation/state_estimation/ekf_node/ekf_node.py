@@ -71,7 +71,10 @@ class EkfNode(Node):
         self.R_imu = np.diag(self.get_parameter('R_imu').value)
         self.R_vesc = np.diag(self.get_parameter('R_vesc').value)
         self.R_vio = np.diag(self.get_parameter('R_vio').value)
-        self.Q = np.diag(self.get_parameter('Q').value)
+        q_values = list(self.get_parameter('Q').value)
+        if self.model_type != "kinematic_bicycle_model" and len(q_values) == 7:
+            q_values = q_values[0:6]
+        self.Q = np.diag(q_values)
 
         # Get Car Parameters
         tire_config = load_pacejka_tire_config_ros(self.racecar_version, self.floor)

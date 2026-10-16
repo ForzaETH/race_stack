@@ -1,6 +1,7 @@
 import os
 import yaml
 import rclpy
+from stack_master.qos import LATCHED_QOS
 import numpy as np
 from scipy.spatial.transform import Rotation
 from rclpy.node import Node
@@ -98,12 +99,11 @@ class Controller(Node):
         # '/l1_param_tuner/parameter_updates',self.l1_params_cb) #l1 param
         # tuning/updating
         self.create_subscription(String, '/state', self.state_cb, 10)
-        self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, 10)
+        self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, LATCHED_QOS)
         self.create_subscription(ObstacleArray, '/perception/obstacles', self.obstacle_cb, 10)
         self.create_subscription(WpntArray, '/local_waypoints', self.local_waypoint_cb,
                                  10)  # waypoints (x, y, v, norm trackbound, s, kappa)
-        self.create_subscription(Odometry, '/car_state/odom', self.odom_cb, 10)  # car speed
-        self.create_subscription(PoseStamped, '/car_state/pose', self.car_state_cb, 10)  # car position (x, y, theta)
+        self.create_subscription(Odometry, '/state_estimation/odom', self.odom_cb, 10)  # car speed
         self.create_subscription(
             Odometry,
             '/car_state/frenet/odom',
@@ -401,12 +401,10 @@ class Controller(Node):
 
     def odom_cb(self, data: Odometry):
         self.speed_now = data.twist.twist.linear.x
-
-    def car_state_cb(self, data: PoseStamped):
-        x = data.pose.position.x
-        y = data.pose.position.y
-        rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y,
-                                  data.pose.orientation.z, data.pose.orientation.w])
+        x = data.pose.pose.position.x
+        y = data.pose.pose.position.y
+        rot = Rotation.from_quat([data.pose.pose.orientation.x, data.pose.pose.orientation.y,
+                                    data.pose.pose.orientation.z, data.pose.pose.orientation.w])
         rot_euler = rot.as_euler('xyz', degrees=False)
         theta = rot_euler[2]
         self.position_in_map = np.array([x, y, theta])[np.newaxis]

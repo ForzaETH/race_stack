@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.parameter import Parameter
@@ -61,6 +62,10 @@ class LocalPlanner(Node):
         self.num_glb_wpnts = 0  # number of waypoints on global trajectory
         self.num_ot_points = 0
         self.frenet_wpnts = WpntArray()
+        self.gb_og_vx = None  # unscaled mincurv speeds, to get the sector scaling ratio
+        self.ref_wpnts = None  # tracked raceline if not mincurv (frenet stays on mincurv)
+        self.ref_xy = None
+        self.ref_to_gb_idx = None  # nearest mincurv index for each ref waypoint
 
         # spliner variables
         splini_ttl = self.params.splini_ttl if self.params.ot_planner == "spliner" else self.params.pred_splini_ttl
@@ -76,19 +81,38 @@ class LocalPlanner(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         # Subscriptions
-        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, 10)  # from og wpnts
-        self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED_QOS)  # from og wpnts
+        self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, LATCHED_QOS)
         self.create_subscription(String, "/state", self.state_cb, 1)
         self.get_logger().info("[Local Planner] Waiting for state machine state message...")
         while self.cur_state is None:
             rclpy.spin_once(self)
         self.get_logger().info("[Local Planner] Received state message.")
 
-        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_cb, 10)  # from velocity scaler
+        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_cb, LATCHED_QOS)  # from velocity scaler
         self.get_logger().info("[Local Planner] Waiting for scaled global waypoints message...")
         while self.glb_wpnts is None:
             rclpy.spin_once(self)
         self.get_logger().info("[Local Planner] Received scaled global waypoints message.")
+        self.get_logger().info("[Local Planner] Waiting for unscaled global waypoints message...")
+        while self.gb_og_vx is None:
+            rclpy.spin_once(self)
+        self.get_logger().info("[Local Planner] Received unscaled global waypoints message.")
+
+        raceline_topics = {
+            "mincurv": None,
+            "shortest_path": "/global_waypoints/shortest_path",
+            "centerline": "/centerline_waypoints",
+        }
+        self.raceline = self.get_parameter("raceline").value
+        if self.raceline not in raceline_topics:
+            raise ValueError(f"[Local Planner] Unknown raceline '{self.raceline}', choose from {list(raceline_topics)}")
+        if raceline_topics[self.raceline] is not None:
+            self.create_subscription(WpntArray, raceline_topics[self.raceline], self.ref_wpnts_cb, LATCHED_QOS)
+            self.get_logger().info(f"[Local Planner] Waiting for {self.raceline} waypoints...")
+            while self.ref_wpnts is None:
+                rclpy.spin_once(self)
+            self.get_logger().info(f"[Local Planner] Tracking {self.raceline}, frenet and sectors on mincurv.")
 
         self.create_subscription(WpntArray, "/planner/waypoints", self.frenet_planner_cb, 10)
         self.create_subscription(Float32MultiArray, "/planner/graph_based_wpnts", self.graphbased_wpts_cb, 10)
@@ -151,6 +175,15 @@ class LocalPlanner(Node):
             self.max_speed = max([wpnt.vx_mps for wpnt in data.wpnts])
         else:
             pass
+        self.gb_og_vx = np.array([w.vx_mps for w in data.wpnts[:-1]])
+
+    def ref_wpnts_cb(self, data: WpntArray):
+        """Alternative raceline (shortest path / centerline) to track instead of mincurv."""
+        wpnts = data.wpnts[:-1]  # last point == first point
+        self.ref_xy = np.array([[w.x_m, w.y_m] for w in wpnts])
+        gb_xy = np.array([[w.x_m, w.y_m] for w in self.glb_wpnts])
+        self.ref_to_gb_idx = np.argmin(((self.ref_xy[:, None, :] - gb_xy[None, :, :]) ** 2).sum(-1), axis=1)
+        self.ref_wpnts = wpnts
 
     def avoidance_cb(self, data: OTWpntArray):
         """spliniboi waypoints"""
@@ -423,8 +456,21 @@ class LocalPlanner(Node):
     # Functions to calculate local waypoints in Odom frame #
     ########################################################
     def GlobalTracking(self):
-        s = int(self.cur_s / self.waypoints_dist + 0.5)
-        return [self.glb_wpnts[(s + i) % self.num_glb_wpnts] for i in range(self.params.n_loc_wpnts)]
+        if self.ref_wpnts is None:
+            s = int(self.cur_s / self.waypoints_dist + 0.5)
+            return [self.glb_wpnts[(s + i) % self.num_glb_wpnts] for i in range(self.params.n_loc_wpnts)]
+
+        # alternative raceline: start from nearest ref point, apply the mincurv sector scaling ratio
+        x, y, _ = self.current_position
+        start = int(np.argmin(((self.ref_xy - [x, y]) ** 2).sum(-1)))
+        wpnts = []
+        for i in range(self.params.n_loc_wpnts):
+            j = (start + i) % len(self.ref_wpnts)
+            g = self.ref_to_gb_idx[j]
+            w = copy.copy(self.ref_wpnts[j])
+            w.vx_mps *= self.glb_wpnts[g].vx_mps / max(self.gb_og_vx[g], 1e-3)
+            wpnts.append(w)
+        return wpnts
 
     def Trailing(self):
         if self._check_close_to_raceline():

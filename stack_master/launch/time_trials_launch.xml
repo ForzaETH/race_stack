@@ -3,6 +3,7 @@
     <arg name="ctrl_algo" default="MAP" />
     <arg name="measure" default="False" />
     <arg name="sim_opp" default="False" description="True to run the time trials stack as the simulated opponent (remaps topics to the opponent ones)" />
+    <arg name="raceline" default="mincurv" description="'mincurv' / 'shortest_path' / 'centerline'" />
 
     <!-- TODO feed this somewhere-->
     <let name="param_file"
@@ -33,6 +34,7 @@
 
     <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml">
         <arg name="sim_opp" value="$(var sim_opp)" />
+        <arg name="raceline" value="$(var raceline)" />
     </include>
 
 </launch>

@@ -1,13 +1,12 @@
 import rclpy
+from stack_master.qos import LATCHED_QOS
 import numpy as np
 from builtin_interfaces.msg import Time
 from rclpy.node import Node
-from scipy.spatial.transform import Rotation
 from rcl_interfaces.srv import GetParameters
 from rclpy.parameter import Parameter
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseStamped
 from f110_msgs.msg import WpntArray, OTWpntArray, ObstacleArray
 from visualization_msgs.msg import Marker
 try:
@@ -42,7 +41,7 @@ class StateMachine(Node):
         else:
             self.battery_level = self.params.volt_threshold + 1
         self.max_speed = None
-        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_cb, LATCHED_QOS)
         while self.max_speed is None: # equivalent of wait for message
             self.get_logger().info("Waiting for global waypoints message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
@@ -52,7 +51,7 @@ class StateMachine(Node):
         self.num_glb_wpnts = 0
         self.track_length = 1
         self.gb_max_idx = 10
-        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, LATCHED_QOS)
         while self.glb_wpnts is None: # equivalent of wait for message
             self.get_logger().info("Waiting for scaled global waypoints message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
@@ -66,13 +65,6 @@ class StateMachine(Node):
             rclpy.spin_once(self)
 
         if self.params.mode == 'head_to_head':
-            self.current_position = None
-            self.create_subscription(PoseStamped, '/car_state/pose', self.car_state_cb, 10)
-            while self.current_position is None:
-                self.get_logger().info("Waiting for car state pose message", throttle_duration_sec=0.5)
-                rclpy.spin_once(self)
-
-
             self.last_valid_avoidance_wpnts = None
             self.splini_ttl_counter = 0
             self.avoidance_wpnts = None
@@ -156,16 +148,6 @@ class StateMachine(Node):
             self.obstacles = data.obstacles
         else:
             self.obstacles = []
-    
-    def car_state_cb(self, data: PoseStamped):
-        x = data.pose.position.x
-        y = data.pose.position.y
-        rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y, 
-                                       data.pose.orientation.z, data.pose.orientation.w])
-        rot_euler = rot.as_euler('xyz', degrees=False)
-        theta = rot_euler[2]
-
-        self.current_position = [x, y, theta]
     
     ### Properties to evaulate state transitions
     @property

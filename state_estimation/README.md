@@ -1,9 +1,15 @@
 # State Estimation
 ![State Estimation Architecture](./misc/state_estimation_arch.png)
 
-This directory contains the all required files to launch the state estimation submodule, including Google's *cartographer* localization framework, the Extended Kalan Filter for velocity estimation, and the car state aggregator (*carstate_node*). This includes the relevant launchers, configuration files, and scripts. 
+This directory contains the all required files to launch the state estimation submodule, including Google's *cartographer* localization framework, the Extended Kalan Filter for velocity estimation. This includes the relevant launchers, configuration files, and scripts. 
 
 The main launcher for the state estimation components can be found in `state_estimation/launch/state_estimation_launch.xml`. 
+
+The resulting car state is exposed as:
+- TF `map -> base_link` (and the alias `car_state/base_link`): the car pose from localization.
+- `/car_state/pose`: the same pose as `PoseStamped`, published by `carstate_node` on the physical car (the simulator publishes it directly).
+- `/state_estimation/odom`: velocity estimate from the EKF (twist in the `base_link` frame).
+- `/car_state/frenet/odom`: pose and velocity in the Frenet frame, published by the `frenet_odom_republisher` node (`utilities/nodes/frenet_odom_republisher`), which combines the TF pose with `/state_estimation/odom`. Launched for both simulation and the physical car by `stack_master/launch/base_system_launch.xml`.
 
 ## Kalman Filter ##
 

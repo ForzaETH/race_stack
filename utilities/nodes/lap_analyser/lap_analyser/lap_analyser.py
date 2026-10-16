@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from f110_msgs.msg import LapData, WpntArray
 from std_msgs.msg import Float32, Empty
@@ -48,7 +49,7 @@ class LapAnalyser(Node):
         # self.get_logger().info("[LapAnalyser] Waiting for /global_waypoints topic")
         # rospy.wait_for_message('/global_waypoints', WpntArray)
         # self.get_logger().info("[LapAnalyser] Ready to go")
-        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, 10) # TODO maybe add wait for topic/timeout?
+        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS) # TODO maybe add wait for topic/timeout?
 
         # while self.global_lateral_waypoints is None:
         #     print("[Lap Analyzer] Waiting for global lateral waypoints")
