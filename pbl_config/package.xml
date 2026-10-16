@@ -3,12 +3,14 @@
 <package format="3">
   <name>pbl_config</name>
   <version>0.0.0</version>
-  <description>Pydantic-validated config loaders (car, pacejka tire, linear tire) for the race stack</description>
+  <description>Pydantic-validated config loaders (car, pacejka tire, steering LUT) for the race stack</description>
   <maintainer email="maurice.brunner@pbl.ee.ethz.ch">maubrunn</maintainer>
   <license>MIT</license>
 
   <depend>ament_index_python</depend>
   <exec_depend>stack_master</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

@@ -1,9 +1,9 @@
 import os
-import logging
-from datetime import datetime
+from pathlib import Path
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from pbl_config.archive import write_archived
 from pbl_config.paths import get_stack_master_path
 
 
@@ -59,7 +59,7 @@ def load_pacejka_tire_config_ros(racecar_version: str, floor: str) -> PacejkaTir
                     else:
                         print(f"Error loading the {relative_path} file. Please contact support (edo) with this traceback.")
                         raise e
-                return None
+                raise
     except FileNotFoundError as e:
         # check if pacejka folder exists
         pacejka_path = get_stack_master_path('config/' + racecar_version + '/pacejka/')
@@ -76,36 +76,19 @@ def save_pacejka_tire_config(
         config: PacejkaTireConfig,
         racecar_version: str,
         floor: str,
-        update_latest: bool = True) -> None:
-    """Saves the pacejka_tire config to the yaml file
+        update_latest: bool = True) -> Path:
+    """Saves the pacejka_tire config to `config/<car>/pacejka/<floor>/archive/` and,
+    if `update_latest`, points default.yaml at it.
 
     Args:
         config (PacejkaTireConfig): a PacejkaTireConfig
     """
-    model_path = str(get_stack_master_path('config/' + racecar_version + '/pacejka/' + floor)) + '/'
-    timestamp = datetime.now().strftime("%m%d")
-    archive_folder = model_path + 'archive/'
-    if not os.path.exists(archive_folder):
-        os.makedirs(archive_folder)
-    filename_only = f'{timestamp}_pacejka.yaml'
-    filename = archive_folder + filename_only
+    def write(path):
+        with open(path, 'w', encoding='utf-8') as file:
+            yaml.dump(config.model_dump(), file)
 
-    # print warning if the file already exists
-    if os.path.exists(filename):
-        logging.warning("%s already exists and will be overwritten", filename)
-
-    with open(filename, 'w', encoding='utf-8') as file:
-        yaml.dump(config.model_dump(), file)
-    logging.info("Saved pacejka_tire config of %s on floor %s to %s", racecar_version, floor, filename)
-
-    if update_latest:
-        # update  default.yaml to be symlink to the latest model
-        latest_path = model_path + 'default.yaml'
-        if os.path.exists(latest_path):
-            os.remove(latest_path)
-        symlink_path = f"./archive/{filename_only}"
-        os.symlink(symlink_path, latest_path)
-        logging.info("Updated latest pacejka_tire config symlink of %s on floor %s to %s", racecar_version, floor, filename)
+    return write_archived(get_stack_master_path('config/' + racecar_version + '/pacejka/' + floor),
+                          'pacejka.yaml', write, update_latest)
 
 class NotExistingFloor(ValueError):
     pass
