@@ -6,7 +6,7 @@
         <param name="map_path" value="$(var map_path)" />
         <param name="publish_markers" value="true" />
         <param name="publish_shortest_path" value="true" />
-        <param name="publish_centerline" value="false" />
+        <param name="publish_centerline" value="true" />
         <param name="publish_lattice" value="false" />
     </node>
 </launch>

@@ -1,4 +1,5 @@
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from rcl_interfaces.msg import FloatingPointRange, ParameterDescriptor, SetParametersResult, ParameterType
@@ -69,9 +70,9 @@ class ObstacleSpliner(Node):
         self.create_subscription(
             Odometry, '/car_state/frenet/odom', self.state_cb, QoSProfile(depth=10))
         self.create_subscription(
-            WpntArray, '/global_waypoints', self.gb_cb, QoSProfile(depth=10))
+            WpntArray, '/global_waypoints', self.gb_cb, LATCHED_QOS)
         self.create_subscription(
-            WpntArray, '/global_waypoints_scaled', self.gb_scaled_cb, QoSProfile(depth=10))
+            WpntArray, '/global_waypoints_scaled', self.gb_scaled_cb, LATCHED_QOS)
 
         # Setup publishers
         self.mrks_pub = self.create_publisher(

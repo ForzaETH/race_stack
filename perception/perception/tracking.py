@@ -13,6 +13,7 @@ from filterpy.kalman import ExtendedKalmanFilter as EKF
 from scipy.linalg import block_diag
 
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType, FloatingPointRange, IntegerRange, SetParametersResult
 from rclpy.parameter import Parameter
@@ -459,7 +460,7 @@ class StaticDynamic(Node):
         self.obs_sub = self.create_subscription(
             ObstacleArray, '/perception/detection/raw_obstacles', self.obstacleCallback, 10)
         self.glob_wpts_sub = self.create_subscription(
-            WpntArray, '/global_waypoints', self.pathCallback, 10)
+            WpntArray, '/global_waypoints', self.pathCallback, LATCHED_QOS)
         self.cs_frenet = self.create_subscription(
             Odometry, '/car_state/frenet/odom', self.carStateCallback, 10)
         self.tf_buffer = Buffer(rclpy.duration.Duration(seconds=5))

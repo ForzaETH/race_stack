@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, HistoryPolicy
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
@@ -109,7 +110,7 @@ class Detect(Node):
         self.scan_sub = self.create_subscription(
             LaserScan, '/scan', self.laserCb, 10, callback_group=msgs_cb_group)
         self.glob_wpts_sub = self.create_subscription(
-            WpntArray, '/global_waypoints', self.pathCb, 10, callback_group=msgs_cb_group)
+            WpntArray, '/global_waypoints', self.pathCb, LATCHED_QOS, callback_group=msgs_cb_group)
         self.car_state_sub = self.create_subscription(
             Odometry, '/car_state/frenet/odom', self.carStateCb, 10, callback_group=msgs_cb_group)
 

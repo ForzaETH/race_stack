@@ -1,4 +1,5 @@
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 
 from f110_msgs.msg import WpntArray
@@ -23,7 +24,7 @@ class FrenetOdomRepublisher(Node):
 
         self.frenet_odom_publisher_ = self.create_publisher(Odometry, '/car_state/frenet/odom', 10)
 
-        self.create_subscription(WpntArray, '/global_waypoints', self.global_trajectory_callback, 10)
+        self.create_subscription(WpntArray, '/global_waypoints', self.global_trajectory_callback, LATCHED_QOS)
         self.create_subscription(Odometry, '/state_estimation/odom', self.odom_callback, 10)
 
     def global_trajectory_callback(self, msg):

@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from skimage.morphology import skeletonize
 
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from ament_index_python.packages import get_package_share_directory
 from visualization_msgs.msg import MarkerArray
@@ -19,7 +20,6 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import Float32
 from f110_msgs.msg import WpntArray
 
-import trajectory_planning_helpers as tph
 from .readwrite_global_waypoints import write_global_waypoints
 from global_racetrajectory_optimization.trajectory_optimizer import trajectory_optimizer
 from global_racetrajectory_optimization import helper_funcs_glob
@@ -54,13 +54,14 @@ class GlobalPlannerNode(Node):
         self.map_info_str = ""
         self.input_path = os.path.join(get_package_share_directory('stack_master'), 'config', 'global_planner')
         
-        self.global_waypoints_pub = self.create_publisher(WpntArray, '/global_waypoints', 10)
-        self.global_waypoints_sp_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', 10)
-        self.global_waypoints_markers_pub = self.create_publisher(MarkerArray, '/global_waypoints/markers', 10)
-        self.centerline_waypoints_markers_pub = self.create_publisher(MarkerArray, '/centerline_waypoints/markers', 10)
-        self.track_bounds_pub = self.create_publisher(MarkerArray, '/trackbounds/markers', 10)
+        self.global_waypoints_pub = self.create_publisher(WpntArray, '/global_waypoints', LATCHED_QOS)
+        self.global_waypoints_sp_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', LATCHED_QOS)
+        self.global_waypoints_markers_pub = self.create_publisher(MarkerArray, '/global_waypoints/markers', LATCHED_QOS)
+        self.centerline_waypoints_pub = self.create_publisher(WpntArray, '/centerline_waypoints', LATCHED_QOS)
+        self.centerline_waypoints_markers_pub = self.create_publisher(MarkerArray, '/centerline_waypoints/markers', LATCHED_QOS)
+        self.track_bounds_pub = self.create_publisher(MarkerArray, '/trackbounds/markers', LATCHED_QOS)
         self.shortest_path_waypoints_markers_pub = self.create_publisher(
-            MarkerArray, '/global_waypoints/shortest_path/markers', 10)
+            MarkerArray, '/global_waypoints/shortest_path/markers', LATCHED_QOS)
         
         self.load_and_plot_map()
     
@@ -69,6 +70,7 @@ class GlobalPlannerNode(Node):
                      global_waypoints: WpntArray,
                      global_waypoints_marker: MarkerArray,
                      centerline_waypoints_marker: MarkerArray,
+                     centerline_waypoints: WpntArray,
                      global_waypoints_sp: WpntArray,
                      shortest_path_waypoints_marker: MarkerArray,
                      track_bounds_marker: MarkerArray
@@ -81,6 +83,7 @@ class GlobalPlannerNode(Node):
         self.track_bounds_pub.publish(track_bounds_marker)
         self.global_waypoints_pub.publish(global_waypoints)
         self.global_waypoints_sp_pub.publish(global_waypoints_sp)
+        self.centerline_waypoints_pub.publish(centerline_waypoints)
 
     def load_and_plot_map(self):
         """Loads the map from disk, applies filtering and plots it."""
@@ -94,7 +97,14 @@ class GlobalPlannerNode(Node):
         self.map_origin = Point()
         self.map_origin.x = map_info['origin'][0]
         self.map_origin.y = map_info['origin'][1]
-        self.initial_position = map_info['initial_pose']
+        self.initial_pose_missing = 'initial_pose' not in map_info
+        if self.initial_pose_missing:
+            self.get_logger().warn(
+                f"No 'initial_pose' in {self.map_name}.yaml, this is probably a hand-drawn map. "
+                "Projecting (0, 0) onto the track and keeping the extracted centerline direction.")
+            self.initial_position = [0.0, 0.0, 0.0]
+        else:
+            self.initial_position = map_info['initial_pose']
         self.skeleton = skeleton
         try:
             f, (ax0, ax1) = plt.subplots(2, 1)
@@ -136,6 +146,11 @@ class GlobalPlannerNode(Node):
                                            centerline_meter_int[min_dist_ind - 1, 1])])
 
         self.get_logger().info(f"Direction of the centerline: {cent_direction[0]}")
+        if self.initial_pose_missing:
+            # pose on the centerline, aligned with it: keeps direction check and left/right bound labeling consistent
+            self.initial_position = [centerline_meter_int[min_dist_ind, 0], centerline_meter_int[min_dist_ind, 1],
+                                     cent_direction[0]]
+            self.get_logger().info(f"Initial pose projected on the track: {np.round(self.initial_position, 3).tolist()}")
         if self.show_plots:
             plt.plot(centerline_meter_int[:, 0], centerline_meter_int[:, 1], 'ko', label='Centerline interpolated')
             plt.plot(centerline_meter_int[min_dist_ind - 1, 0], centerline_meter_int[min_dist_ind - 1, 1], 'ro',
@@ -195,24 +210,7 @@ class GlobalPlannerNode(Node):
                                           reverse=self.reverse_mapping)
 
         # Write centerline in a csv file and get a marker array of it
-        centerline_waypoints, centerline_markers = write_centerline(cent_with_dist)
-
-        # Add curvature and angle to centerline waypoints
-        centerline_coords = np.array([
-            [coord.x_m, coord.y_m] for coord in centerline_waypoints.wpnts
-        ])
-
-        psi_centerline, kappa_centerline = tph.calc_head_curv_num.\
-            calc_head_curv_num(
-                path=centerline_coords,
-                el_lengths=0.1 * np.ones(len(centerline_coords) - 1),
-                is_closed=False
-            )
-        for i, (psi, kappa) in enumerate(zip(psi_centerline, kappa_centerline)):
-            centerline_waypoints.wpnts[i].s_m = i * 0.1
-            # pi/2 added because trajectory_planning_helpers package assumes north to be zero psi
-            centerline_waypoints.wpnts[i].psi_rad = psi + np.pi / 2
-            centerline_waypoints.wpnts[i].kappa_radpm = kappa
+        _, centerline_markers = write_centerline(cent_with_dist)
 
         self.get_logger().info('Start Global Trajectory optimization with iterative minimum curvature...')
         try:
@@ -249,6 +247,24 @@ class GlobalPlannerNode(Node):
 
         # publish global trajectory markers and waypoints
         self.get_logger().info('Done with iterative minimum curvature optimization')
+
+        ################################################################################################################
+        # Compute centerline trajectory: same preprocessing and velocity profile as the optimized lines, no optimization
+        ################################################################################################################
+        global_trajectory_cl, *_ = trajectory_optimizer(
+            input_path=self.input_path, track_name=iqp_centerline_path, curv_opt_type='centerline',
+            safety_width=self.safety_width, plot=False)
+        d_right_cl, d_left_cl = dist_to_bounds(trajectory=global_trajectory_cl,
+                                               bound_r=bound_r_iqp,
+                                               bound_l=bound_l_iqp,
+                                               centerline=centerline_meter_int,
+                                               safety_width=self.safety_width,
+                                               show_plots=self.show_plots,
+                                               reverse=self.reverse_mapping)
+        centerline_waypoints, _ = _create_wpnts_markers(trajectory=global_trajectory_cl,
+                                                        d_right=d_right_cl,
+                                                        d_left=d_left_cl,
+                                                        loginfo=self.get_logger().info)
         self.get_logger().info('Lap Completed now publishing global waypoints')
 
         ################################################################################################################
@@ -314,6 +330,7 @@ class GlobalPlannerNode(Node):
         self.publish_plan(global_waypoints=global_traj_wpnts_iqp,
                           global_waypoints_marker=global_traj_markers_iqp,
                           centerline_waypoints_marker=centerline_markers,
+                          centerline_waypoints=centerline_waypoints,
                           shortest_path_waypoints_marker=global_traj_markers_sp,
                             global_waypoints_sp=global_traj_wpnts_sp,
                           track_bounds_marker=bounds_markers)

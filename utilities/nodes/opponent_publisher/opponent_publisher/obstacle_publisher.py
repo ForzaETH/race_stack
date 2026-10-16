@@ -1,4 +1,5 @@
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from geometry_msgs.msg import PointStamped
 from f110_msgs.msg import ObstacleArray, Obstacle, WpntArray, OpponentTrajectory, OppWpnt
@@ -56,8 +57,8 @@ class ObstaclePublisher(Node):
         
 
         # Subscriptions and Publishers
-        self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, 10)
-        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, 10)
+        self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, LATCHED_QOS)
+        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, LATCHED_QOS)
         
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,

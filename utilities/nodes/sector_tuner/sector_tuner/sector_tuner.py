@@ -1,4 +1,6 @@
+import copy
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rcl_interfaces.msg import ParameterType, ParameterDescriptor, FloatingPointRange
 from rclpy.node import Node
 from f110_msgs.msg import WpntArray
@@ -17,8 +19,6 @@ class SectorTuner(Node):
                          allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
         
-        timer_period = 0.5  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
         self.vis_timer = self.create_timer(1.0, self.marker_callback)
         
         # sectors params
@@ -46,16 +46,16 @@ class SectorTuner(Node):
             WpntArray,
             self.glb_wpnts_name,
             self.global_waypoints_cb,
-            10)
+            LATCHED_QOS)
         self.global_waypoint_sp_sub = self.create_subscription(
             WpntArray,
             self.glb_wpnts_name+"/shortest_path",
             self.global_waypoints_sp_cb,
-            10)
+            LATCHED_QOS)
         
         # new glb_waypoints pub
-        self.scaled_points_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled", 10)
-        self.scaled_points_sp_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled/shortest_path", 10)
+        self.scaled_points_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled", LATCHED_QOS)
+        self.scaled_points_sp_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled/shortest_path", LATCHED_QOS)
         
         # Visualizations
         self.sector_visualization_pub = self.create_publisher(MarkerArray, '/sector_markers', 10)
@@ -77,6 +77,8 @@ class SectorTuner(Node):
         Saves the global waypoints of the main trajectory (e.g. min curvature)
         """
         self.glb_wpnts_og = data
+        self.glb_wpnts_scaled = None  # re-copy, the new og may differ
+        self.publish_scaled()
      
     def global_waypoints_sp_cb(self, data:WpntArray):
         """
@@ -98,6 +100,7 @@ class SectorTuner(Node):
             )
 
         self.get_logger().info(str(self.sectors_params))
+        self.publish_scaled()
 
     def get_vel_scaling(self, s):
         """
@@ -168,7 +171,8 @@ class SectorTuner(Node):
         Scales the global waypoints' velocities
         """
         if self.glb_wpnts_scaled is None:
-            self.glb_wpnts_scaled = self.glb_wpnts_og
+            # deepcopy: scaling in place on the og message would compound the scaling on every publish
+            self.glb_wpnts_scaled = copy.deepcopy(self.glb_wpnts_og)
             self.glb_wpnts_sp_scaled = self.glb_wpnts_sp_og
 
         for i, wpnt  in enumerate(self.glb_wpnts_og.wpnts):
@@ -176,7 +180,7 @@ class SectorTuner(Node):
             new_vel = wpnt.vx_mps*vel_scaling
             self.glb_wpnts_scaled.wpnts[i].vx_mps = new_vel
 
-    def timer_callback(self):
+    def publish_scaled(self):
         if(self.glb_wpnts_og is None):
             return
         self.scale_points()

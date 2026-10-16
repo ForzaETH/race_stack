@@ -1,6 +1,7 @@
 import os
 import yaml
 import rclpy
+from stack_master.qos import LATCHED_QOS
 import numpy as np
 from scipy.spatial.transform import Rotation
 from rclpy.node import Node
@@ -98,7 +99,7 @@ class Controller(Node):
         # '/l1_param_tuner/parameter_updates',self.l1_params_cb) #l1 param
         # tuning/updating
         self.create_subscription(String, '/state', self.state_cb, 10)
-        self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, 10)
+        self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, LATCHED_QOS)
         self.create_subscription(ObstacleArray, '/perception/obstacles', self.obstacle_cb, 10)
         self.create_subscription(WpntArray, '/local_waypoints', self.local_waypoint_cb,
                                  10)  # waypoints (x, y, v, norm trackbound, s, kappa)

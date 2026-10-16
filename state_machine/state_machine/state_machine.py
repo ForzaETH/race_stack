@@ -1,4 +1,5 @@
 import rclpy
+from stack_master.qos import LATCHED_QOS
 import numpy as np
 from builtin_interfaces.msg import Time
 from rclpy.node import Node
@@ -40,7 +41,7 @@ class StateMachine(Node):
         else:
             self.battery_level = self.params.volt_threshold + 1
         self.max_speed = None
-        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_cb, LATCHED_QOS)
         while self.max_speed is None: # equivalent of wait for message
             self.get_logger().info("Waiting for global waypoints message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
@@ -50,7 +51,7 @@ class StateMachine(Node):
         self.num_glb_wpnts = 0
         self.track_length = 1
         self.gb_max_idx = 10
-        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, LATCHED_QOS)
         while self.glb_wpnts is None: # equivalent of wait for message
             self.get_logger().info("Waiting for scaled global waypoints message", throttle_duration_sec=0.5)
             rclpy.spin_once(self)
