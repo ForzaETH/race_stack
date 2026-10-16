@@ -1,5 +1,6 @@
 <launch>
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
+    <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="ctrl_algo" default="MAP" />
     <arg name="measure" default="False" />
     <arg name="raceline" default="mincurv" description="'mincurv' / 'shortest_path' / 'centerline'" />
@@ -12,6 +13,7 @@
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
         <arg name="mode" value="$(var ctrl_algo)" />
+        <arg name="LU_table" value="$(var LU_table)" />
         <arg name="sim_opp" value="$(var sim_opp)" />
     </include>
 
