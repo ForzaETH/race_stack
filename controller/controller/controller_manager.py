@@ -15,7 +15,6 @@ from geometry_msgs.msg import Point, PointStamped, Pose, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import Imu, LaserScan
 from std_msgs.msg import Float64, String
-from steering_lookup.lookup_steer_angle import LookupSteerAngle
 from visualization_msgs.msg import Marker, MarkerArray
 from frenet_conversion.frenet_converter import FrenetConverter
 
@@ -40,6 +39,7 @@ class Controller(Node):
         # remote parameters
         self.map_path = get_remote_parameter(self, 'global_parameters', 'map_path')
         self.racecar_version = get_remote_parameter(self, 'global_parameters', 'racecar_version')
+        self.floor = get_remote_parameter(self, 'global_parameters', 'floor')
         self.sim = get_remote_parameter(self, 'global_parameters', 'sim')
         self.state_machine_rate = get_remote_parameter(self, 'state_machine', 'rate_hz')
 
@@ -47,8 +47,6 @@ class Controller(Node):
         self.rate = 40
         self.state = "GB_TRACK"
 
-        self.LUT_name = self.get_parameter('LU_table').value  # name of lookup table
-        self.get_logger().info(f"Using {self.LUT_name}")
         self.mode = self.get_parameter('mode').value
         self.mapping = self.get_parameter('mapping').value
 
@@ -244,7 +242,8 @@ class Controller(Node):
             self.l1_params["trailing_d_gain"],
             self.l1_params["blind_trailing_speed"],
             self.rate,
-            self.LUT_name)
+            self.racecar_version,
+            self.floor)
 
     def init_pp_controller(self):
 

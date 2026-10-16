@@ -4,18 +4,18 @@
     <let name="overtake_mode2" value="$(var overtake_mode)"/>
     <arg name="od_mode" default="sami"/> <!--  sami / dani -->
     <arg name="racecar_version" default="NUC4"/>
-    <arg name="LU_table" default="$(var racecar_version)_pacejka"/>
+    <arg name="floor" default="dubi"/>
     
     <let name="param_file" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml"/>
 
     <node pkg="stack_master" name="global_parameters" exec="global_parameter_node">
         <param name="racecar_version" value="$(var racecar_version)" />
+        <param name="floor" value="$(var floor)" />
     </node>
 
     <!--  launch L1 controller -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
         <arg name="mode" value="$(var L1_mode)"/>
-        <arg name="LU_table" value="$(var LU_table)"/>
     </include>
     
 </launch>

@@ -16,6 +16,8 @@
   <depend>rclpy</depend>
 
   <exec_depend>stack_master</exec_depend>
+  <exec_depend>pbl_config</exec_depend>
+  <exec_depend>steering_lookup</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

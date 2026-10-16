@@ -24,13 +24,11 @@ def generate_launch_description():
                         emulate_tty=True,
                         parameters=[{
                             'frequency': 100,
-                            'racecar_version': LaunchConfiguration('racecar_version'),
                             'model_type': LaunchConfiguration('model_type'),
                             'odom_topic': LaunchConfiguration('odom_topic'),
                             'imu_topic': LaunchConfiguration('imu_topic'),
                             'vesc_topic': LaunchConfiguration('odom_vesc_topic'),
                             'vio_topic': '/basalt/odom',
-                            'floor': LaunchConfiguration('floor'),
                             'R_imu': [0.1, 0.1, 1000000.0, 1000000.0],
                             'R_vesc': [1, 1, 1, 1, 100, 0.1],
                             'R_vio': [0.1, 0.1, 0.1, 0.1, 0.1, 1000000.0],
@@ -51,8 +49,6 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('custom_ekf', default_value='false'),
         DeclareLaunchArgument('model_type', default_value='point_mass_model'),
-        DeclareLaunchArgument('racecar_version', default_value='none'),
-        DeclareLaunchArgument('floor', default_value='dubi'),
 
         DeclareLaunchArgument('odom_vesc_topic', default_value='/odom'),
         DeclareLaunchArgument('imu_topic', default_value='/imu'),

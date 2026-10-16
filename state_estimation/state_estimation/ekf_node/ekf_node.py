@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import threading
 import time
 
@@ -44,15 +43,14 @@ class EkfNode(Node):
         self.declare_parameter('vesc_topic', '/odom')
         self.declare_parameter('vio_topic', '/basalt/odom')
         self.declare_parameter('send_transform', False)
-        self.declare_parameter('floor', rclpy.Parameter.Type.STRING)
         self.declare_parameter('R_imu', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('R_vesc', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('R_vio', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('Q', rclpy.Parameter.Type.DOUBLE_ARRAY)
 
         self.Hz = self.get_parameter('frequency').value
-        self.racecar_version = os.environ.get('RACECAR_VERSION', 'NUC6')
-        self.floor = get_remote_parameter(self, 'global_parameters', 'floor', default='dubi')
+        self.racecar_version = get_remote_parameter(self, 'global_parameters', 'racecar_version')
+        self.floor = get_remote_parameter(self, 'global_parameters', 'floor')
 
         self.model_type = self.get_parameter('model_type').value
         self.ODOM_TOPIC = self.get_parameter('odom_topic').value
@@ -80,34 +78,14 @@ class EkfNode(Node):
         tire_config = load_pacejka_tire_config_ros(self.racecar_version, self.floor)
         car_config = load_car_config_ros(self.racecar_version)
         self.get_logger().info(f"[EKF Node] Loaded Config with: {self.racecar_version} and {self.floor}")
-        self.p = {
-            # Tire Parameters
-            'Bf': tire_config.Bf,
-            'Cf': tire_config.Cf,
-            'Df': tire_config.Df,
-            'Ef': tire_config.Ef,
-            'Br': tire_config.Br,
-            'Cr': tire_config.Cr,
-            'Dr': tire_config.Dr,
-            'Er': tire_config.Er,
-            'mu': tire_config.friction_coeff,
-
-            # Car Physical Configs
-            'm': car_config.m,
-            'I_z': car_config.Iz,
-            'l_f': car_config.lf,
-            'l_r': car_config.lr,
-            'h_cg': car_config.h_cg,
-            'wheelbase': car_config.wheelbase
-        }
 
         # Build the right Model Object
         if self.model_type == "point_mass_model":
             self.model = models.point_mass_model(self.Q)
         elif self.model_type == "kinematic_bicycle_model":
-            self.model = models.kinematic_bicycle_model(self.p, self.Q)
+            self.model = models.kinematic_bicycle_model(car_config, self.Q)
         elif self.model_type == "single_track_model":
-            self.model = models.single_track_model(self.p, self.Q)
+            self.model = models.single_track_model(car_config, tire_config, self.Q)
         else:
             self.get_logger().warn("[EKF Node] Unknown Model provided. Using point-mass motion model instead")
             self.model = models.point_mass_model(self.Q)

@@ -33,7 +33,8 @@ class MAP_Controller:
                 blind_trailing_speed,
 
                 loop_rate,
-                LUT_name,
+                racecar_version,
+                floor,
                 
                 logger_info = logging.info,
                 logger_warn = logging.warn
@@ -60,7 +61,6 @@ class MAP_Controller:
         self.blind_trailing_speed = blind_trailing_speed
 
         self.loop_rate = loop_rate
-        self.LUT_name = LUT_name
 
         # Parameters in the controller
         self.lateral_error_list = [] # list of squared lateral error 
@@ -83,7 +83,8 @@ class MAP_Controller:
         self.logger_info = logger_info
         self.logger_warn = logger_warn
 
-        self.steer_lookup = LookupSteerAngle(self.LUT_name, logger_info)
+        self.steer_lookup = LookupSteerAngle(racecar_version, floor, logger_info)
+        self.logger_info(f"Using the steering LUT of {racecar_version} on floor {floor}")
     # main loop    
     def main_loop(self, state, position_in_map, waypoint_array_in_map, speed_now, opponent, position_in_map_frenet, acc_now, track_length):
         # Updating parameters from manager
