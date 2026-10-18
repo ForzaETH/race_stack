@@ -21,7 +21,7 @@ The parameters `kd_obs_pred`, `fixed_pred_time` are only used with some obstacle
 ## Input/Output Topic Signature
 This node subscribes to:
 - `/perception/obstacles`: Subscribes to the obstacle array.
-- `/car_state/frenet/odom`: Reads the car's state
+- `/car_state/frenet`: Reads the car's state in Frenet coordinates (`rs_msgs/FrenetState`)
 - `/global_waypoints`: Subscribes to global waypoints.
 - `/global_waypoints_scaled`: Subscribes to the scaled global waypoints to obtain the current target velocities.
     

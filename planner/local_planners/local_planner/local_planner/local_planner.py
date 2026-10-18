@@ -8,8 +8,8 @@ from rclpy.parameter import Parameter
 import tf2_ros
 from tf_transformations import concatenate_matrices, translation_matrix, quaternion_matrix, euler_from_quaternion
 
-from rs_msgs.msg import OTWpntArray, Wpnt, WpntArray
-from std_msgs.msg import Float32MultiArray, String
+from rs_msgs.msg import OvertakingSpline, RaceState, Wpnt, WpntArray
+from std_msgs.msg import Float32MultiArray
 from visualization_msgs.msg import Marker, MarkerArray
 
 from stack_master.parameter_event_handler import ParameterEventHandler
@@ -35,13 +35,11 @@ class LocalPlanner(Node):
         # remote parameters
         self.base_frame = get_remote_parameter(self, 'global_parameters', 'base_frame', default='base_link')
 
-        self.cur_state: str | None = None
+        self.cur_state: int | None = None
         self.state_functions = {  # which wpt-generation function to use for which state
-            "GB_TRACK": self.GlobalTracking,
-            "TRAILING": self.Trailing,
-            "OVERTAKE": self.Overtaking,
-            "FTGONLY": self.FTGOnly,
-            "LOW_BAT": self.GlobalTracking,
+            RaceState.GB_TRACK: self.GlobalTracking,
+            RaceState.TRAILING: self.Trailing,
+            RaceState.OVERTAKE: self.Overtaking,
         }
 
         self.overtake_wpnts: list[Wpnt] = []
@@ -68,7 +66,7 @@ class LocalPlanner(Node):
         splini_ttl = self.params.splini_ttl if self.params.ot_planner == "spliner" else self.params.pred_splini_ttl
         self.splini_ttl_counter = int(splini_ttl * self.params.rate_hz)  # convert seconds to counters
         self.last_valid_avoidance_wpnts: list[Wpnt] | None = None
-        self.avoidance_wpnts: OTWpntArray | None = None
+        self.avoidance_wpnts: OvertakingSpline | None = None
 
         # Graph Based Variables
         self.graph_based_wpts = np.empty((0, 7))
@@ -80,7 +78,7 @@ class LocalPlanner(Node):
         # Subscriptions
         self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, 10)  # from og wpnts
         self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, 10)
-        self.create_subscription(String, "/state", self.state_cb, 1)
+        self.create_subscription(RaceState, "/state", self.state_cb, 1)
         self.get_logger().info("[Local Planner] Waiting for state machine state message...")
         while self.cur_state is None:
             rclpy.spin_once(self)
@@ -95,7 +93,7 @@ class LocalPlanner(Node):
         self.create_subscription(WpntArray, "/planner/waypoints", self.frenet_planner_cb, 10)
         self.create_subscription(Float32MultiArray, "/planner/graph_based_wpnts", self.graphbased_wpts_cb, 10)
         if self.params.ot_planner == "spliner" or self.params.ot_planner == "predictive_spliner":
-            self.create_subscription(OTWpntArray, "/planner/avoidance/otwpnts", self.avoidance_cb, 10)
+            self.create_subscription(OvertakingSpline, "/planner/avoidance/otwpnts", self.avoidance_cb, 10)
 
         # cross-node listener for the state machine's dynamically reconfigurable parameters
         self.param_handler = ParameterEventHandler(self)
@@ -118,8 +116,8 @@ class LocalPlanner(Node):
     #################
     #   Callbacks   #
     #################
-    def state_cb(self, msg: String):
-        self.cur_state = msg.data
+    def state_cb(self, msg: RaceState):
+        self.cur_state = msg.state
 
     def glb_wpnts_cb(self, data: WpntArray):
         """
@@ -155,7 +153,7 @@ class LocalPlanner(Node):
         else:
             pass
 
-    def avoidance_cb(self, data: OTWpntArray):
+    def avoidance_cb(self, data: OvertakingSpline):
         """spliniboi waypoints"""
         if len(data.wpnts) > 0:
             splini_ttl = self.params.splini_ttl if self.params.ot_planner == "spliner" else self.params.pred_splini_ttl
@@ -443,9 +441,6 @@ class LocalPlanner(Node):
             s = self.cur_id_ot
             return [self.overtake_wpnts[(s + i) % self.num_ot_points] for i in range(self.params.n_loc_wpnts)]
 
-    def FTGOnly(self):
-        return []
-
     def loop(self):
         """
         Main loop of the local planner.
@@ -477,7 +472,7 @@ class LocalPlanner(Node):
             # Once ttl has reached 0 we overwrite the avoidance waypoints with the empty waypoints
             if self.splini_ttl_counter <= 0:
                 self.last_valid_avoidance_wpnts = None
-                self.avoidance_wpnts = OTWpntArray()
+                self.avoidance_wpnts = OvertakingSpline()
                 self.splini_ttl_counter = -1
 
         # get the proper local waypoints based on the new state

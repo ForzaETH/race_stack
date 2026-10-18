@@ -1,0 +1,22 @@
+launch:
+
+- arg:
+    name: "mode"
+    default: "timetrials"
+    description: "Define state machine for timetrials or head to head"
+    choice:
+    - value: "timetrials"
+    - value: "head_to_head"
+
+# fail on arguments this launch file does not declare
+- check_args: {}
+
+- node:
+    pkg: "rs_state_machine"
+    exec: "state_machine"
+    name: "state_machine"
+    output: "screen"
+    param:
+    - from: "$(find-pkg-share stack_master)/config/state_machine_params.yaml"
+    - name: "mode"
+      value: "$(var mode)"

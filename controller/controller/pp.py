@@ -2,6 +2,7 @@
 
 import logging
 import numpy as np
+from rs_msgs.msg import RaceState
 
 class PP_Controller:
     """This class implements a Pure Pursuit controller for autonomous driving.
@@ -142,7 +143,7 @@ class PP_Controller:
         
         """
         # lookahead for steer (steering delay incorporation by propagating position)
-        if self.state == "TRAILING" and (self.opponent is not None):
+        if self.state == RaceState.TRAILING and (self.opponent is not None):
             speed_la_for_lu = self.speed_now
         else:
             adv_ts_st = self.speed_lookahead_for_steer
@@ -225,7 +226,7 @@ class PP_Controller:
         la_position = [self.position_in_map[0, 0] + v[0]*adv_ts_sp, self.position_in_map[0, 1] + v[1]*adv_ts_sp]
         idx_la_position = self.nearest_waypoint(la_position, self.waypoint_array_in_map[:, :2])
         global_speed = self.waypoint_array_in_map[idx_la_position, 2]
-        if(self.state == "TRAILING" and (self.opponent is not None)): #Trailing controller
+        if(self.state == RaceState.TRAILING and (self.opponent is not None)): #Trailing controller
             speed_command = self.trailing_controller(global_speed)
         else:
             self.trailing_speed = global_speed

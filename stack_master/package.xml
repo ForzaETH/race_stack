@@ -8,6 +8,7 @@
   <license>MIT</license>
 
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rs_launch</exec_depend>
   <depend>rclpy</depend>
 
   <test_depend>python3-pytest</test_depend>

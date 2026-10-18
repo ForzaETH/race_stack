@@ -19,7 +19,7 @@ from rclpy.parameter import Parameter
 
 from std_msgs.msg import Float32
 from builtin_interfaces.msg import Time
-from rs_msgs.msg import Wpnt, WpntArray, ObstacleArray, Obstacle
+from rs_msgs.msg import FrenetState, Wpnt, WpntArray, ObstacleArray, Obstacle
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, MarkerArray
@@ -460,7 +460,7 @@ class StaticDynamic(Node):
         self.glob_wpts_sub = self.create_subscription(
             WpntArray, '/global_waypoints', self.pathCallback, 10)
         self.cs_frenet = self.create_subscription(
-            Odometry, '/car_state/frenet/odom', self.carStateCallback, 10)
+            FrenetState, '/car_state/frenet', self.carStateCallback, 10)
         self.cs_odom_sub = self.create_subscription(
             Odometry, '/car_state/odom', self.carStateGlobCallback, 10)
         self.scan_sub = self.create_subscription(
@@ -586,11 +586,11 @@ class StaticDynamic(Node):
 
         self._initialized_track_bounds = True
 
-    def carStateCallback(self, data: Odometry) -> None:
+    def carStateCallback(self, data: FrenetState) -> None:
         """Update the car S state."""
-        self.car_s = data.pose.pose.position.x
+        self.car_s = data.s
         if self.last_car_s is None:
-            self.last_car_s = data.pose.pose.position.x
+            self.last_car_s = data.s
 
     def carStateGlobCallback(self, data: Odometry) -> None:
         """Update the car state in Cartesian coordinates."""

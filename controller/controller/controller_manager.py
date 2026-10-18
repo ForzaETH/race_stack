@@ -4,24 +4,20 @@ import rclpy
 import numpy as np
 from scipy.spatial.transform import Rotation
 from rclpy.node import Node
-from rclpy.client import Client
-from rcl_interfaces.srv import GetParameters
 
 from ament_index_python import get_package_share_directory
 from ackermann_msgs.msg import AckermannDriveStamped
-from rs_msgs.msg import (CarStateStamped, GapData, ObstacleArray, PidData, Wpnt, WpntArray)
-from geometry_msgs.msg import Point, PointStamped, Pose, PoseStamped
-from nav_msgs.msg import Odometry, Path
+from rs_msgs.msg import (FrenetState, ObstacleArray, PidData, RaceState, WpntArray)
+from geometry_msgs.msg import Point, PoseStamped
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu, LaserScan
-from std_msgs.msg import Float64, String
-from steering_lookup.lookup_steer_angle import LookupSteerAngle
 from visualization_msgs.msg import Marker, MarkerArray
 from frenet_conversion.frenet_converter import FrenetConverter
 
 from controller.map import MAP_Controller
 from controller.pp import PP_Controller
 from controller.ftg import FTG_Controller
-from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange, SetParametersResult
+from rcl_interfaces.msg import ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange, SetParametersResult
 from tf_transformations import quaternion_from_euler
 
 from pbl_config import get_remote_parameter
@@ -45,7 +41,7 @@ class Controller(Node):
 
         # variables
         self.rate = 40
-        self.state = "GB_TRACK"
+        self.state = RaceState.GB_TRACK
 
         self.LUT_name = self.get_parameter('LU_table').value  # name of lookup table
         self.get_logger().info(f"Using {self.LUT_name}")
@@ -98,7 +94,7 @@ class Controller(Node):
         # self.create_subscription(Config,
         # '/l1_param_tuner/parameter_updates',self.l1_params_cb) #l1 param
         # tuning/updating
-        self.create_subscription(String, '/state', self.state_cb, 10)
+        self.create_subscription(RaceState, '/state', self.state_cb, 10)
         self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, 10)
         self.create_subscription(ObstacleArray, '/perception/obstacles', self.obstacle_cb, 10)
         self.create_subscription(WpntArray, '/local_waypoints', self.local_waypoint_cb,
@@ -106,10 +102,10 @@ class Controller(Node):
         self.create_subscription(Odometry, '/car_state/odom', self.odom_cb, 10)  # car speed
         self.create_subscription(PoseStamped, '/car_state/pose', self.car_state_cb, 10)  # car position (x, y, theta)
         self.create_subscription(
-            Odometry,
-            '/car_state/frenet/odom',
+            FrenetState,
+            '/car_state/frenet',
             self.car_state_frenet_cb,
-            10)  # car frenet coordinates
+            10)
         self.create_subscription(LaserScan, '/scan', self.scan_cb, 10)  # lidar scan
 
         # Block until relevant data is here
@@ -407,18 +403,14 @@ class Controller(Node):
         self.acc_now[1:] = self.acc_now[:-1]
         self.acc_now[0] = -data.linear_acceleration.y  # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
 
-    def car_state_frenet_cb(self, data: Odometry):
-        s = data.pose.pose.position.x
-        d = data.pose.pose.position.y
-        vs = data.twist.twist.linear.x
-        vd = data.twist.twist.linear.y
-        self.position_in_map_frenet = np.array([s, d, vs, vd])
+    def car_state_frenet_cb(self, data: FrenetState):
+        self.position_in_map_frenet = np.array([data.s, data.d, data.vs, data.vd])
 
     def l1_params_cb(self):
         pass
 
-    def state_cb(self, data):
-        self.state = data.data
+    def state_cb(self, data: RaceState):
+        self.state = data.state
 
     def map_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.map_controller.main_loop(self.state,
@@ -597,7 +589,7 @@ class Controller(Node):
         self.lookahead_pub.publish(lookahead_marker)
 
     def visualize_trailing_opponent(self):
-        if (self.state == "TRAILING" and (self.opponent is not None)):
+        if (self.state == RaceState.TRAILING and (self.opponent is not None)):
             on = True
         else:
             on = False

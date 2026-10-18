@@ -4,9 +4,8 @@ from rclpy.qos import QoSProfile
 from rcl_interfaces.msg import FloatingPointRange, ParameterDescriptor, SetParametersResult, ParameterType
 from rclpy.parameter import Parameter
 
-from rs_msgs.msg import Obstacle, ObstacleArray, OTWpntArray, Wpnt, WpntArray
+from rs_msgs.msg import FrenetState, Obstacle, ObstacleArray, OvertakingSpline, Wpnt, WpntArray
 from geometry_msgs.msg import PointStamped
-from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -67,7 +66,7 @@ class ObstacleSpliner(Node):
         self.create_subscription(
             ObstacleArray, '/perception/obstacles', self.obs_cb, QoSProfile(depth=10))
         self.create_subscription(
-            Odometry, '/car_state/frenet/odom', self.state_cb, QoSProfile(depth=10))
+            FrenetState, '/car_state/frenet', self.state_cb, QoSProfile(depth=10))
         self.create_subscription(
             WpntArray, '/global_waypoints', self.gb_cb, QoSProfile(depth=10))
         self.create_subscription(
@@ -77,7 +76,7 @@ class ObstacleSpliner(Node):
         self.mrks_pub = self.create_publisher(
             MarkerArray, '/planner/avoidance/markers', QoSProfile(depth=10))
         self.evasion_pub = self.create_publisher(
-            OTWpntArray, '/planner/avoidance/otwpnts', QoSProfile(depth=10))
+            OvertakingSpline, '/planner/avoidance/otwpnts', QoSProfile(depth=10))
         self.closest_obs_pub = self.create_publisher(
             Marker, '/planner/avoidance/considered_OBS', QoSProfile(depth=10))
         self.pub_propagated = self.create_publisher(
@@ -211,11 +210,11 @@ class ObstacleSpliner(Node):
         # Callback function for obstacle data
         self.obs = msg
 
-    def state_cb(self, msg: Odometry):
+    def state_cb(self, msg: FrenetState):
         # Callback function for car state data
-        self.cur_s = msg.pose.pose.position.x
-        self.cur_d = msg.pose.pose.position.y
-        self.cur_vs = msg.twist.twist.linear.x
+        self.cur_s = msg.s
+        self.cur_d = msg.d
+        self.cur_vs = msg.vs
 
     def gb_cb(self, msg: WpntArray):
         # Callback function for global waypoints
@@ -232,7 +231,7 @@ class ObstacleSpliner(Node):
 
     #################### HELPER FUNCTIONS####################
     def wait_for_messages(self):
-        self.get_logger().info('Carstate Node waiting for Odometry messages...')
+        self.get_logger().info('Spline planner waiting for car state and global waypoints...')
         state_print = False
         gb_print = False
         scaled_gb_print = False
@@ -388,7 +387,7 @@ class ObstacleSpliner(Node):
         # Sample data
         obs = self.obs
         gb_scaled_wpnts = self.gb_scaled_wpnts.wpnts
-        wpnts = OTWpntArray()
+        wpnts = OvertakingSpline()
         mrks = MarkerArray()
 
         # If obs then do splining around it
@@ -421,7 +420,6 @@ class ObstacleSpliner(Node):
         Args:
         - obstacles (ObstacleArray): An array of obstacle objects to be evaded.
         - gb_wpnts (WpntArray): A list of global waypoints that describe a reference raceline.
-        - state (Odometry): The current state of the car.
 
         Returns:
         - wpnts (WpntArray): An array of waypoints that describe the evasion trajectory to the closest obstacle.
@@ -430,7 +428,7 @@ class ObstacleSpliner(Node):
         """
         # Return wpnts and markers
         mrks = MarkerArray()
-        wpnts = OTWpntArray()
+        wpnts = OvertakingSpline()
 
         # Get spacing between wpnts for rough approximations
         wpnt_dist = gb_wpnts[1].s_m - gb_wpnts[0].s_m
@@ -536,13 +534,10 @@ class ObstacleSpliner(Node):
                 mrks.markers.append(self.xyv_to_markers(
                     x=resp[0, i], y=resp[1, i], v=vi, mrks=mrks))
 
-            # Fill the rest of OTWpnts
+            # Fill the rest of the spline message
             wpnts.header.stamp = self.get_clock().now().to_msg()
             wpnts.header.frame_id = "map"
             if not danger_flag:
-                wpnts.ot_side = more_space
-                wpnts.ot_line = outside
-                wpnts.side_switch = True if self.last_ot_side != more_space else False
                 wpnts.last_switch_time = self.last_switch_time
 
                 # Update the last switch time and the last side
@@ -552,8 +547,7 @@ class ObstacleSpliner(Node):
             else:
                 wpnts.wpnts = []
                 mrks.markers = []
-                # This fools the statemachine to cool down
-                wpnts.side_switch = True
+                # treat it as a side switch, so consumers hold off on the next spline for the hysteresis time
                 self.last_switch_time = self.get_clock().now().to_msg()
         return wpnts, mrks
 
@@ -619,7 +613,7 @@ class ObstacleSpliner(Node):
 
         return mrk
 
-    def xyv_to_wpnts(self, s: float, d: float, x: float, y: float, v: float, wpnts: OTWpntArray) -> Wpnt:
+    def xyv_to_wpnts(self, s: float, d: float, x: float, y: float, v: float, wpnts: OvertakingSpline) -> Wpnt:
         wpnt = Wpnt()
         wpnt.id = len(wpnts.wpnts)
         wpnt.x_m = float(x)

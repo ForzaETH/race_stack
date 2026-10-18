@@ -2,9 +2,8 @@
 
 import rclpy
 from rclpy.node import Node
-from rs_msgs.msg import LapData, WpntArray
+from rs_msgs.msg import FrenetState, LapData, WpntArray
 from std_msgs.msg import Float32, Empty
-from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 from visualization_msgs.msg import Marker
 
@@ -25,20 +24,8 @@ class LapAnalyser(Node):
 
         self.get_logger().debug("Lap_analyser node started")
 
-        # Wait for state machine to start to figure out where to place the visualization message
         self.vis_pos = Pose()
-        self.state_marker = None
-        # msg: Marker = rospy.wait_for_message("/state_marker", Marker, timeout=None)
-        self.marker_sub = self.create_subscription(Marker, '/state_marker', self.marker_cb, 10)
-
-        # while self.state_marker is None:
-        #     print("[Lap Analyzer] Waiting for state marker")
-        #     time.sleep(0.1)
-
-        if self.state_marker is not None:
-            self.vis_pos = self.state_marker.pose
-
-        self.vis_pos.position.z += 1.5  # appear on top of the state marker
+        self.vis_pos.position.z += 1.5
         self.get_logger().debug(f"LapAnalyser will be centered at {self.vis_pos.position.x}, {self.vis_pos.position.y}, {self.vis_pos.position.z}")
 
         # stuff for min distance to track boundary
@@ -53,7 +40,7 @@ class LapAnalyser(Node):
         # while self.global_lateral_waypoints is None:
         #     print("[Lap Analyzer] Waiting for global lateral waypoints")
         #     time.sleep(0.1)
-        self.odom_frenet_sub = self.create_subscription(Odometry, '/car_state/frenet/odom', self.frenet_odom_cb, 10) # car odom in frenet frame
+        self.odom_frenet_sub = self.create_subscription(FrenetState, '/car_state/frenet', self.frenet_state_cb, 10)
 
         self.lap_analy_sub = self.create_subscription(Empty, '/lap_analyser/start', self.start_log_cb, 10)
 
@@ -91,9 +78,6 @@ class LapAnalyser(Node):
         with open(self.logfile_dir, 'w') as f:
             f.write(f"Laps done on " + datetime.now().strftime('%d %b %H:%M:%S') + '\n')
 
-    def marker_cb(self, data: Marker):
-            self.state_marker = data
-
 
 
     def waypoints_cb(self, data: WpntArray):
@@ -115,13 +99,13 @@ class LapAnalyser(Node):
         else:
             pass
 
-    def frenet_odom_cb(self, msg):
+    def frenet_state_cb(self, msg: FrenetState):
         if not self.wp_flag:
             self.get_logger().warn("frenet cb waiting for gb wpnts...", throttle_duration_sec=0.5)
             return
 
-        current_s = msg.pose.pose.position.x
-        current_d = msg.pose.pose.position.y
+        current_s = msg.s
+        current_d = msg.d
         if self.check_for_finish_line_pass(current_s):
             if (self.lap_count == -1):
                 self.lap_start_time = self.get_clock().now()

@@ -14,5 +14,5 @@
     </node>
 
     <!-- Play the ROS bag -->
-    <executable cmd="ros2 bag play $(var bag_file) --topics /tf /tf_static /scan /car_state/frenet/odom /global_waypoints --clock" output="screen" />
+    <executable cmd="ros2 bag play $(var bag_file) --topics /tf /tf_static /scan /car_state/frenet /global_waypoints --clock" output="screen" />
 </launch>

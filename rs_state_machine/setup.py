@@ -1,9 +1,13 @@
 from setuptools import setup
 import os
 from glob import glob
+from generate_parameter_library_py.setup_helper import generate_parameter_module
 
 
-package_name = 'state_machine'
+package_name = 'rs_state_machine'
+
+# Generates the typed parameters_codegen module from its YAML definition
+generate_parameter_module('parameters_codegen', 'rs_state_machine/parameters.yaml')
 
 setup(
     name=package_name,
@@ -19,12 +23,12 @@ setup(
     zip_safe=True,
     maintainer='ForzaETH',
     maintainer_email='nicolas.baumann@pbl.ee.ethz.ch',
-    description='The state_machine package',
+    description='Race state machine: decides between raceline tracking, trailing and overtaking',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'state_machine = state_machine.state_machine:main', # runs main in state_machine.py
+            'state_machine = rs_state_machine.state_machine:main',
         ],
     },
 )

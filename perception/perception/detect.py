@@ -12,13 +12,12 @@ from tf2_ros import Buffer, TransformListener
 import time
 import threading
 from frenet_conversion.frenet_converter import FrenetConverter
-from rs_msgs.msg import WpntArray, ObstacleArray, Obstacle as ObstacleMessage
+from rs_msgs.msg import FrenetState, WpntArray, ObstacleArray, Obstacle as ObstacleMessage
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float32
 from bisect import bisect_left
-from nav_msgs.msg import Odometry
 import math
 import numpy as np
 from tf_transformations import quaternion_from_euler
@@ -111,7 +110,7 @@ class Detect(Node):
         self.glob_wpts_sub = self.create_subscription(
             WpntArray, '/global_waypoints', self.pathCb, 10, callback_group=msgs_cb_group)
         self.car_state_sub = self.create_subscription(
-            Odometry, '/car_state/frenet/odom', self.carStateCb, 10, callback_group=msgs_cb_group)
+            FrenetState, '/car_state/frenet', self.carStateCb, 10, callback_group=msgs_cb_group)
 
         # --- Publisher ---
         self.breakpoints_markers_pub = self.create_publisher(
@@ -268,8 +267,8 @@ class Detect(Node):
         self.boundaries_pub.publish(self.detection_boundaries_marker)
         self.path_needs_update = False
 
-    def carStateCb(self, data: Odometry):
-        self.car_s = data.pose.pose.position.x
+    def carStateCb(self, data: FrenetState):
+        self.car_s = data.s
     
     def dyn_param_cb(self, params: List[Parameter]):
         """

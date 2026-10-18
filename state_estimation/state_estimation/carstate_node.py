@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from sensor_msgs.msg import Imu
-from rs_msgs.msg import WpntArray
+from rs_msgs.msg import FrenetState, WpntArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from frenet_conversion.frenet_converter import FrenetConverter
@@ -49,8 +49,7 @@ class Carstate(Node):
         # publishers
         self.state_odom_pub = self.create_publisher(Odometry, self.odom_out_topic, 10)
         self.state_pose_pub = self.create_publisher(PoseStamped, self.pose_out_topic, 10)
-        self.frenet_state_odom_pub = self.create_publisher(Odometry, "/car_state/frenet/odom", 10)
-        self.frenet_state_pose_pub = self.create_publisher(PoseStamped, "/car_state/frenet/pose", 10)
+        self.frenet_state_pub = self.create_publisher(FrenetState, "/car_state/frenet", 10)
 
         # Block until relevant data is here
         self.wait_for_messages(frenet_bool=self.frenet_bool)
@@ -138,29 +137,14 @@ class Carstate(Node):
         frenet_pos = self.frenet_converter.get_frenet([x_cart], [y_cart])
         frenet_vel = self.frenet_converter.get_frenet_velocities(vx, vy, theta)
 
-        s = frenet_pos[0, 0]
-        d = frenet_pos[1, 0]
-        vs = frenet_vel[0][0]
-        vd = frenet_vel[1][0]
-
-        #frenet pose msg
-        frenet_pose_msg = PoseStamped()
-        frenet_pose_msg.header.stamp = odom_cart.header.stamp
-        frenet_pose_msg.header.frame_id = "frenet"
-        frenet_pose_msg.pose.position.x = s
-        frenet_pose_msg.pose.position.y = d
-
-        #frenet odom msg
-        frenet_odom_msg = Odometry()
-        frenet_odom_msg.header = frenet_pose_msg.header
-        frenet_odom_msg.pose.pose = frenet_pose_msg.pose
-        frenet_odom_msg.twist.twist.linear.x = vs
-        frenet_odom_msg.twist.twist.linear.y = vd
+        frenet_msg = FrenetState()
+        frenet_msg.header.stamp = odom_cart.header.stamp
+        frenet_msg.s = float(frenet_pos[0, 0])
+        frenet_msg.d = float(frenet_pos[1, 0])
+        frenet_msg.vs = float(frenet_vel[0][0])
+        frenet_msg.vd = float(frenet_vel[1][0])
         #TODO handle speed from EKF
-
-        #publish
-        self.frenet_state_odom_pub.publish(frenet_odom_msg)
-        self.frenet_state_pose_pub.publish(frenet_pose_msg)
+        self.frenet_state_pub.publish(frenet_msg)
 
 def main():
     rclpy.init()

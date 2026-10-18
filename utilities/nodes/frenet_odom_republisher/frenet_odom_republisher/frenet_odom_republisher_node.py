@@ -1,8 +1,7 @@
 import rclpy
 from rclpy.node import Node
 
-from rs_msgs.msg import Wpnt, WpntArray
-from geometry_msgs.msg import PoseStamped
+from rs_msgs.msg import FrenetState, Wpnt, WpntArray
 from nav_msgs.msg import Odometry
 from frenet_conversion.frenet_converter import FrenetConverter
 import numpy as np
@@ -14,8 +13,7 @@ class FrenetOdomRepublisher(Node):
     def __init__(self):
         super().__init__('frenet_odom_republisher')
         self.has_global_trajectory = False
-        self.frenet_odom_publisher_ = self.create_publisher(Odometry, '/car_state/frenet/odom', 10)
-        self.frenet_pose_publisher_ = self.create_publisher(PoseStamped, '/car_state/frenet/pose', 10)
+        self.frenet_state_publisher_ = self.create_publisher(FrenetState, '/car_state/frenet', 10)
 
         self.global_trajectory_sub_ = self.create_subscription(
             WpntArray,
@@ -47,23 +45,13 @@ class FrenetOdomRepublisher(Node):
             frenet_pos = self.converter.get_frenet([odom_pos.x], [odom_pos.y])
             frenet_vel = self.converter.get_frenet_velocities(odom_vel.x, odom_vel.y, theta)
             
-            frenet_msg = msg
-            idx = str(self.converter.get_closest_index([odom_pos.x], [odom_pos.y])[0])
-            frenet_msg.child_frame_id = idx
-            frenet_msg.pose.pose.position.x = frenet_pos[0, 0]
-            frenet_msg.pose.pose.position.y = frenet_pos[1, 0]
-            frenet_msg.twist.twist.linear.x = frenet_vel[0][0]
-            frenet_msg.twist.twist.linear.y = frenet_vel[1][0]
-            
-            #Pose msg
-            frenet_pose_msg = PoseStamped()
-            frenet_pose_msg.header = msg.header
-            frenet_pose_msg.pose.position.x = frenet_pos[0, 0]
-            frenet_pose_msg.pose.position.y = frenet_pos[1, 0]
-            
-            #Publish or perish
-            self.frenet_pose_publisher_.publish(frenet_pose_msg)
-            self.frenet_odom_publisher_.publish(frenet_msg)
+            frenet_msg = FrenetState()
+            frenet_msg.header.stamp = msg.header.stamp
+            frenet_msg.s = float(frenet_pos[0, 0])
+            frenet_msg.d = float(frenet_pos[1, 0])
+            frenet_msg.vs = float(frenet_vel[0][0])
+            frenet_msg.vd = float(frenet_vel[1][0])
+            self.frenet_state_publisher_.publish(frenet_msg)
             
 
 def main(args=None):

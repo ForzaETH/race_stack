@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>state_machine</name>
+  <name>rs_state_machine</name>
   <version>0.0.0</version>
-  <description>The state_machine package</description>
+  <description>Race state machine: decides between raceline tracking, trailing and overtaking</description>
   <maintainer email="nicolas.baumann@pbl.ee.ethz.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
@@ -13,7 +13,10 @@
   <test_depend>python3-pytest</test_depend>
 
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rs_launch</exec_depend>
+  <exec_depend>stack_master</exec_depend>
   <depend>rclpy</depend>
+  <depend>generate_parameter_library_py</depend>
   <depend>rs_msgs</depend>
 
   <export>

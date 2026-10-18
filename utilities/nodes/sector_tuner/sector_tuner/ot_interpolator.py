@@ -1,7 +1,8 @@
 import yaml
 import rclpy
 from rclpy.node import Node
-from rs_msgs.msg import Wpnt, WpntArray
+from rclpy.qos import DurabilityPolicy, QoSProfile
+from rs_msgs.msg import OvertakingSectors, Wpnt, WpntArray
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
 import os
@@ -53,6 +54,10 @@ class OvertakingInterpolator(Node):
         self.ot_points_pub = self.create_publisher(WpntArray, "/global_waypoints/overtaking", 10)
         self.ot_markers_pub = self.create_publisher(MarkerArray, "/global_waypoints/overtaking/markers", 10)
         self.sector_pub = self.create_publisher(MarkerArray, '/ot_sector_markers', 10)
+        # transient local, so nodes starting later still get the current sectors
+        self.ot_sectors_pub = self.create_publisher(
+            OvertakingSectors, '/overtaking_sectors', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self.publish_ot_sectors()
 
         timer_period = 0.5  # seconds
         self.wait_for_message_timer = self.create_timer(timer_period, self.wait_for_message_callback)
@@ -129,9 +134,18 @@ class OvertakingInterpolator(Node):
             # update params
             self.sectors_params=self.parameters_to_dict()
             self.need_to_reinterpolate = True
+            self.publish_ot_sectors()
             self.get_logger().info(str(self.sectors_params))            
         # Else
         return
+
+    def publish_ot_sectors(self):
+        sectors = [self.sectors_params[f"Overtaking_sector{i}"] for i in range(self.n_sectors)]
+        msg = OvertakingSectors()
+        msg.start = [int(sector['start']) for sector in sectors]
+        msg.end = [int(sector['end']) for sector in sectors]
+        msg.allowed = [bool(sector['ot_flag']) for sector in sectors]
+        self.ot_sectors_pub.publish(msg)
 
     def initialize_converter(self) -> FrenetConverter:
         """

@@ -151,10 +151,6 @@ class SectorSlicer(Node):
             dict_file['Sector' + str(i)] = {'start':self.sector_pnts[i] if i == 0 else self.sector_pnts[i] + 1,
                                             'end':self.sector_pnts[i+1],
                                             'scaling':self.speed_scaling}
-            #Add only_FTG field to sector
-            dict_file['Sector' + str(i)].update({'only_FTG': False})
-            #Add no_FTG field to sector
-            dict_file['Sector' + str(i)].update({'no_FTG': False})
         ros_yaml_preamble = {'sector_tuner': {'ros__parameters': dict_file}}
         
         #Save yaml to the respective maps folder 

@@ -1,0 +1,60 @@
+# Parameter definition for the state machine.
+# Values are set in stack_master/config/state_machine_params.yaml
+
+state_machine:
+  rate_hz:
+    type: int
+    default_value: 40
+    description: "Rate at which the state machine should run in Hz"
+    read_only: true
+    validation:
+      bounds<>: [10, 100]
+  mode:
+    type: string
+    default_value: "timetrials"
+    description: "Mode of the state machine"
+    read_only: true
+    validation:
+      one_of<>: [["timetrials", "head_to_head"]]
+  splini_ttl:
+    type: double
+    default_value: 2.0
+    description: "Time to live for spliner waypoints in seconds"
+    validation:
+      bounds<>: [1.0, 5.0]
+  gb_ego_width_m:
+    type: double
+    default_value: 0.4
+    description: "Distance from gb path for rejoining in meters"
+    validation:
+      bounds<>: [0.0, 5.0]
+  lateral_width_gb_m:
+    type: double
+    default_value: 1.1
+    description: "Lateral width within which we consider obstacles to be on the global line in meters"
+    validation:
+      bounds<>: [0.0, 5.0]
+  gb_horizon_m:
+    type: double
+    default_value: 6.9
+    description: "Horizon considered for the global waypoints to check for obstacles in meters"
+    validation:
+      bounds<>: [3.0, 20.0]
+  overtaking_horizon_m:
+    type: double
+    default_value: 6.9
+    description: "Horizon considered for overtaking in meters"
+    validation:
+      bounds<>: [3.0, 20.0]
+  lateral_width_ot_m:
+    type: double
+    default_value: 0.3
+    description: "Lateral width within which we consider opponents to be on the overtaking line in meters"
+    validation:
+      bounds<>: [0.0, 5.0]
+  splini_hyst_timer_sec:
+    type: double
+    default_value: 0.2
+    description: "Time we have to wait between switching from overtaking on one side to the other in seconds"
+    validation:
+      bounds<>: [0.0, 2.0]

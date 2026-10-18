@@ -13,9 +13,8 @@
     </include>
 
     <!-- launch state machine -->
-    <include file="$(find-pkg-share state_machine)/launch/state_machine_launch.xml">
+    <include file="$(find-pkg-share rs_state_machine)/launch/state_machine_launch.yaml">
         <arg name="mode" value="head_to_head"/>
-        <arg name="overtake_mode" value="$(var overtake_mode)"/>
     </include>
 
     <!-- SPLINE PLANNER-->

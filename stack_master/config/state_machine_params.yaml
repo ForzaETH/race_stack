@@ -1,13 +1,6 @@
 state_machine:
   ros__parameters:
     rate_hz: 40  # [hz]
-    initial_state: 'GB_TRACK'  # "GB_TRACK", ...
-    test_on_car: True  # also set True if using on a bag
-
-    volt_threshold: 11. # [V] voltage threshold below which we start screaming
-
-    force_state: False  # force state to be the one specified in force_state_choice
-
 
     splini_ttl: 2. # [s] ttl counter for validity of spliner waypoints -> NOW DYNAMIC RECONFIGURABLE
 
@@ -18,7 +11,3 @@ state_machine:
     overtaking_horizon_m: 6.9 # [m] horizon considered for overtaking
     lateral_width_ot_m: 0.3 # [m] lateral width within which we consider opponents to be on the overtaking line -> NOW DYNAMIC RECONFIGURABLE
     splini_hyst_timer_sec: 0.2 # [s] time we have to wait between switching from overtaking on one side to the other -> NOW DYNAMIC RECONFIGURABLE
-
-    ftg_threshold_speed: 0.1 # [m/s] speed threshold below which we start a timer for activating FTG
-    ftg_timer_sec: 3. # [s] time we have to stay slower than the `ftg_threshold_speed` threshold before we activate FTG
-
