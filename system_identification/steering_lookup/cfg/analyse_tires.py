@@ -30,7 +30,6 @@ class TireAnalyser:
     self.cmd_topic = "/vesc/commands/servo/position"
     field_dict = {"/ekf/odometry/filtered": ["twist.twist.angular.z"],
                   "/car_state/odom": ["twist.twist.linear.x", "twist.twist.linear.y"], 
-                  #"/vesc/low_level/ackermann_cmd_mux/output": ["drive.speed", "drive.acceleration", "drive.steering_angle"],
                   self.cmd_topic: ["data"],
                   "/vesc/sensors/imu/raw": ["linear_acceleration.x", "linear_acceleration.y"]}
 

@@ -7,7 +7,6 @@
       },
       "includePath": [
         "/opt/ros/humble/include/**",
-        "/home/forzapblnuc/ws/src/race_stack/base_system/f1tenth_system/ackermann_mux/include/**",
         "/home/forzapblnuc/ws/src/race_stack/sensors/vesc/vesc_ackermann/include/**",
         "/home/forzapblnuc/ws/src/race_stack/sensors/vesc/vesc_driver/include/**",
         "/usr/include/**"
