@@ -35,7 +35,8 @@
                 ],
                 "python.analysis.extraPaths": [
                     "/opt/ros/humble/lib/python3.10/site-packages",
-                    "/opt/ros/humble/local/lib/python3.10/dist-packages"
+                    "/opt/ros/humble/local/lib/python3.10/dist-packages",
+                    "/ws/install/rs_msgs/local/lib/python3.10/dist-packages"
                 ],
                 "python.analysis.typeCheckingMode": "basic",
                 "python.analysis.diagnosticSeverityOverrides": {
