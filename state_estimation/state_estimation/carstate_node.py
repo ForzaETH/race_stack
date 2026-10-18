@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from sensor_msgs.msg import Imu
-from race_stack_interfaces.msg import WpntArray
+from rs_msgs.msg import WpntArray
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from frenet_conversion.frenet_converter import FrenetConverter

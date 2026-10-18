@@ -22,16 +22,16 @@ services:
     stdin_open: true
     tty: true
     # Named volumes keep the owner they were created with; re-own them to the current UID
-    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; exec tail -f /dev/null"
+    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; sudo chown $$(id -u):$$(id -g) /ws/build /ws/install /ws/log; exec tail -f /dev/null"
     init: true
     volumes:
       - /dev:/dev:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../race_stack_deps:/ws/src:rw
       - ./:/ws/src/race_stack:rw
-      - ../race_stack_cache/humble/build:/ws/build:rw
-      - ../race_stack_cache/humble/install:/ws/install:rw
-      - ../race_stack_cache/humble/log:/ws/log:rw
+      - ws-build:/ws/build
+      - ws-install:/ws/install
+      - ws-log:/ws/log
       - ../race_stack_maps:/ws/maps:rw
     environment:
       - USER=race_crew
@@ -75,7 +75,7 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
-      - ../race_stack_cache/humble/install:/ws/install:ro
+      - ws-install:/ws/install:ro
     command: >
       bash -c "source /opt/ros/humble/setup.bash
       && if [ -f /ws/install/setup.bash ]; then source /ws/install/setup.bash; fi
@@ -104,3 +104,12 @@ services:
       - |
         echo '<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&resize=scale">' > /usr/share/novnc/index.html
         exec /start_vnc.sh
+
+# Named per host user, so users sharing a machine never share build artifacts
+volumes:
+  ws-build:
+    name: race_stack_humble_build_${HOST_UID:-1000}
+  ws-install:
+    name: race_stack_humble_install_${HOST_UID:-1000}
+  ws-log:
+    name: race_stack_humble_log_${HOST_UID:-1000}

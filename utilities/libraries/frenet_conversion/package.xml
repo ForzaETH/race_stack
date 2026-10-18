@@ -13,6 +13,7 @@
   <test_depend>python3-pytest</test_depend>
 
   <exec_depend>rclpy</exec_depend>
+  <depend>rs_msgs</depend>
 
   <export>
     <build_type>ament_python</build_type>

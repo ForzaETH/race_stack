@@ -1,4 +1,3 @@
-CACHE_DIR := ../race_stack_cache/humble
 MAPS_DIR := ../race_stack_maps
 DEPS_DIR := ../race_stack_deps
 
@@ -21,7 +20,6 @@ deps:
 	done < .install_utils/dependencies.txt
 
 setup: deps
-	@mkdir -p $(CACHE_DIR)/build $(CACHE_DIR)/install $(CACHE_DIR)/log
 	@mkdir -p $(MAPS_DIR)
 
 	@echo "Exporting environment variables to .env..."
@@ -29,6 +27,7 @@ setup: deps
 	@printf "Enter RACECAR_VERSION (SIM for laptops, NUCx for cars)[SIM]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-SIM}" >> .env
 	@echo "HOST_UID=$$(id -u)" >> .env
 	@echo "HOST_GID=$$(id -g)" >> .env
+	@echo "COMPOSE_BAKE=false" >> .env
 
 	@echo "Configuring Display for X11 GUI Forwarding..."
 	@if [ "$$(uname -s)" = "Darwin" ]; then \

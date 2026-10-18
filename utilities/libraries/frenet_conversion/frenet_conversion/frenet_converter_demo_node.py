@@ -5,7 +5,7 @@ from frenet_conversion.frenet_converter import FrenetConverter
 import random
 
 import numpy as np
-from race_stack_interfaces.msg import Wpnt
+from rs_msgs.msg import Wpnt
 
 
 class FrenetConverterDemo(Node):

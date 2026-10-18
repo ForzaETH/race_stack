@@ -15,6 +15,7 @@
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>frenet_conversion</exec_depend>
   <depend>rclpy</depend>
+  <depend>rs_msgs</depend>
 
   <export>
     <build_type>ament_python</build_type>
