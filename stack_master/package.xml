@@ -4,7 +4,7 @@
   <name>stack_master</name>
   <version>0.0.0</version>
   <description>The package to rule them all: Launch files, configs, maps you name it</description>
-  <maintainer email="nicolas.baumann@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <exec_depend>ros2launch</exec_depend>

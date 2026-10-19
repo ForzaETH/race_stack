@@ -4,7 +4,7 @@
   <name>state_estimation</name>
   <version>0.0.0</version>
   <description>Handles Localisation and Fusion of sensors for localisation</description>
-  <maintainer email="nicolas.baumann@pbl.ee.ethz.ch">forzapblnuc</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>

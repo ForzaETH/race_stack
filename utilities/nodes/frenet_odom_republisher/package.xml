@@ -4,8 +4,8 @@
   <name>frenet_odom_republisher</name>
   <version>0.0.0</version>
   <description>Republishing odometry in frenet frame</description>
-  <maintainer email="nimholz@ethz.ch">Nadine Imholz</maintainer>
-  <license>Apache License 2.0</license>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
+  <license>MIT</license>
 
   <exec_depend>ros2launch</exec_depend>
   <depend>rclpy</depend>

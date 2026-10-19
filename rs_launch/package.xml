@@ -4,7 +4,7 @@
   <name>rs_launch</name>
   <version>0.0.0</version>
   <description>Custom launch actions for the race stack's XML/YAML launch files (e.g. check_args)</description>
-  <maintainer email="yeturu.saimaneesh@gmail.com">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <exec_depend>launch</exec_depend>

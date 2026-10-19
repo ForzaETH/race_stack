@@ -4,7 +4,7 @@
   <name>pbl_config</name>
   <version>0.0.0</version>
   <description>Pydantic-validated config loaders (car, pacejka tire, linear tire) for the race stack</description>
-  <maintainer email="maurice.brunner@pbl.ee.ethz.ch">maubrunn</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <depend>ament_index_python</depend>

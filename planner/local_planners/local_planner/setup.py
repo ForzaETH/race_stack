@@ -22,7 +22,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='maurice.brunner@pbl.ee.ethz.ch',
+    maintainer_email='contact@forzaeth.ch',
     description='The local_planner package',
     license='MIT',
     tests_require=['pytest'],

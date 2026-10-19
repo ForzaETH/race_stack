@@ -13,10 +13,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='kuehnej',
-    maintainer_email='kuehnej@ethz.ch',
+    maintainer='ForzaETH',
+    maintainer_email='contact@forzaeth.ch',
     description='TODO: Package description',
-    license='TODO: License declaration',
+    license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [

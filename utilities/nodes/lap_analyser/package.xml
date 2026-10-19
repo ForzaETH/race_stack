@@ -4,7 +4,7 @@
   <name>lap_analyser</name>
   <version>0.0.0</version>
   <description>The lap_analyser package</description>
-  <maintainer email="nicolas.baumann@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <test_depend>ament_copyright</test_depend>

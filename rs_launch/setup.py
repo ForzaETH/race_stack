@@ -13,7 +13,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='yeturu.saimaneesh@gmail.com',
+    maintainer_email='contact@forzaeth.ch',
     description="Custom launch actions for the race stack's XML/YAML launch files (e.g. check_args)",
     license='MIT',
     entry_points={
