@@ -36,6 +36,30 @@ def read_bag(uri, topics):
     return {t: (np.array(s), m) for t, (s, m) in out.items()}
 
 
+def check_imu_frame(frame_ids, a_x, a_y, a_z, v_x, omega, expected_frame='base_link', min_samples=100):
+    """Checks that the IMU is in the car frame (x forward, y left, z up).
+
+    Returns an error message, or None when the IMU looks right. Besides the frame_id it
+    checks the physics: while cornering a_y follows v_x * omega, and a_z holds gravity.
+    """
+    frames = {f.split('/')[-1] for f in frame_ids}
+    if frames != {expected_frame}:
+        return f"IMU frame_id is {sorted(frames)}, expected '{expected_frame}'"
+    if abs(np.median(a_z) - 9.81) > 2.0:
+        return f"IMU median a_z is {np.median(a_z):.2f} m/s^2, expected about +9.81 (z up, gravity included)"
+    a_lat = v_x * omega
+    cornering = np.abs(a_lat) > 1.0
+    if np.count_nonzero(cornering) < min_samples:
+        print(f"Warning: only {np.count_nonzero(cornering)} cornering samples, cannot check the IMU axes")
+        return None
+    corr_y = np.corrcoef(a_y[cornering], a_lat[cornering])[0, 1]
+    corr_x = np.nan_to_num(np.corrcoef(a_x[cornering], a_lat[cornering])[0, 1])  # constant a_x gives nan
+    if not corr_y >= 0.5 or abs(corr_x) > corr_y:  # also rejects a constant a_y (nan)
+        return (f"IMU axes do not match the car frame: correlation with v_x * omega is {corr_y:.2f} for a_y "
+                f"and {corr_x:.2f} for a_x (expected a_y close to 1)")
+    return None
+
+
 def bag_to_data(uri, args, C_0d, C_d):
     """Samples v_x, v_y, omega, delta (and a_x) at the odometry stamps."""
     steer_topic = args.servo_topic or args.steer_topic
@@ -59,7 +83,13 @@ def bag_to_data(uri, args, C_0d, C_d):
     a_x = None
     if args.imu_topic:
         t_imu, imu = bag[args.imu_topic]
-        a_x = np.interp(t, t_imu, [m.linear_acceleration.x for m in imu])
+        acc = np.array([[m.linear_acceleration.x, m.linear_acceleration.y, m.linear_acceleration.z] for m in imu])
+        a_x, a_y, a_z = (np.interp(t, t_imu, acc[:, i]) for i in range(3))
+        error = check_imu_frame([m.header.frame_id for m in imu], a_x, a_y, a_z, data[:, 0], data[:, 2],
+                                args.imu_frame)
+        if error:
+            raise SystemExit(f"{uri}: {error}. Use an IMU topic in the car frame, or --imu-topic '' "
+                             "to use static axle loads.")
     return data, a_x
 
 
@@ -75,6 +105,7 @@ def main():
                              '--steer-topic when set, converted with C_0d and C_d of car_model.yaml')
     parser.add_argument('--imu-topic', default='/imu',
                         help="IMU in the car frame, for load transfer; '' uses static axle loads")
+    parser.add_argument('--imu-frame', default='base_link', help='expected frame_id of the IMU messages')
     parser.add_argument('--vy-at-cog', action='store_true', help='odometry v_y is at the center of gravity '
                         '(e.g. in simulation) instead of the rear axle')
     parser.add_argument('--equal-tires', action='store_true')
