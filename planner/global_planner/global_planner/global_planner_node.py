@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from skimage.morphology import skeletonize
 
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from ament_index_python.packages import get_package_share_directory
 from visualization_msgs.msg import MarkerArray
@@ -32,6 +33,9 @@ from .global_planner_utils import extract_centerline, \
     publish_track_bounds, \
     create_wpnts_markers, \
     compare_direction
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 
 class GlobalPlannerNode(Node):
@@ -54,13 +58,13 @@ class GlobalPlannerNode(Node):
         self.map_info_str = ""
         self.input_path = os.path.join(get_package_share_directory('stack_master'), 'config', 'global_planner')
         
-        self.global_waypoints_pub = self.create_publisher(WpntArray, '/global_waypoints', 10)
-        self.global_waypoints_sp_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', 10)
-        self.global_waypoints_markers_pub = self.create_publisher(MarkerArray, '/global_waypoints/markers', 10)
-        self.centerline_waypoints_markers_pub = self.create_publisher(MarkerArray, '/centerline_waypoints/markers', 10)
-        self.track_bounds_pub = self.create_publisher(MarkerArray, '/trackbounds/markers', 10)
+        self.global_waypoints_pub = self.create_publisher(WpntArray, '/global_waypoints', LATCHED)
+        self.global_waypoints_sp_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', LATCHED)
+        self.global_waypoints_markers_pub = self.create_publisher(MarkerArray, '/global_waypoints/markers', LATCHED)
+        self.centerline_waypoints_markers_pub = self.create_publisher(MarkerArray, '/centerline_waypoints/markers', LATCHED)
+        self.track_bounds_pub = self.create_publisher(MarkerArray, '/trackbounds/markers', LATCHED)
         self.shortest_path_waypoints_markers_pub = self.create_publisher(
-            MarkerArray, '/global_waypoints/shortest_path/markers', 10)
+            MarkerArray, '/global_waypoints/shortest_path/markers', LATCHED)
         
         self.load_and_plot_map()
     

@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 
 from rs_msgs.msg import FrenetState, Wpnt, WpntArray
@@ -6,6 +7,9 @@ from nav_msgs.msg import Odometry
 from frenet_conversion.frenet_converter import FrenetConverter
 import numpy as np
 from tf_transformations import euler_from_quaternion
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 
 class FrenetOdomRepublisher(Node):
@@ -19,7 +23,7 @@ class FrenetOdomRepublisher(Node):
             WpntArray,
             '/global_waypoints',
             self.global_trajectory_callback,
-            10)
+            LATCHED)
         self.odom_sub_ = self.create_subscription(
             Odometry,
             'car_state/odom',

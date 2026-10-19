@@ -13,6 +13,9 @@ from frenet_conversion.frenet_converter import FrenetConverter
 from tf_transformations import quaternion_from_euler
 from stack_master.parameter_event_handler import ParameterEventHandler
 
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+
 #from dynamic_reconfigure.msg import Config
 
 class OvertakingInterpolator(Node):
@@ -46,14 +49,14 @@ class OvertakingInterpolator(Node):
         self.callback_handle = self.handler.add_parameter_event_callback(
             callback=self.dyn_param_cb,
         )
-        self.glb_wpnt_scaled_sub = self.create_subscription(WpntArray, self.glb_wpnts_name, self.glb_wpnts_cb, 10)
-        self.glb_wpnt_og_sub = self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, 10)
-        self.glb_wpnt_sp_sub = self.create_subscription(WpntArray, self.glb_wpnts_sp_name, self.glb_wpnts_sp_cb, 10)
+        self.glb_wpnt_scaled_sub = self.create_subscription(WpntArray, self.glb_wpnts_name, self.glb_wpnts_cb, LATCHED)
+        self.glb_wpnt_og_sub = self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED)
+        self.glb_wpnt_sp_sub = self.create_subscription(WpntArray, self.glb_wpnts_sp_name, self.glb_wpnts_sp_cb, LATCHED)
 
         # new glb_waypoints
-        self.ot_points_pub = self.create_publisher(WpntArray, "/global_waypoints/overtaking", 10)
-        self.ot_markers_pub = self.create_publisher(MarkerArray, "/global_waypoints/overtaking/markers", 10)
-        self.sector_pub = self.create_publisher(MarkerArray, '/ot_sector_markers', 10)
+        self.ot_points_pub = self.create_publisher(WpntArray, "/global_waypoints/overtaking", LATCHED)
+        self.ot_markers_pub = self.create_publisher(MarkerArray, "/global_waypoints/overtaking/markers", LATCHED)
+        self.sector_pub = self.create_publisher(MarkerArray, '/ot_sector_markers', LATCHED)
         # transient local, so nodes starting later still get the current sectors
         self.ot_sectors_pub = self.create_publisher(
             OvertakingSectors, '/overtaking_sectors', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
@@ -83,9 +86,10 @@ class OvertakingInterpolator(Node):
 
     def glb_wpnts_cb(self, data:WpntArray):
         """
-        Saves the global waypoints (minimum curvature)
+        Saves the scaled global waypoints (minimum curvature). A new message means the sector scaling changed.
         """
         self.glb_wpnts_scaled = data
+        self.need_to_reinterpolate = True
         coords = np.array(
             [[wpnt.s_m, wpnt.x_m, wpnt.y_m] for wpnt in data.wpnts]
         )
@@ -123,10 +127,7 @@ class OvertakingInterpolator(Node):
         self.wait_for_message_timer = self.create_timer(timer_period, self.loop_cb)
         
     def dyn_param_cb(self, parameter_event):
-        if(parameter_event.node == '/sector_tuner'):
-            self.need_to_reinterpolate = True
-            self.glb_wpnts_scaled = None
-            return
+        # sector_tuner changes arrive as a new /global_waypoints_scaled message, see glb_wpnts_cb
         if(parameter_event.node == '/ot_interpolator'):
             """
             Notices the change in the parameters and scales the global waypoints
@@ -344,20 +345,17 @@ class OvertakingInterpolator(Node):
 
             self.interp_wpnt.wpnts.append(copy.deepcopy(new_wpnt))
 
-    def interpolate_points(self):
+    def interpolate_points(self) -> bool:
         """
-        Scales the global waypoints'
+        Re-interpolates the overtaking line if its inputs changed. Returns whether it did.
         """
-        # we need to wait the global waitpoint scaled, otherwise we might use old ones
-        if self.glb_wpnts_scaled is None:
-            return
-        if self.need_to_reinterpolate:
-            schedule =  self.get_interpolating_schedule()
-            self.interpolate_line(schedule)
-            self.recalculate_ot_s()
-
-            self.need_to_reinterpolate = False
-        pass
+        if self.glb_wpnts_scaled is None or not self.need_to_reinterpolate:
+            return False
+        schedule = self.get_interpolating_schedule()
+        self.interpolate_line(schedule)
+        self.recalculate_ot_s()
+        self.need_to_reinterpolate = False
+        return True
 
     def publish_spline_markers(self):
         max_vx_mps = self.max_gb_speed
@@ -441,10 +439,11 @@ class OvertakingInterpolator(Node):
         self.sector_pub.publish(sec_markers)    
 
     def loop_cb(self):
-        self.interpolate_points()
-        self.ot_points_pub.publish(self.interp_wpnt)
-        self.publish_spline_markers()
-        self.publish_sector_markers()
+        # outputs are latched, only publish when something changed
+        if self.interpolate_points():
+            self.ot_points_pub.publish(self.interp_wpnt)
+            self.publish_spline_markers()
+            self.publish_sector_markers()
 
 
 def main():

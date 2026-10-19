@@ -6,7 +6,10 @@ from visualization_msgs.msg import Marker, MarkerArray
 from nav_msgs.msg import Odometry, OccupancyGrid
 import numpy as np
 from frenet_conversion.frenet_converter import FrenetConverter
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
+from rclpy.qos import DurabilityPolicy, QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 
 class ObstaclePublisher(Node):
@@ -57,8 +60,8 @@ class ObstaclePublisher(Node):
 
         # Subscriptions and Publishers
         self.odom_subscriber = self.create_subscription(Odometry, '/car_state/odom_frenet', self.odom_cb, 10)
-        self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, 10)
-        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, 10)
+        self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, LATCHED)
+        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, LATCHED)
         
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,

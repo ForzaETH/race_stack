@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 import tf2_ros
 
@@ -11,6 +12,9 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from frenet_conversion.frenet_converter import FrenetConverter
 from tf_transformations import euler_from_quaternion
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 # Carstate node is relevant for SE1 only (basic state estimaiton pipeline).
 # The carstate node publishes the "final" state estimation of the car, in this case the velocities from the (early fusion) EKF and the pose from localization (by default cartographer SLAM).
@@ -44,7 +48,7 @@ class Carstate(Node):
 
         # subscribers
         self.ekf_odom_sub = self.create_subscription(Odometry, self.odom_in_topic, self.ekf_odom_cb, 10)
-        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.gb_wpnts_cb, 10)
+        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.gb_wpnts_cb, LATCHED)
 
         # publishers
         self.state_odom_pub = self.create_publisher(Odometry, self.odom_out_topic, 10)

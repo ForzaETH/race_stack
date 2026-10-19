@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, QoSDurabilityPolicy, HistoryPolicy
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSDurabilityPolicy, QoSProfile
 from rclpy.callback_groups import ReentrantCallbackGroup, MutuallyExclusiveCallbackGroup
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType, FloatingPointRange, IntegerRange, SetParametersResult
 from rclpy.parameter import Parameter
@@ -25,6 +25,9 @@ from scipy.spatial.transform import Rotation
 from typing import List, Tuple
 
 from visualization_msgs.msg import Marker, MarkerArray
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 Point2D = Tuple[float, float]
 
@@ -108,7 +111,7 @@ class Detect(Node):
         self.scan_sub = self.create_subscription(
             LaserScan, '/scan', self.laserCb, 10, callback_group=msgs_cb_group)
         self.glob_wpts_sub = self.create_subscription(
-            WpntArray, '/global_waypoints', self.pathCb, 10, callback_group=msgs_cb_group)
+            WpntArray, '/global_waypoints', self.pathCb, LATCHED, callback_group=msgs_cb_group)
         self.car_state_sub = self.create_subscription(
             FrenetState, '/car_state/frenet', self.carStateCb, 10, callback_group=msgs_cb_group)
 

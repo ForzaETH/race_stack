@@ -13,6 +13,7 @@ from filterpy.kalman import ExtendedKalmanFilter as EKF
 from scipy.linalg import block_diag
 
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from rcl_interfaces.msg import ParameterDescriptor, ParameterType, FloatingPointRange, IntegerRange, SetParametersResult
 from rclpy.parameter import Parameter
@@ -26,6 +27,9 @@ from visualization_msgs.msg import Marker, MarkerArray
 
 from frenet_conversion.frenet_converter import FrenetConverter
 from tf_transformations import euler_from_quaternion
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 def normalize_s(s: float, track_length: float) -> float:
     """Normalizes S coordinate around the track length.
@@ -458,7 +462,7 @@ class StaticDynamic(Node):
         self.obs_sub = self.create_subscription(
             ObstacleArray, '/perception/detection/raw_obstacles', self.obstacleCallback, 10)
         self.glob_wpts_sub = self.create_subscription(
-            WpntArray, '/global_waypoints', self.pathCallback, 10)
+            WpntArray, '/global_waypoints', self.pathCallback, LATCHED)
         self.cs_frenet = self.create_subscription(
             FrenetState, '/car_state/frenet', self.carStateCallback, 10)
         self.cs_odom_sub = self.create_subscription(

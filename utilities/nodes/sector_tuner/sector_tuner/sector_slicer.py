@@ -1,5 +1,6 @@
 import yaml, os, subprocess, time
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from rs_msgs.msg import WpntArray
 import numpy as np
@@ -7,6 +8,9 @@ from visualization_msgs.msg import MarkerArray
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from matplotlib.patches import Arrow
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 class SectorSlicer(Node):
     """
@@ -33,12 +37,12 @@ class SectorSlicer(Node):
             WpntArray,
             '/global_waypoints',
             self.global_wpnts_cb,
-            10)
+            LATCHED)
         self.bounds_sub = self.create_subscription(
             MarkerArray,
             '/trackbounds/markers',
             self.bounds_cb,
-            10)
+            LATCHED)
 
         #rosparam to define yaml dir but filename will always be speed_scaling.yaml
         self.yaml_dir = self.get_parameter('map_path').value

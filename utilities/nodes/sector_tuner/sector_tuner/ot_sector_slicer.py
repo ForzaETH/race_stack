@@ -1,5 +1,6 @@
 import yaml, os, subprocess, time
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from rs_msgs.msg import WpntArray
 import numpy as np
@@ -7,6 +8,9 @@ from visualization_msgs.msg import MarkerArray
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from matplotlib.patches import Arrow
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 class OvertakingSectorSlicer(Node):
     """
@@ -26,9 +30,9 @@ class OvertakingSectorSlicer(Node):
         self.glob_slider_s = 0
         self.sector_pnts = [0] #Sector always has tostart at 0
 
-        self.wpnt_sub = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, 10)
-        self.wpnt_sub_sp = self.create_subscription(WpntArray, '/global_waypoints/shortest_path', self.glb_sp_wpnts_cb, 10)
-        self.bounds_sub = self.create_subscription(MarkerArray, '/trackbounds/markers', self.bounds_cb, 10)
+        self.wpnt_sub = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, LATCHED)
+        self.wpnt_sub_sp = self.create_subscription(WpntArray, '/global_waypoints/shortest_path', self.glb_sp_wpnts_cb, LATCHED)
+        self.bounds_sub = self.create_subscription(MarkerArray, '/trackbounds/markers', self.bounds_cb, LATCHED)
         
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)

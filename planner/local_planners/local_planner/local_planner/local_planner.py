@@ -1,5 +1,6 @@
 import numpy as np
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
@@ -15,6 +16,9 @@ from visualization_msgs.msg import Marker, MarkerArray
 from stack_master.parameter_event_handler import ParameterEventHandler
 from pbl_config import get_remote_parameter
 from local_planner.parameters_codegen import local_planner as local_planner_parameters
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 
 def time_to_float(time_instant) -> float:
@@ -76,15 +80,15 @@ class LocalPlanner(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         # Subscriptions
-        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, 10)  # from og wpnts
-        self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED)  # from og wpnts
+        self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, LATCHED)
         self.create_subscription(RaceState, "/state", self.state_cb, 1)
         self.get_logger().info("[Local Planner] Waiting for state machine state message...")
         while self.cur_state is None:
             rclpy.spin_once(self)
         self.get_logger().info("[Local Planner] Received state message.")
 
-        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_cb, 10)  # from velocity scaler
+        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_cb, LATCHED)  # from velocity scaler
         self.get_logger().info("[Local Planner] Waiting for scaled global waypoints message...")
         while not self.glb_wpnts:
             rclpy.spin_once(self)

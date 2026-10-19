@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from rs_msgs.msg import FrenetState, LapData, WpntArray
 from std_msgs.msg import Float32, Empty
@@ -15,6 +16,9 @@ import numpy as np
 import subprocess # save map
 from datetime import datetime
 import os
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 class LapAnalyser(Node):
     def __init__(self):
@@ -35,7 +39,7 @@ class LapAnalyser(Node):
         # self.get_logger().info("[LapAnalyser] Waiting for /global_waypoints topic")
         # rospy.wait_for_message('/global_waypoints', WpntArray)
         # self.get_logger().info("[LapAnalyser] Ready to go")
-        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, 10) # TODO maybe add wait for topic/timeout?
+        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED) # TODO maybe add wait for topic/timeout?
 
         # while self.global_lateral_waypoints is None:
         #     print("[Lap Analyzer] Waiting for global lateral waypoints")

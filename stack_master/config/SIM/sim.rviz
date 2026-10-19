@@ -89,9 +89,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /centerline_waypoints/markers
           Value: false
         - Class: rviz_default_plugins/MarkerArray
@@ -101,9 +101,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /global_waypoints/markers
           Value: true
         - Class: rviz_default_plugins/MarkerArray
@@ -113,9 +113,9 @@ Visualization Manager:
             {}
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /lattice_viz
           Value: false
         - Class: rviz_default_plugins/MarkerArray
@@ -125,9 +125,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /trackbounds/markers
           Value: false
         - Class: rviz_default_plugins/MarkerArray
@@ -137,9 +137,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /global_waypoints/overtaking/markers
           Value: false
         - Class: rviz_default_plugins/MarkerArray
@@ -149,9 +149,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /global_waypoints/shortest_path/markers
           Value: false
       Enabled: true
@@ -431,9 +431,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /sector_markers
           Value: true
         - Class: rviz_default_plugins/MarkerArray
@@ -443,9 +443,9 @@ Visualization Manager:
             "": true
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
-            Reliability Policy: Best Effort
+            Reliability Policy: Reliable
             Value: /ot_sector_markers
           Value: true
       Enabled: true

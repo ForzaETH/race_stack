@@ -11,6 +11,9 @@ from rs_msgs.msg import FrenetState, Obstacle, ObstacleArray, OvertakingSectors,
 
 from rs_state_machine.parameters_codegen import state_machine as state_machine_parameters
 
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+
 
 # State machine transition definitions
 # Keep in mind the guards are evaluated in order!
@@ -147,7 +150,7 @@ class StateMachine(Node):
         self.pending_inputs = {"/global_waypoints_scaled", "/car_state/frenet"}
 
         self.track_length = 0.0
-        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, 10)
+        self.create_subscription(WpntArray, "/global_waypoints_scaled", self.glb_wpnts_scaled_cb, LATCHED)
 
         self.cur_s = 0.0
         self.cur_d = 0.0

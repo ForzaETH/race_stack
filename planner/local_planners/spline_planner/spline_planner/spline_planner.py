@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rcl_interfaces.msg import FloatingPointRange, ParameterDescriptor, SetParametersResult, ParameterType
 from rclpy.parameter import Parameter
 
@@ -14,6 +14,9 @@ import time
 from typing import List, Any, Tuple
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline
 from frenet_conversion.frenet_converter import FrenetConverter
+
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
 
 class ObstacleSpliner(Node):
     """
@@ -68,9 +71,9 @@ class ObstacleSpliner(Node):
         self.create_subscription(
             FrenetState, '/car_state/frenet', self.state_cb, QoSProfile(depth=10))
         self.create_subscription(
-            WpntArray, '/global_waypoints', self.gb_cb, QoSProfile(depth=10))
+            WpntArray, '/global_waypoints', self.gb_cb, LATCHED)
         self.create_subscription(
-            WpntArray, '/global_waypoints_scaled', self.gb_scaled_cb, QoSProfile(depth=10))
+            WpntArray, '/global_waypoints_scaled', self.gb_scaled_cb, LATCHED)
 
         # Setup publishers
         self.mrks_pub = self.create_publisher(

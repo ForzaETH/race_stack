@@ -1,4 +1,7 @@
+import copy
+
 import rclpy
+from rclpy.qos import DurabilityPolicy, QoSProfile
 from rcl_interfaces.msg import ParameterType, ParameterDescriptor, FloatingPointRange
 from rclpy.node import Node
 from rs_msgs.msg import WpntArray
@@ -8,6 +11,9 @@ from tf_transformations import quaternion_from_euler
 
 from stack_master.parameter_event_handler import ParameterEventHandler
 
+# latched: late subscribers still get the last message (publisher and subscriber must both use it)
+LATCHED = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+
 class SectorTuner(Node):
     """
     Sector scaler for the velocity of the global waypoints
@@ -16,11 +22,7 @@ class SectorTuner(Node):
         super().__init__('sector_tuner',
                          allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
-        
-        timer_period = 0.5  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.vis_timer = self.create_timer(1.0, self.marker_callback)
-        
+
         # sectors params
         self.glb_wpnts_og = None
         self.glb_wpnts_scaled = None
@@ -46,19 +48,19 @@ class SectorTuner(Node):
             WpntArray,
             self.glb_wpnts_name,
             self.global_waypoints_cb,
-            10)
+            LATCHED)
         self.global_waypoint_sp_sub = self.create_subscription(
             WpntArray,
             self.glb_wpnts_name+"/shortest_path",
             self.global_waypoints_sp_cb,
-            10)
+            LATCHED)
         
         # new glb_waypoints pub
-        self.scaled_points_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled", 10)
-        self.scaled_points_sp_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled/shortest_path", 10)
+        self.scaled_points_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled", LATCHED)
+        self.scaled_points_sp_pub = self.create_publisher(WpntArray, "/global_waypoints_scaled/shortest_path", LATCHED)
         
         # Visualizations
-        self.sector_visualization_pub = self.create_publisher(MarkerArray, '/sector_markers', 10)
+        self.sector_visualization_pub = self.create_publisher(MarkerArray, '/sector_markers', LATCHED)
         
         self.get_logger().debug("Waiting for global waypoints...")
         
@@ -74,9 +76,11 @@ class SectorTuner(Node):
 
     def global_waypoints_cb(self, data:WpntArray):
         """
-        Saves the global waypoints of the main trajectory (e.g. min curvature)
+        Saves the global waypoints of the main trajectory (e.g. min curvature) and publishes them scaled
         """
         self.glb_wpnts_og = data
+        self.publish_scaled()
+        self.publish_sector_markers()
      
     def global_waypoints_sp_cb(self, data:WpntArray):
         """
@@ -98,6 +102,9 @@ class SectorTuner(Node):
             )
 
         self.get_logger().info(str(self.sectors_params))
+        # outputs are latched and only published on change
+        self.publish_scaled()
+        self.publish_sector_markers()
 
     def get_vel_scaling(self, s):
         """
@@ -169,22 +176,18 @@ class SectorTuner(Node):
         """
         Scales the global waypoints' velocities
         """
-        if self.glb_wpnts_scaled is None:
-            self.glb_wpnts_scaled = self.glb_wpnts_og
-            self.glb_wpnts_sp_scaled = self.glb_wpnts_sp_og
+        # scale a fresh copy: scaling the og message in place would compound on every publish
+        self.glb_wpnts_scaled = copy.deepcopy(self.glb_wpnts_og)
+        for i, wpnt in enumerate(self.glb_wpnts_og.wpnts):
+            self.glb_wpnts_scaled.wpnts[i].vx_mps = wpnt.vx_mps * self.get_vel_scaling(i)
 
-        for i, wpnt  in enumerate(self.glb_wpnts_og.wpnts):
-            vel_scaling = self.get_vel_scaling(i)
-            new_vel = wpnt.vx_mps*vel_scaling
-            self.glb_wpnts_scaled.wpnts[i].vx_mps = new_vel
-
-    def timer_callback(self):
-        if(self.glb_wpnts_og is None):
+    def publish_scaled(self):
+        if self.glb_wpnts_og is None:
             return
         self.scale_points()
         self.scaled_points_pub.publish(self.glb_wpnts_scaled)
-        
-    def marker_callback(self):
+
+    def publish_sector_markers(self):
         if self.glb_wpnts_og is None:
             return
         
