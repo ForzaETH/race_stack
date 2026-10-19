@@ -8,8 +8,8 @@ services:
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
         IMAGE: ros:humble-ros-base
-    container_name: forzaeth_devcontainer
-    image: race_stack:humble_dev
+    container_name: forzaeth_devcontainer_${HOST_UID:-1000} # passing the user allows multiple users per machine
+    image: race_stack:humble_dev_${HOST_UID:-1000}
     hostname: ${RACECAR_VERSION:-SIM}
     extra_hosts:
       - "${RACECAR_VERSION:-SIM}:127.0.1.1"
@@ -47,7 +47,7 @@ services:
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
 
   zenoh_router:
-    image: race_stack:humble_dev
+    image: race_stack:humble_dev_${HOST_UID:-1000}
     pull_policy: never
     depends_on:
       - race_stack
@@ -65,7 +65,7 @@ services:
 
   # Foxglove bridge (ws://<host>:8765)
   foxglove_bridge:
-    image: race_stack:humble_dev
+    image: race_stack:humble_dev_${HOST_UID:-1000}
     pull_policy: never
     depends_on:
       - zenoh_router
