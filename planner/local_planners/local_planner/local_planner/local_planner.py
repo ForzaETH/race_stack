@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import rclpy
 from rclpy.qos import DurabilityPolicy, QoSProfile
@@ -344,6 +345,8 @@ class LocalPlanner(Node):
         trans, rot = self.get_map_to_odom()
         T = concatenate_matrices(translation_matrix(trans), quaternion_matrix(rot))
 
+        # the waypoints reference the global raceline; transform copies, not the raceline itself
+        loc_wpnts.wpnts = [copy.copy(w) for w in loc_wpnts.wpnts]
         for i, wpnt in enumerate(loc_wpnts.wpnts):
             # transform from map to odom
             p_map = [wpnt.x_m, wpnt.y_m, 0.0, 1.0]
