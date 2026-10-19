@@ -9,9 +9,10 @@ type_arr = ["not_set", "bool_value", "integer_value", "double_value", "string_va
 def get_remote_parameter(node, remote_node_name, param_name, default=None):
         cli = node.create_client(GetParameters, remote_node_name + '/get_parameters')
         while not cli.wait_for_service(timeout_sec=1):
-            node.get_logger().info('service not available, returning default value for parameter: %s' % param_name)
             if default is not None:
+                node.get_logger().info('service not available, returning default for %s' % param_name)
                 return default
+            node.get_logger().info('waiting for %s/get_parameters (%s)' % (remote_node_name, param_name))
         req = GetParameters.Request()
         req.names = [param_name]
         future = cli.call_async(req)
