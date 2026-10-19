@@ -71,7 +71,11 @@ class EkfNode(Node):
         self.R_imu = np.diag(self.get_parameter('R_imu').value)
         self.R_vesc = np.diag(self.get_parameter('R_vesc').value)
         self.R_vio = np.diag(self.get_parameter('R_vio').value)
-        self.Q = np.diag(self.get_parameter('Q').value)
+        q_values = list(self.get_parameter('Q').value)
+        # Q has one entry per state: 7 for the kinematic bicycle model, 6 for the others
+        if self.model_type != "kinematic_bicycle_model" and len(q_values) == 7:
+            q_values = q_values[0:6]
+        self.Q = np.diag(q_values)
 
         # Get Car Parameters
         tire_config = load_pacejka_tire_config_ros(self.racecar_version, self.floor)
@@ -275,7 +279,7 @@ class EkfNode(Node):
 
         t.transform.translation.x = float(state[0])
         t.transform.translation.y = float(state[1])
-        t.transform.translation.z = float(state[2])
+        t.transform.translation.z = 0.0  # planar filter; state[2] is the yaw, not a height
         t.transform.rotation.x = float(q[0])
         t.transform.rotation.y = float(q[1])
         t.transform.rotation.z = float(q[2])
