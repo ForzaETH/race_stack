@@ -67,11 +67,6 @@ launch:
     - include:
         file: "$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml"
 
-    - node:
-        pkg: "tf2_ros"
-        exec: "static_transform_publisher"
-        name: "static_map_to_odom"
-        args: "--frame-id map --child-frame-id odom --ros-args --log-level warn"
 
 # launch real car system
 - group:
