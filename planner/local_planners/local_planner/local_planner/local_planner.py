@@ -4,7 +4,6 @@ import rclpy
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
 from rclpy.time import Time
-from rclpy.duration import Duration
 from rclpy.parameter import Parameter
 
 import tf2_ros
@@ -331,7 +330,13 @@ class LocalPlanner(Node):
         return s_ot
 
     def get_map_to_odom(self):
-        tf = self.tf_buffer.lookup_transform("odom", "map", Time(), timeout=Duration(seconds=5.0))
+        """Returns (trans, rot) of the map->odom transform, or None if unavailable."""
+        # non-blocking: the TF listener runs on this node's executor, so waiting here could never succeed
+        try:
+            tf = self.tf_buffer.lookup_transform("odom", "map", Time())
+        except tf2_ros.TransformException as e:
+            self.get_logger().warn(f"[Local Planner] map->odom lookup failed: {e}", throttle_duration_sec=1.0)
+            return None
         t = tf.transform.translation
         r = tf.transform.rotation
         return [t.x, t.y, t.z], [r.x, r.y, r.z, r.w]
@@ -342,7 +347,10 @@ class LocalPlanner(Node):
         loc_wpnts.header.stamp = self.get_clock().now().to_msg()
         loc_wpnts.header.frame_id = "odom"
 
-        trans, rot = self.get_map_to_odom()
+        map_to_odom = self.get_map_to_odom()
+        if map_to_odom is None:
+            return
+        trans, rot = map_to_odom
         T = concatenate_matrices(translation_matrix(trans), quaternion_matrix(rot))
 
         # the waypoints reference the global raceline; transform copies, not the raceline itself
@@ -384,14 +392,20 @@ class LocalPlanner(Node):
         del_marker.action = Marker.DELETEALL
         self.del_marker_pub.publish(MarkerArray(markers=[del_marker]))
 
-    def update_pose_from_tf(self):
-        tf = self.tf_buffer.lookup_transform("map", self.base_frame, Time(), timeout=Duration(seconds=5.0))
+    def update_pose_from_tf(self) -> bool:
+        """Updates current_position from TF. Returns False if the transform is unavailable."""
+        try:
+            tf = self.tf_buffer.lookup_transform("map", self.base_frame, Time())
+        except tf2_ros.TransformException as e:
+            self.get_logger().warn(f"[Local Planner] map->{self.base_frame} lookup failed: {e}", throttle_duration_sec=1.0)
+            return False
         x = tf.transform.translation.x
         y = tf.transform.translation.y
         q = tf.transform.rotation
         theta = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
 
         self.current_position = [x, y, theta]
+        return True
 
     def update_frenet_from_pose(self):
         x, y, _ = self.current_position
@@ -452,8 +466,9 @@ class LocalPlanner(Node):
         """
         Main loop of the local planner.
         """
-        # update position
-        self.update_pose_from_tf()
+        # update position, skip this iteration if TF is not available yet
+        if not self.update_pose_from_tf():
+            return
         self.update_frenet_from_pose()
 
         # decrease splini ttl counter used to cache the splini waypoints, once 0
