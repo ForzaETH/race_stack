@@ -53,6 +53,10 @@ Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a r
    Pass `--servo-topic /vesc/commands/servo/position` to use servo commands instead of `/drive`. Pass `--imu-topic ''` when there is no IMU in the car frame. Pass `--vy-at-cog` for simulation data.
 4. Check `pacejka/<floor>/data/steady_state_fit.png`, then commit the new config.
 
+## In simulation
+
+Both methods work with `racecar_version:=SIM`. The sim odometry reports `v_y` at the center of gravity: `on_track_node` handles that automatically for SIM, and `steady_state_from_bag` needs `--vy-at-cog`. The sim publishes no IMU, so also pass `--imu-topic ''`. The sim uses linear tires, so the identified Pacejka curve matches them only inside the slip range that was driven.
+
 ## Regenerate the LUT only
 
 After editing a `pacejka/<floor>/default.yaml` by hand:
