@@ -1,6 +1,7 @@
 import os
 import logging
 from datetime import datetime
+from typing import Optional
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -30,6 +31,17 @@ class PacejkaTireConfig(BaseModel):
     """Peak value of the lateral force (D) of the REAR tire"""
     Er: float
     """Lateral stiffness coefficient (E) of the REAR tire"""
+
+    # Longitudinal Magic Formula, shared by both axles. Optional so that
+    # configs without longitudinal identification keep loading.
+    Bx: Optional[float] = None
+    """Longitudinal stiffness factor (B) vs. slip ratio"""
+    Cx: Optional[float] = None
+    """Longitudinal shape factor (C)"""
+    Dx: Optional[float] = None
+    """Longitudinal peak factor (D), multiplies friction_coeff * F_z"""
+    Ex: Optional[float] = None
+    """Longitudinal curvature factor (E)"""
 
     floor: str
     """Floor indicating location of the track"""
@@ -95,7 +107,7 @@ def save_pacejka_tire_config(
         logging.warning("%s already exists and will be overwritten", filename)
 
     with open(filename, 'w', encoding='utf-8') as file:
-        yaml.dump(config.model_dump(), file)
+        yaml.dump(config.model_dump(exclude_none=True), file)
     logging.info("Saved pacejka_tire config of %s on floor %s to %s", racecar_version, floor, filename)
 
     if update_latest:

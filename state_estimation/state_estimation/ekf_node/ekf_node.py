@@ -17,7 +17,7 @@ from geometry_msgs.msg import TransformStamped
 from tf2_ros import TransformBroadcaster
 
 from . import models
-from .sensors import ImuSensor, OdomSensor
+from .sensors import ImuSensor, OdomSensor, VescSpeedInput
 
 
 class EkfNode(Node):
@@ -29,6 +29,10 @@ class EkfNode(Node):
         - VESC: [x, y, psi, vx, vy, vpsi]
         - VIO: [x, y, psi, vx, vy, vpsi]
         - ACKERMANN: [accel, steer_angle]
+
+    With model_type 'single_track_wheel_model' the VESC speed is used as a model
+    input instead of a measurement, VIO is the only odometry measurement, and the
+    control input is u = [steer, v_wheel, ax_lt].
 
     Sensors are configured in a single list in __init__ (see self.sensors); adding
     a new sensor is one line there.
@@ -49,6 +53,19 @@ class EkfNode(Node):
         self.declare_parameter('R_vesc', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('R_vio', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('Q', rclpy.Parameter.Type.DOUBLE_ARRAY)
+
+        # single_track_wheel_model parameters
+        self.declare_parameter('gate_prob', 0.0)            # 0 disables chi^2 gating
+        self.declare_parameter('gate_max_reject', 50)
+        self.declare_parameter('imu_acc_ema_alpha', 0.2)    # 1.0 = no EMA on the accel measurement
+        self.declare_parameter('tau_lt', 0.03)              # ax_lt low-pass time constant [s]
+        self.declare_parameter('steer_lag', True)           # first-order lag on commanded steering (tau_steer)
+        self.declare_parameter('imu_px', 0.0)               # IMU position from CoG [m]
+        self.declare_parameter('imu_py', 0.0)
+        self.declare_parameter('base_link_at_rear_axle', True)
+        self.declare_parameter('n_substeps', 4)
+        self.declare_parameter('C_roll', 0.0)               # rolling resistance [N]
+        self.declare_parameter('C_drag', 0.0)               # drag [N s^2/m^2]
 
         self.Hz = self.get_parameter('frequency').value
         self.racecar_version = os.environ.get('RACECAR_VERSION', 'NUC6')
@@ -72,8 +89,13 @@ class EkfNode(Node):
         self.R_vesc = np.diag(self.get_parameter('R_vesc').value)
         self.R_vio = np.diag(self.get_parameter('R_vio').value)
         q_values = list(self.get_parameter('Q').value)
-        if self.model_type != "kinematic_bicycle_model" and len(q_values) == 7:
-            q_values = q_values[0:6]
+        model_dims = {'point_mass_model': 6, 'kinematic_bicycle_model': 7,
+                      'single_track_model': 6, 'single_track_wheel_model': 13}
+        dim = model_dims.get(self.model_type, 6)
+        if len(q_values) > dim:
+            q_values = q_values[0:dim]
+        elif len(q_values) < dim:
+            raise ValueError(f"[EKF Node] Q has {len(q_values)} entries, {self.model_type} needs {dim}")
         self.Q = np.diag(q_values)
 
         # Get Car Parameters
@@ -101,6 +123,27 @@ class EkfNode(Node):
             'wheelbase': car_config.wheelbase
         }
 
+        self.is_wheel_model = self.model_type == "single_track_wheel_model"
+        self.tau_steer = car_config.tau_steer
+        if self.is_wheel_model:
+            missing = [k for k in ('Bx', 'Cx', 'Dx', 'Ex') if getattr(tire_config, k) is None]
+            if missing:
+                raise ValueError(f"[EKF Node] single_track_wheel_model needs longitudinal tire "
+                                 f"parameters {missing} in pacejka/{self.floor}/default.yaml")
+            self.p.update({
+                'Bx': tire_config.Bx,
+                'Cx': tire_config.Cx,
+                'Dx': tire_config.Dx,
+                'Ex': tire_config.Ex,
+                'C_roll': self.get_parameter('C_roll').value,
+                'C_drag': self.get_parameter('C_drag').value,
+                'imu_px': self.get_parameter('imu_px').value,
+                'imu_py': self.get_parameter('imu_py').value,
+                'base_px': -car_config.lr if self.get_parameter('base_link_at_rear_axle').value else 0.0,
+                'base_py': 0.0,
+                'n_substeps': self.get_parameter('n_substeps').value,
+            })
+
         # Build the right Model Object
         if self.model_type == "point_mass_model":
             self.model = models.point_mass_model(self.Q)
@@ -108,6 +151,8 @@ class EkfNode(Node):
             self.model = models.kinematic_bicycle_model(self.p, self.Q)
         elif self.model_type == "single_track_model":
             self.model = models.single_track_model(self.p, self.Q)
+        elif self.model_type == "single_track_wheel_model":
+            self.model = models.single_track_wheel_model(self.p, self.Q)
         else:
             self.get_logger().warn("[EKF Node] Unknown Model provided. Using point-mass motion model instead")
             self.model = models.point_mass_model(self.Q)
@@ -130,23 +175,54 @@ class EkfNode(Node):
         self.last_cmd_vel = 0.0
         self.last_cmd_time = None
 
+        # Filtered steering (first-order lag on the command, wheel model only)
+        self.steer_filt = 0.0
+
         # Sensors. Each sensor owns its own subscription, buffering and EKF update.
         # Adding a new sensor is a single line here. VIO shares the full-odometry
         # measurement model with the VESC.
         # ``relative=True`` zero-references a sensor to its own first measurement,
         # so it contributes no absolute origin. The IMU needs it: its heading comes
         # from the VESC AHRS and shares no reference with the odometry sources.
-        self.sensors = [
-            ImuSensor(self, self.IMU_TOPIC, self.R_imu,
-                      self.model.Hx_imu, self.model.HJacobian_imu,
-                      on_init=self.init_state_from_imu, relative=True),
-            OdomSensor(self, 'vesc', self.VESC_TOPIC, self.R_vesc,
-                       self.model.Hx_vesc, self.model.HJacobian_vesc,
-                       relative=False),
-            OdomSensor(self, 'vio', self.VIO_TOPIC, self.R_vio,
-                       self.model.Hx_vesc, self.model.HJacobian_vesc,
-                       relative=False),
-        ]
+        if self.is_wheel_model:
+            gate_prob = self.get_parameter('gate_prob').value
+            gating = {}
+            if gate_prob > 0.0:
+                gating = dict(gate_prob=gate_prob,
+                              gate_max_reject=self.get_parameter('gate_max_reject').value)
+            b_ax_idx = self.model.IDX['b_ax']
+            # IMU: yaw, gyro and accelerometer gated independently.
+            # VIO: pose and velocity gated independently.
+            self.imu_sensor = ImuSensor(
+                self, self.IMU_TOPIC, self.R_imu,
+                self.model.Hx_imu, self.model.HJacobian_imu,
+                on_init=self.init_state_from_imu, relative=True,
+                alpha=self.get_parameter('imu_acc_ema_alpha').value,
+                bias_fn=lambda: float(self.ekf.x[b_ax_idx]),
+                tau_lt=self.get_parameter('tau_lt').value,
+                **({**gating, 'gate_groups': [[0], [1], [2, 3]]} if gating else {}))
+            self.sensors = [
+                self.imu_sensor,
+                OdomSensor(self, 'vio', self.VIO_TOPIC, self.R_vio,
+                           self.model.Hx_vio, self.model.HJacobian_vio,
+                           relative=False,
+                           **({**gating, 'gate_groups': [[0, 1, 2], [3, 4, 5]]} if gating else {})),
+            ]
+            # VESC speed is a model input here, not a measurement.
+            self.vesc_speed = VescSpeedInput(self, self.VESC_TOPIC)
+        else:
+            self.sensors = [
+                ImuSensor(self, self.IMU_TOPIC, self.R_imu,
+                          self.model.Hx_imu, self.model.HJacobian_imu,
+                          on_init=self.init_state_from_imu, relative=True),
+                OdomSensor(self, 'vesc', self.VESC_TOPIC, self.R_vesc,
+                           self.model.Hx_vesc, self.model.HJacobian_vesc,
+                           relative=False),
+                OdomSensor(self, 'vio', self.VIO_TOPIC, self.R_vio,
+                           self.model.Hx_vesc, self.model.HJacobian_vesc,
+                           relative=False),
+            ]
+
 
         # Control input subscriptions
         self.create_subscription(AckermannDriveStamped, '/drive', self.ackermann_callback, 1)
@@ -178,7 +254,7 @@ class EkfNode(Node):
 
     def init_state_from_imu(self, imu_data):
         """Seed the filter state from the first IMU orientation reading."""
-        if self.model_type == "single_track_model" or self.model_type == "point_mass_model":
+        if self.model_type in ("single_track_model", "point_mass_model", "single_track_wheel_model"):
             self.ekf.x[2] = imu_data[0]
             self.ekf.x[5] = imu_data[1]
             self.ekf.P[2, 2] = self.R_imu[0][0]
@@ -232,6 +308,8 @@ class EkfNode(Node):
             print(f"Update Steps Run: {sensor.update_count}")
             print(f"Mean Execution Time: {sensor.update_mean_ms:.3f} ms")
             print(f"Peak Execution Time: {sensor.update_max_ms:.3f} ms")
+            if getattr(sensor, 'gate_groups', None):
+                print(f"Gated rejections: {sensor.reject_count}, forced accepts: {sensor.force_accept_count}")
         self.get_logger().info("Shutting down...")
 
     def publish_odometry(self):
@@ -298,6 +376,9 @@ class EkfNode(Node):
             # Get snapshot of newest measurement data, cmd inputs, and flags to use in prediction and update steps
             initialized = self.is_initialized
             u = np.copy(self.ackermann_data)
+            if self.is_wheel_model:
+                v_w = self.vesc_speed.snapshot()
+                ax_lt = self.imu_sensor.ax_lt
             snapshots = [(sensor, *sensor.snapshot()) for sensor in self.sensors]
 
         if not initialized:
@@ -314,6 +395,14 @@ class EkfNode(Node):
         if dt == 0:
             return
         self.last_filter_time = now
+
+        if self.is_wheel_model:
+            steer_cmd = u[1]
+            if self.get_parameter('steer_lag').value and self.tau_steer > 0.0:
+                self.steer_filt += dt / (self.tau_steer + dt) * (steer_cmd - self.steer_filt)
+            else:
+                self.steer_filt = steer_cmd
+            u = np.array([self.steer_filt, v_w, ax_lt])
 
         t0 = time.perf_counter_ns()
 
