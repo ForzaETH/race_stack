@@ -27,8 +27,7 @@ def car_config_dir(racecar_version: str) -> Path:
 
 
 def load_model_ros(model, racecar_version: str, *subpath: str):
-    """Any ROS-free pydantic schema (e.g. a controller's params) from ``config/<car>/<subpath...>``,
-    with forza_config's strict loading: ``load_model_ros(MyConfig, 'NUC5', 'my_params.yaml')``."""
+    """Any ROS-free pydantic schema from ``config/<car>/<subpath...>``, with forza_config's strict loading."""
     return load_model(model, car_config_dir(racecar_version).joinpath(*subpath))
 
 
