@@ -25,3 +25,7 @@
 	path = utilities/libraries/forza_config
 	url = https://github.com/ForzaETH/forza_config.git
 	branch = main
+[submodule "controller/forzaeth_mpc"]
+	path = controller/forzaeth_mpc
+	url = https://github.com/ForzaETH/forzaeth_mpc.git
+	branch = main

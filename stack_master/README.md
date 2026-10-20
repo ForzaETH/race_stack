@@ -52,7 +52,7 @@ ros2 launch stack_master time_trials_launch.xml racecar_version:=<NUCx used> ctr
 ```
   - `<NUCx>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). If you omit this the one set in base_system is used. 
   - The MAP controller uses the steering Look-Up Table `stack_master/config/<NUCx>/LUT/<floor>/default.csv`, where `floor` is set when launching base_system.
-  - `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP.
+  - `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP / STMPC / KMPC (the MPCs need acados, see `controller/forzaeth_mpc`).
 
 ### Head to Head
 ```shell
@@ -60,5 +60,5 @@ ros2 launch stack_master head_to_head_launch.xml racecar_version:=<NUCx used> ct
 ```
 - `<NUCx>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car).
 - The MAP controller uses the steering Look-Up Table `stack_master/config/<NUCx>/LUT/<floor>/default.csv`, where `floor` is set when launching base_system.
-- `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP.
+- `<control algorithm>` is the control algorithm you want to use. Current possibilities are MAP / PP / STMPC / KMPC (the MPCs need acados, see `controller/forzaeth_mpc`).
 - `<overtake_mode>` is the mode you want to use for overtaking. `spliner` is the only current possibility.

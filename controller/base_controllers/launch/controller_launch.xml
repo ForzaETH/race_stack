@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented"/> <!-- TODO implement PP and MAPPING -->
+  <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / STMPC / KMPC / FTG. STMPC and KMPC need acados"/>
 
   <!--  launch L1 controller -->
   <node pkg="controller" name="controller" exec="controller">
