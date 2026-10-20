@@ -16,7 +16,10 @@
   <depend>rclpy</depend>
 
   <exec_depend>stack_master</exec_depend>
+  <exec_depend>forza_config</exec_depend>
   <exec_depend>forza_config_ros</exec_depend>
+  <!-- only for the STMPC/KMPC modes, which also need acados -->
+  <exec_depend>forzaeth_mpc</exec_depend>
   <exec_depend>steering_lookup</exec_depend>
 
   <export>
