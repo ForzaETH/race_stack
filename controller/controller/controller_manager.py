@@ -25,7 +25,7 @@ from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescripto
 from tf_transformations import quaternion_from_euler
 from stack_master.parameter_event_handler import ParameterEventHandler
 
-from pbl_config import get_remote_parameter
+from forza_config_ros import get_remote_parameter
 
 from typing import List, Dict, Union
 

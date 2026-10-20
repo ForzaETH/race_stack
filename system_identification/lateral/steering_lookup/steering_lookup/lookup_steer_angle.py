@@ -1,5 +1,5 @@
 import numpy as np
-from pbl_config import load_steering_lut
+from forza_config_ros import load_steering_lut_ros
 
 def find_nearest(array, value):
     # array = np.asarray(array)
@@ -31,7 +31,7 @@ class LookupSteerAngle:
     from the steering LUT of the car and floor in stack_master/config
     """
     def __init__(self, racecar_version, floor, logger):
-      self.lu = load_steering_lut(racecar_version, floor)
+      self.lu = load_steering_lut_ros(racecar_version, floor)
       self.logger = logger
 
     def lookup_steer_angle(self, accel, vel):

@@ -15,7 +15,7 @@
 
   <exec_depend>ros2launch</exec_depend>
   <depend>rclpy</depend>
-  <exec_depend>pbl_config</exec_depend>
+  <exec_depend>forza_config_ros</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
 
   <export>

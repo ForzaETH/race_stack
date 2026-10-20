@@ -1,4 +1,4 @@
-"""Glue between pbl_config (stack_master/config) and the on_track_sysid library."""
+"""Glue between forza_config_ros (stack_master/config) and the on_track_sysid library."""
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from on_track_sysid import PacejkaParams, VehicleParams, generate_lut, pacejka_formula  # noqa: E402
 from on_track_sysid.pacejka import axle_loads  # noqa: E402
-from pbl_config import (NotExistingFloor, PacejkaTireConfig, load_car_config_ros,  # noqa: E402
-                        load_pacejka_tire_config_ros, save_pacejka_tire_config, save_steering_lut)
-from pbl_config.paths import get_stack_master_path  # noqa: E402
+from forza_config import PacejkaTireConfig  # noqa: E402
+from forza_config_ros import (NotExistingFloor, get_stack_master_path, load_car_config_ros,  # noqa: E402
+                              load_pacejka_tire_config_ros, save_pacejka_tire_config_ros, save_steering_lut_ros)
 
 # Start point when a floor has no identified tires yet; convergence does not hinge on it
 GENERIC_TIRES = PacejkaParams(Bf=5.0, Cf=1.0, Df=1.5, Ef=0.5, Br=5.0, Cr=1.0, Dr=1.5, Er=0.5, friction_coeff=1.0)
@@ -46,11 +46,11 @@ def save_raw_data(data, racecar_version: str, floor: str, name: str) -> Path:
 def save_results(tires: PacejkaParams, vehicle: VehicleParams, racecar_version: str, floor: str,
                  update_latest: bool = True, log=print):
     """Saves the tire config, then generates and saves the steering LUT from it."""
-    path = save_pacejka_tire_config(PacejkaTireConfig(**asdict(tires), floor=floor),
-                                    racecar_version, floor, update_latest)
+    path = save_pacejka_tire_config_ros(PacejkaTireConfig(**asdict(tires), floor=floor),
+                                        racecar_version, floor, update_latest)
     log(f"Saved tires to {path}")
     log("Generating the steering LUT...")
-    path = save_steering_lut(generate_lut(vehicle, tires), racecar_version, floor, update_latest)
+    path = save_steering_lut_ros(generate_lut(vehicle, tires), racecar_version, floor, update_latest)
     log(f"Saved steering LUT to {path}")
 
 
