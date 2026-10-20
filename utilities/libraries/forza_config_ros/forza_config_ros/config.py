@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
-from forza_config import (CarConfig, PacejkaTireConfig, load_car_config, load_pacejka_tire_config,
+from forza_config import (CarConfig, PacejkaTireConfig, load_car_config, load_model, load_pacejka_tire_config,
                           load_steering_lut, save_pacejka_tire_config, save_steering_lut)
 
 
@@ -24,6 +24,12 @@ def get_stack_master_path(subpath: str = '') -> Path:
 
 def car_config_dir(racecar_version: str) -> Path:
     return get_stack_master_path(f'config/{racecar_version}')
+
+
+def load_model_ros(model, racecar_version: str, *subpath: str):
+    """Any ROS-free pydantic schema (e.g. a controller's params) from ``config/<car>/<subpath...>``,
+    with forza_config's strict loading: ``load_model_ros(MyConfig, 'NUC5', 'my_params.yaml')``."""
+    return load_model(model, car_config_dir(racecar_version).joinpath(*subpath))
 
 
 def load_car_config_ros(racecar_version: str) -> CarConfig:

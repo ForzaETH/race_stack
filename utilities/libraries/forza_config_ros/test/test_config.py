@@ -41,3 +41,16 @@ def test_real_tree_cars_load():
         cfg.load_car_config(path)
     for path in config.glob('*/pacejka/*/default.yaml'):
         cfg.load_pacejka_tire_config(path)
+
+
+def test_load_model_ros_any_schema(tree):
+    from pydantic import BaseModel, ConfigDict
+
+    class Gains(BaseModel):
+        model_config = ConfigDict(extra='forbid')
+        kp: float
+
+    folder = tree / 'config/NUC5/mpc'
+    folder.mkdir(parents=True)
+    (folder / 'gains.yaml').write_text('kp: 2.0\n')
+    assert cfg.load_model_ros(Gains, 'NUC5', 'mpc', 'gains.yaml').kp == 2.0
