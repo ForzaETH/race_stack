@@ -29,21 +29,7 @@
                 // Python setup
                 "python.defaultInterpreterPath": "/usr/bin/python3",
                 "python.envFile": "",
-                "python.autoComplete.extraPaths": [
-                    "/opt/ros/humble/lib/python3.10/site-packages",
-                    "/opt/ros/humble/local/lib/python3.10/dist-packages"
-                ],
-                "python.analysis.extraPaths": [
-                    "/opt/ros/humble/lib/python3.10/site-packages",
-                    "/opt/ros/humble/local/lib/python3.10/dist-packages",
-                    "/ws/install/rs_msgs/local/lib/python3.10/dist-packages"
-                ],
-                "python.analysis.typeCheckingMode": "basic",
-                "python.analysis.diagnosticSeverityOverrides": {
-                    "reportArgumentType": "none",
-                    "reportOptionalMemberAccess": "none"
-                },
-                "python.analysis.ignore": ["**/parameters_codegen.py"],
+
                 "C_Cpp.default.compileCommands": "/ws/build/compile_commands.json",
                 "search.exclude": {
                     "**/build": true,

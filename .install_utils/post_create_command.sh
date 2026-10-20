@@ -6,6 +6,9 @@ set -e
 # Setup user permissions
 sudo chown -R race_crew:race_crew /ws/
 
+#  pyrightconfig.json for pylance
+ln -sf src/race_stack/pyrightconfig.json /ws/pyrightconfig.json
+
 if [ -z "$(find /ws/src -mindepth 1 -maxdepth 1 -type d -not -name race_stack -print -quit)" ]; then
 	echo "No external repositories found in /ws/src. Run 'make deps' in the race_stack folder on the host, then rebuild the container."
 	exit 1
