@@ -8,7 +8,7 @@ import rosbag2_py
 import yaml
 from on_track_sysid import identify_steady_state
 from on_track_sysid.pacejka import steady_state_forces
-from pbl_config import load_car_config_ros
+from forza_config_ros import load_car_config_ros
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 

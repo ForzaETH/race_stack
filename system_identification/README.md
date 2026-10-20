@@ -3,7 +3,7 @@
 Lateral (tire) identification lives in `lateral/`:
 
 - `on_track_sysid/`: git submodule of [On-Track-SysID](https://github.com/ForzaETH/On-Track-SysID), the ROS-free algorithms (on-track and steady-state identification, steering LUT generation).
-- `lateral_sysid_ros/`: ROS 2 nodes and tools around it. They read and write everything through `pbl_config`.
+- `lateral_sysid_ros/`: ROS 2 nodes and tools around it. They read and write everything through `forza_config_ros`.
 - `steering_lookup/`: the LUT reader used by the MAP controller.
 
 Results go to `stack_master/config/<racecar_version>/`:

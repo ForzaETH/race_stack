@@ -8,7 +8,7 @@ import tf_transformations as tft
 from ackermann_msgs.msg import AckermannDriveStamped
 from filterpy.kalman import ExtendedKalmanFilter
 from nav_msgs.msg import Odometry
-from pbl_config import load_car_config_ros, load_pacejka_tire_config_ros, get_remote_parameter
+from forza_config_ros import load_car_config_ros, load_pacejka_tire_config_ros, get_remote_parameter
 from rclpy.node import Node
 from rcl_interfaces.msg import SetParametersResult
 

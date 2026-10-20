@@ -1,5 +1,5 @@
 # Steering lookup
-This package provides an importable library to use the steering lookup obtained from sysid experiments. The table is read through `pbl_config` from `stack_master/config/<racecar_version>/LUT/<floor>/default.csv`; generate it with `ros2 run lateral_sysid_ros generate_lut`.
+This package provides an importable library to use the steering lookup obtained from sysid experiments. The table is read through `forza_config_ros` from `stack_master/config/<racecar_version>/LUT/<floor>/default.csv`; generate it with `ros2 run lateral_sysid_ros generate_lut`.
 
 ## How to import python lib
 

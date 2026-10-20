@@ -21,3 +21,7 @@
 [submodule "system_identification/lateral/on_track_sysid"]
 	path = system_identification/lateral/on_track_sysid
 	url = https://github.com/ForzaETH/On-Track-SysID.git
+[submodule "utilities/libraries/forza_config"]
+	path = utilities/libraries/forza_config
+	url = https://github.com/ForzaETH/forza_config.git
+	branch = main
