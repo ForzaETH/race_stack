@@ -39,6 +39,7 @@ apt install -y \
     libglew-dev \
     liblz4-dev \
     python3-numpy \
+    ros-humble-ament-cmake-clang-format \
     $OPENCV_PKGS
 
 mkdir -p "$BASALT_WS/src"
