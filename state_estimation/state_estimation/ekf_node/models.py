@@ -322,7 +322,7 @@ class single_track_model:
         return x
 
 
-class single_track_wheel_model:
+class single_track_full_model:
     """
     Single-track EKF model with Pacejka longitudinal and lateral forces, where the
     longitudinal force is driven by the measured wheel speed (VESC) instead of the

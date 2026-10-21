@@ -17,7 +17,7 @@ DEFAULT_COV = {
     'Q': [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
 }
 
-# single_track_wheel_model: state
+# single_track_full_model: state
 # [x, y, theta, vx, vy, omega, s_w, b_gz, b_ax, b_ay, d_x, d_y, d_psi]
 # Starting values only: shrink Q on d_* as the tire fit improves. Keep Q on
 # vx, vy, omega small: process noise should enter through d_*, not the velocities.
@@ -47,7 +47,7 @@ WHEEL_MODEL_PARAMS = {
 
 def launch_setup(context, *args, **kwargs):
     model_type = LaunchConfiguration('model_type').perform(context)
-    is_wheel = model_type == 'single_track_wheel_model'
+    is_wheel = model_type == 'single_track_full_model'
     cov = WHEEL_MODEL_COV if is_wheel else DEFAULT_COV
 
     params = {

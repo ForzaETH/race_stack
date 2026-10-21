@@ -30,7 +30,7 @@ class EkfNode(Node):
         - VIO: [x, y, psi, vx, vy, vpsi]
         - ACKERMANN: [accel, steer_angle]
 
-    With model_type 'single_track_wheel_model' the VESC speed is used as a model
+    With model_type 'single_track_full_model' the VESC speed is used as a model
     input instead of a measurement, VIO is the only odometry measurement, and the
     control input is u = [steer, v_wheel, ax_lt].
 
@@ -54,7 +54,7 @@ class EkfNode(Node):
         self.declare_parameter('R_vio', rclpy.Parameter.Type.DOUBLE_ARRAY)
         self.declare_parameter('Q', rclpy.Parameter.Type.DOUBLE_ARRAY)
 
-        # single_track_wheel_model parameters
+        # single_track_full_model parameters
         self.declare_parameter('gate_prob', 0.0)            # 0 disables chi^2 gating
         self.declare_parameter('gate_max_reject', 50)
         self.declare_parameter('imu_acc_ema_alpha', 0.2)    # 1.0 = no EMA on the accel measurement
@@ -90,7 +90,7 @@ class EkfNode(Node):
         self.R_vio = np.diag(self.get_parameter('R_vio').value)
         q_values = list(self.get_parameter('Q').value)
         model_dims = {'point_mass_model': 6, 'kinematic_bicycle_model': 7,
-                      'single_track_model': 6, 'single_track_wheel_model': 13}
+                      'single_track_model': 6, 'single_track_full_model': 13}
         dim = model_dims.get(self.model_type, 6)
         if len(q_values) > dim:
             q_values = q_values[0:dim]
@@ -123,12 +123,12 @@ class EkfNode(Node):
             'wheelbase': car_config.wheelbase
         }
 
-        self.is_wheel_model = self.model_type == "single_track_wheel_model"
+        self.is_wheel_model = self.model_type == "single_track_full_model"
         self.tau_steer = car_config.tau_steer
         if self.is_wheel_model:
             missing = [k for k in ('Bx', 'Cx', 'Dx', 'Ex') if getattr(tire_config, k) is None]
             if missing:
-                raise ValueError(f"[EKF Node] single_track_wheel_model needs longitudinal tire "
+                raise ValueError(f"[EKF Node] single_track_full_model needs longitudinal tire "
                                  f"parameters {missing} in pacejka/{self.floor}/default.yaml")
             self.p.update({
                 'Bx': tire_config.Bx,
@@ -151,8 +151,8 @@ class EkfNode(Node):
             self.model = models.kinematic_bicycle_model(self.p, self.Q)
         elif self.model_type == "single_track_model":
             self.model = models.single_track_model(self.p, self.Q)
-        elif self.model_type == "single_track_wheel_model":
-            self.model = models.single_track_wheel_model(self.p, self.Q)
+        elif self.model_type == "single_track_full_model":
+            self.model = models.single_track_full_model(self.p, self.Q)
         else:
             self.get_logger().warn("[EKF Node] Unknown Model provided. Using point-mass motion model instead")
             self.model = models.point_mass_model(self.Q)
@@ -254,7 +254,7 @@ class EkfNode(Node):
 
     def init_state_from_imu(self, imu_data):
         """Seed the filter state from the first IMU orientation reading."""
-        if self.model_type in ("single_track_model", "point_mass_model", "single_track_wheel_model"):
+        if self.model_type in ("single_track_model", "point_mass_model", "single_track_full_model"):
             self.ekf.x[2] = imu_data[0]
             self.ekf.x[5] = imu_data[1]
             self.ekf.P[2, 2] = self.R_imu[0][0]
