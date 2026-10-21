@@ -18,7 +18,8 @@ sudo apt-get update
 
 # Install ROS 2 dependencies (race_stack and additional cloned repos)
 rosdep update
-rosdep install --from-paths /ws/src --ignore-src -y
+# python-transforms3d-pip was removed from rosdistro (transforms3d is installed via pip)
+rosdep install --from-paths /ws/src --ignore-src -y --skip-keys "python-transforms3d-pip"
 
 # Copy the sample maps into MAPS_DIR
 for map in /ws/src/race_stack/sample_maps/*/; do
