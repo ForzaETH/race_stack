@@ -5,15 +5,15 @@
 [submodule "base_system/f110_simulator/f1tenth_gym"]
 	path = base_system/f110_simulator/f1tenth_gym
 	url = https://github.com/ForzaETH/f1tenth_gym.git
-	branch = main
+	branch = humble
 [submodule "base_system/f110_simulator/f1tenth_gym_ros"]
 	path = base_system/f110_simulator/f1tenth_gym_ros
 	url = https://github.com/ForzaETH/f1tenth_gym_ros.git
-	branch = main
+	branch = humble
 [submodule "planner/global_planner/global_planner/global_racetrajectory_optimization"]
 	path = planner/global_planner/global_planner/global_racetrajectory_optimization
 	url = https://github.com/ForzaETH/global_racetrajectory_optimization.git
-	branch = pip_package
+	branch = master
 [submodule "sensors/vesc"]
 	path = sensors/vesc
 	url = https://github.com/ForzaETH/vesc.git

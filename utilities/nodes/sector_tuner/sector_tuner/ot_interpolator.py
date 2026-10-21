@@ -28,6 +28,7 @@ class OvertakingInterpolator(Node):
         # sectors params
         self.glb_wpnts_og = None
         self.glb_wpnts_scaled = None
+        self.glb_wpnts_sp_og = None
         self.interp_wpnt = None
         self.need_to_reinterpolate = True
         self.max_gb_speed = 10

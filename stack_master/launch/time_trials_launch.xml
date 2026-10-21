@@ -3,18 +3,22 @@
     <arg name="LU_table" default="NUC2_hangar_pacejka" />
     <arg name="ctrl_algo" default="MAP" />
     <arg name="measure" default="False" />
+    <arg name="sim_opp" default="False" description="True to run the time trials stack as the simulated opponent (remaps topics to the opponent ones)" />
     <arg name="raceline" default="mincurv" description="'mincurv' / 'shortest_path' / 'centerline'" />
 
     <!-- TODO feed this somewhere-->
     <let name="param_file"
         value="$(find-pkg-share stack_master)/config/$(var racecar_version)/l1_params.yaml" />
 
+    <group>
+    <!-- sim opponent: own namespace so node names do not clash with the ego ones -->
+    <push-ros-namespace namespace="opp_racecar" if="$(var sim_opp)" />
+
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
         <arg name="mode" value="$(var ctrl_algo)" />
-        <arg name="param_file"
-            value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
-        <arg name="mapping" value="False" />
+        <arg name="LU_table" value="$(var LU_table)" />
+        <arg name="sim_opp" value="$(var sim_opp)" />
     </include>
 
     <!-- launch state machine -->
@@ -23,10 +27,28 @@
             value="$(find-pkg-share stack_master)/config/state_machine_params.yaml" />
         <arg name="mode" value="timetrials" />
         <arg name="overtake_mode" value="dummy" />
+        <arg name="sim_opp" value="$(var sim_opp)" />
     </include>
 
+    <!-- frenet odom of the sim opponent, the ego one comes from base_system -->
+    <node pkg="frenet_odom_republisher" exec="frenet_odom_republisher_node" name="frenet_odom_republisher"
+        output="screen" if="$(var sim_opp)">
+        <param name="base_frame" value="opp_racecar/base_link" />
+        <remap from="/state_estimation/odom" to="/opp_racecar/odom" />
+        <remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" />
+    </node>
+
+    <!-- own sector tuner of the sim opponent, so it can be scaled independently of the ego (loads the base system map sectors) -->
+    <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner" if="$(var sim_opp)">
+        <remap from="/global_waypoints_scaled" to="/opp_racecar/global_waypoints_scaled" />
+        <remap from="/global_waypoints_scaled/shortest_path" to="/opp_racecar/global_waypoints_scaled/shortest_path" />
+        <remap from="/sector_markers" to="/opp_racecar/sector_markers" />
+    </node>
+
     <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml">
+        <arg name="sim_opp" value="$(var sim_opp)" />
         <arg name="raceline" value="$(var raceline)" />
     </include>
+    </group>
 
 </launch>
