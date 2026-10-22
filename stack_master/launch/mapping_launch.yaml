@@ -1,0 +1,82 @@
+launch:
+
+- arg:
+    name: "map"
+    default: "latest"
+    description: "New map name"
+
+- arg:
+    name: "racecar"
+    default: "$(env RACECAR_VERSION)"
+    description: "Car version: NUCX"
+    choice:
+    - value: "NUC2"
+    - value: "NUC4"
+    - value: "NUC5"
+    - value: "NUC6"
+    - value: "NUC7"
+    - value: "NUC10"
+
+- arg:
+    name: "tire_model"
+    default: "dubi"
+    description: "Tire model for the tire-floor combination"
+
+- arg:
+    name: "bringup"
+    default: "true"
+    description: "Start car drivers and teleop; false when replaying a bag"
+    choice:
+    - value: "true"
+    - value: "false"
+
+- check_args: {}
+
+- let:
+    name: "mapping_config"
+    value: "$(find-pkg-share stack_master)/config/mapping.yaml"
+
+- let:
+    name: "map_path"
+    value: "$(env MAPS_DIR)/$(var map)"
+
+- let:
+    name: "teleop_launch"
+    value: "$(find-pkg-share stack_master)/launch/teleop_launch.xml"
+
+- let:
+    name: "state_estimation_launch"
+    value: "$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml"
+
+# Launch mapping node
+- node:
+    pkg: "rs_mapping"
+    exec: "mapping_node"
+    name: "mapping_node"
+    output: "screen"
+    emulate_tty: true
+    param:
+    - from: "$(var mapping_config)"
+    - name: "map_path"
+      value: "$(var map_path)"
+
+# Launch tele-operation stack
+- include:
+    file: "$(var teleop_launch)"
+    if: "$(var bringup)"
+    arg:
+    - name: "racecar_version"
+      value: "$(var racecar)"
+
+# Launch state estimation
+- include:
+    file: "$(var state_estimation_launch)"
+    arg: 
+    - name: "racecar_version"
+      value: "$(var racecar)"
+    - name: "mapping_bool"
+      value: "True"
+    - name: "frenet_bool"
+      value: "False"
+    - name: "floor"
+      value: "$(var tire_model)"

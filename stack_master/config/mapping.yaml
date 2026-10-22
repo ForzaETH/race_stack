@@ -1,5 +1,5 @@
 mapping_node:
   ros__parameters:
-    rate: 10 # [hz]
+    rate_hz: 10 # [hz]
     occupancy_grid_threshold: 10
     filter_kernel_size: 9

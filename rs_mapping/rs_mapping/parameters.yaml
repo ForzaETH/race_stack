@@ -1,0 +1,36 @@
+# Parameter definition for the mapping node.
+# Values are set in stack_master/config/mapping.yaml, map_path by mapping_launch.yaml
+
+mapping:
+  map_path:
+    type: string
+    description: "Directory the map is saved to; its name is used as the map name"
+    read_only: true
+    validation:
+      not_empty<>: []
+  rate_hz:
+    type: int
+    default_value: 10
+    description: "Rate of the main loop (key input, initial pose latching) in Hz"
+    read_only: true
+    validation:
+      bounds<>: [1, 50]
+  occupancy_grid_threshold:
+    type: int
+    default_value: 10
+    description: "Cells with an occupancy probability below this [0-100] count as free; unknown counts as occupied"
+    read_only: true
+    validation:
+      bounds<>: [0, 100]
+  filter_kernel_size:
+    type: int
+    default_value: 9
+    description: "Side length of the square kernel for the morphological opening in cells"
+    read_only: true
+    validation:
+      bounds<>: [1, 31]
+  min_free_width_m:
+    type: double
+    default_value: 0.85
+    description: "Free regions narrower than this are treated as occupied (morphological opening)"
+
