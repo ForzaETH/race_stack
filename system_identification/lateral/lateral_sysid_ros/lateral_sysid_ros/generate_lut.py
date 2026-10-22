@@ -2,7 +2,7 @@
 import argparse
 
 from on_track_sysid import generate_lut
-from pbl_config import save_steering_lut
+from forza_config_ros import save_steering_lut_ros
 
 from lateral_sysid_ros.config_io import load_tires, load_vehicle
 
@@ -15,6 +15,6 @@ def main():
     args = parser.parse_args()
 
     tires = load_tires(args.car, args.floor, lambda msg: parser.error(msg))
-    path = save_steering_lut(generate_lut(load_vehicle(args.car), tires), args.car, args.floor,
-                             not args.no_update_latest)
+    path = save_steering_lut_ros(generate_lut(load_vehicle(args.car), tires), args.car, args.floor,
+                                 not args.no_update_latest)
     print(f"Saved steering LUT to {path}")

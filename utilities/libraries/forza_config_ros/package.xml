@@ -1,20 +1,19 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>pbl_config</name>
-  <version>0.0.0</version>
-  <description>Pydantic-validated config loaders (car, pacejka tire, steering LUT) for the race stack</description>
-  <maintainer email="maurice.brunner@pbl.ee.ethz.ch">maubrunn</maintainer>
+  <name>forza_config_ros</name>
+  <version>0.1.0</version>
+  <description>ROS 2 layer of forza_config: car config lookup in stack_master, remote parameters</description>
+  <maintainer email="edoardo.ghignone@pbl.ee.ethz.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
+  <depend>rclpy</depend>
   <depend>ament_index_python</depend>
+  <depend>rcl_interfaces</depend>
+  <exec_depend>forza_config</exec_depend>
   <exec_depend>stack_master</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
-  <exec_depend>python3-yaml</exec_depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
   <export>

@@ -5,7 +5,7 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from nav_msgs.msg import Odometry
 from on_track_sysid import OnTrackConfig, identify_on_track
 from on_track_sysid.pacejka import steady_state_forces
-from pbl_config import get_remote_parameter
+from forza_config_ros import get_remote_parameter
 from rclpy.node import Node
 from rclpy.task import Future
 
