@@ -43,6 +43,12 @@ ADD ./.install_utils/python_req.txt /tmp/.install_utils/python_req.txt
 RUN pip3 install -r /tmp/.install_utils/python_req.txt &&\
     pip3 install quadprog~=0.1.11
 
+# acados for the MPC controllers (needs the controller/forzaeth_mpc submodule checked out)
+ADD ./controller/forzaeth_mpc/install/install_acados.sh /tmp/install_acados.sh
+RUN bash /tmp/install_acados.sh /acados && rm /tmp/install_acados.sh
+ENV ACADOS_SOURCE_DIR=/acados
+ENV LD_LIBRARY_PATH=/acados/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
 ADD ./.install_utils /.install_utils
 RUN useradd -ms /bin/bash -u ${UID} -G sudo ${USER} && groupadd -fg ${GID} ${USER} \
     && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
