@@ -10,6 +10,8 @@ import numpy as np
 import rclpy
 import tf2_ros
 from rclpy.node import Node
+from rclpy.executors import ExternalShutdownException
+from rclpy.task import Future
 from rclpy.time import Time
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import DurabilityPolicy, QoSProfile
@@ -37,6 +39,9 @@ class MappingNode(Node):
         self.map: OccupancyGrid | None = None
 
         self.initial_position = None
+
+        # Exit after saving
+        self.done = Future()
 
         # The pose directly comes from Cartographer SLAM (map → base_link)
         self.map_frame = 'map'
@@ -71,7 +76,7 @@ class MappingNode(Node):
             tf_msg = self.tf_buffer.lookup_transform(
                 self.map_frame, self.base_frame, Time())
         except tf2_ros.TransformException as e: # type: ignore
-            self.get_logger().warning(
+            self.get_logger().debug(
                 f"Waiting for the {self.map_frame}->{self.base_frame} transform: {e}",
                 once=True
             )
@@ -151,6 +156,7 @@ class MappingNode(Node):
 
         response.success, response.message = True, f"Map saved to {self.map_dir}"
         self.get_logger().info(response.message)
+        self.done.set_result(True)  # stop spinning main()
         return response
 
     def loop(self):
@@ -199,7 +205,11 @@ def main(args=None):
     
     rclpy.init(args=args)
     node = MappingNode()
-    rclpy.spin(node)
+    try:
+        rclpy.spin_until_future_complete(node, node.done)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        return  # rclpy's SIGINT handler already shuts down the context
+    # Map saved: shut down so mapping_launch's on_exit ends the whole launch
     node.destroy_node()
     rclpy.shutdown()
     

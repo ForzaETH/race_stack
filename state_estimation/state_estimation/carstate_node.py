@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from rclpy.node import Node
+from rclpy.executors import ExternalShutdownException
 import tf2_ros
 
 import time
@@ -78,7 +79,7 @@ class Carstate(Node):
         self.get_logger().info('Carstate Node waiting for Odometry messages...')
         ekf_print = False
         frenet_print = False
-        while self.ekf_odom is None or (frenet_bool and self.gb_wpnts is None):
+        while rclpy.ok() and (self.ekf_odom is None or (frenet_bool and self.gb_wpnts is None)):
             rclpy.spin_once(self)
             if self.ekf_odom is not None and not ekf_print:
                 self.get_logger().info('Received Odometry message.')
@@ -152,6 +153,9 @@ class Carstate(Node):
 
 def main():
     rclpy.init()
-    node = Carstate()
-    rclpy.spin(node)
-    rclpy.shutdown()
+    try:
+        # Constructed inside try: __init__ blocks until the first messages arrive
+        node = Carstate()
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass  # rclpy's SIGINT handler already shuts down the context

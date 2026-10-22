@@ -54,7 +54,7 @@ launch:
     exec: "mapping_node"
     name: "mapping_node"
     output: "screen"
-    emulate_tty: true
+    on_exit: "shutdown"
     param:
     - from: "$(var mapping_config)"
     - name: "map_path"
