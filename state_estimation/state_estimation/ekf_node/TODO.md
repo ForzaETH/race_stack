@@ -14,11 +14,6 @@ plots and short notes along the way make it much easier to discuss progress with
 - S. Thrun et al., *Probabilistic Robotics*, Ch. 3 (Kalman filter, EKF) — refresher if needed.
 - `data filtering suggestion.md` (gating) — Stage 4.
 
-**Setup**
-- [ ] Clone the race stack, check out `ros2-humble`, apply `single-track-wheel-ekf.patch` (`git am`), build.
-- [ ] Run the stack once with the *existing* `single_track_model` (`custom_ekf:=true model_type:=single_track_model`) to see the baseline.
-- [ ] Record a rosbag on the track with at least: `/imu`, `/odom` (VESC), `/basalt/odom`, `/drive`, `/tf_static`. Drive a few laps with straights, corners, and some hard accelerations and braking. You will reuse this bag in every stage.
-
 ---
 
 ## Stage 1 — Understand the model and the measurements
@@ -40,7 +35,7 @@ filter-specific parts (covariances, gating) come later.
 - [ ] **Kinematic blend.** Below ~2 m/s the model blends to a kinematic model. Explain why the dynamic model is unreliable at low speed (hint: look at the denominators).
 
 ### 1.3 Measurements
-- [ ] For the IMU measurement `Hx_imu`, write each of the four rows as an equation and explain each term: why does the accelerometer row contain −p_x·r² and the ṙ term? What are `b_gz`, `b_ax`, `b_ay`?
+- [ ] For the IMU measurement `Hx_imu`, write each of the four rows as an equation and explain each term: why does the accelerometer row contain −p_x·r² and the ṙ term, given that the IMU data is expressed at `base_link` and p_x, p_y are the `base_link` offset from the CoG? What are `b_gz`, `b_ax`, `b_ay`?
 - [ ] For `Hx_vio`, explain the mapping from CoG to `base_link`. At v_x = 4 m/s and r = 2 rad/s, compute the difference between v_y at the CoG and at the rear axle. Is it negligible?
 - [ ] Explain why the VESC speed is an **input** in this model and why it must **not** also be fused as a measurement.
 
@@ -59,7 +54,7 @@ The longitudinal Magic Formula parameters `Bx, Cx, Dx, Ex` have **not been ident
 refuses to start without them, so for now you hardcode plausible values and study how much they matter.
 
 - [ ] Add placeholder values to `stack_master/config/<car>/pacejka/<floor>/default.yaml`, e.g. `Bx: 10.0, Cx: 1.6, Dx: 1.0, Ex: 0.0`, with a comment marking them as **not identified**.
-- [ ] Fill in the remaining TODOs in `launch/ekf_node_launch.py`: `imu_px`/`imu_py` (measure where the VESC IMU sits relative to the CoG) and check in the URDF/TF that `base_link` is at the rear axle.
+- [ ] Check in the URDF/TF that `base_link` is at the rear axle (`base_link_at_rear_axle` in `launch/ekf_node_launch.py`). The IMU data already arrives in `base_link`, so no separate IMU mounting offset is needed.
 - [ ] Set `gate_prob: 0.0` (gating off) for this stage.
 - [ ] Replay your bag with `custom_ekf:=true model_type:=single_track_wheel_model`. Record `/state_estimation/odom` and plot it against VIO and the old `single_track_model`.
 - [ ] Log and plot the extra states: `s_w`, the biases, and the disturbances `d_x, d_y, d_psi` (you will need to publish or log `ekf.x` — add this to the node).
@@ -84,7 +79,7 @@ first, discuss it with your supervisor, then drive it.
 
 > **Hints**
 > - Identify things in order: first `s_w` (free rolling at constant speed, compare wheel speed with VIO), then rolling resistance and drag (coast-downs with **zero motor current**, not zero duty — zero duty brakes), and only then the Magic Formula. Otherwise the resistance and radius errors end up inside your tire parameters.
-> - F_x is not measured directly: use F_x = m·a_x + F_resistance, with a_x from the IMU (lever-arm corrected, bias removed at standstill).
+> - F_x is not measured directly: use F_x = m·a_x + F_resistance, with a_x from the IMU (already in `base_link`; bias removed at standstill).
 > - κ needs the true ground speed v_x, which the wheel speed alone cannot give you during slip. Use VIO (or motion capture if available), smoothed offline.
 > - Normal acceleration on rubber tires stays at small κ. To reach the peak you need deliberate wheelspin (hard launches) and hard braking. The VESC runs in speed-control mode, so speed **steps** in the command are the easiest way to excite large slip.
 > - Most samples will be in the linear region. Bin or weight the data by κ so the peak is not ignored by the fit. Start with E = 0 and only free it if the residuals show structure.

@@ -60,8 +60,6 @@ class EkfNode(Node):
         self.declare_parameter('imu_acc_ema_alpha', 0.2)    # 1.0 = no EMA on the accel measurement
         self.declare_parameter('tau_lt', 0.03)              # ax_lt low-pass time constant [s]
         self.declare_parameter('steer_lag', True)           # first-order lag on commanded steering (tau_steer)
-        self.declare_parameter('imu_px', 0.0)               # IMU position from CoG [m]
-        self.declare_parameter('imu_py', 0.0)
         self.declare_parameter('base_link_at_rear_axle', True)
         self.declare_parameter('n_substeps', 4)
         self.declare_parameter('C_roll', 0.0)               # rolling resistance [N]
@@ -137,8 +135,6 @@ class EkfNode(Node):
                 'Ex': tire_config.Ex,
                 'C_roll': self.get_parameter('C_roll').value,
                 'C_drag': self.get_parameter('C_drag').value,
-                'imu_px': self.get_parameter('imu_px').value,
-                'imu_py': self.get_parameter('imu_py').value,
                 'base_px': -car_config.lr if self.get_parameter('base_link_at_rear_axle').value else 0.0,
                 'base_py': 0.0,
                 'n_substeps': self.get_parameter('n_substeps').value,

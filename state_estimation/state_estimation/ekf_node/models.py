@@ -403,8 +403,8 @@ class single_track_full_model:
 
         _, ax, ay, omega_dot = self._dynamics(x_sym, u_sym)
 
-        # IMU: specific force at the sensor location (lever arm from CoG)
-        px, py = self.p.get('imu_px', 0.0), self.p.get('imu_py', 0.0)
+        # IMU data arrives already in base_link: specific force at base_link (lever arm from CoG)
+        px, py = self.p.get('base_px', 0.0), self.p.get('base_py', 0.0)
         h_imu_sym = ca.vertcat(
             theta,
             omega + b_gz,
@@ -417,13 +417,12 @@ class single_track_full_model:
         self.HJacobian_imu = lambda x, u: np.array(self._H_imu(x, u)).reshape(4, self.dim_x)
 
         # VIO / odometry: CoG state mapped to base_link
-        bx, by = self.p.get('base_px', 0.0), self.p.get('base_py', 0.0)
         h_base_sym = ca.vertcat(
-            x + ca.cos(theta) * bx - ca.sin(theta) * by,
-            y + ca.sin(theta) * bx + ca.cos(theta) * by,
+            x + ca.cos(theta) * px - ca.sin(theta) * py,
+            y + ca.sin(theta) * px + ca.cos(theta) * py,
             theta,
-            vx - omega * by,
-            vy + omega * bx,
+            vx - omega * py,
+            vy + omega * px,
             omega,
         )
         self._h_base = ca.Function('h_base', [x_sym], [h_base_sym])

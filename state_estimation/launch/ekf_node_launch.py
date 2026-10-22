@@ -36,8 +36,6 @@ WHEEL_MODEL_PARAMS = {
     'imu_acc_ema_alpha': 1.0,        # raw accel to the measurement; ax_lt carries the low-passed signal
     'tau_lt': 0.03,
     'steer_lag': True,
-    'imu_px': 0.0,                   # TODO: VESC/IMU position from CoG [m]
-    'imu_py': 0.0,
     'base_link_at_rear_axle': True,
     'n_substeps': 4,
     'C_roll': 0.0,                   # TODO: from coast-down
