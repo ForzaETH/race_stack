@@ -1,15 +1,17 @@
 ARG IMAGE=ros:humble
 FROM ${IMAGE}
-ARG PLATFORM=arm
-ARG USER
-ARG UID
-ARG GID
 
 SHELL [ "/bin/bash", "-c" ]
 ARG DEBIAN_FRONTEND=noninteractive
 
+ADD ./.install_utils/basalt.repos /.install_utils/basalt.repos
 ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
 RUN chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh
+
+ARG PLATFORM=arm
+ARG USER
+ARG UID
+ARG GID
 
 ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
 RUN chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh

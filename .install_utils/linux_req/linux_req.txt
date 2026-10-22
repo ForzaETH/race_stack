@@ -28,3 +28,4 @@ ros-humble-imu-pipeline
 ros-humble-rqt*
 ros-humble-rqt-common-plugins
 ros-humble-realsense2-*
+ros-humble-image-transport-plugins

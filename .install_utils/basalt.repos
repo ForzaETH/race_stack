@@ -1,0 +1,21 @@
+# Sources for the basalt VIO workspace built by basalt_ros_setup.sh.
+# Pinned to exact commits so image builds are reproducible; bump a hash to update.
+# basalt must come after basalt_wrapper, since it is cloned into its folder.
+repositories:
+  src/basalt_ros:
+    type: git
+    url: https://github.com/ForzaETH/basalt_ros.git
+    version: f32e019a19e5874e87025ae1caed378d7080056c
+  src/basalt_vio_msgs:
+    type: git
+    url: https://github.com/berndpfrommer/basalt_vio_msgs.git
+    version: 8ed58cfb9da18df3fcea8609208375340d0ee1d9
+  src/basalt_wrapper:
+    type: git
+    url: https://github.com/berndpfrommer/basalt_wrapper.git
+    version: 5b261f65904de18e10c2bb2a858a82d88ae87cf9
+  # ForzaETH fork, branch forzaeth/vio-only: VIO library only, no tools/GUI/tests
+  src/basalt_wrapper/basalt:
+    type: git
+    url: https://github.com/ForzaETH/basalt.git
+    version: 8655e43c7c0d027f44874e56bfdbf49eab7d6c6a

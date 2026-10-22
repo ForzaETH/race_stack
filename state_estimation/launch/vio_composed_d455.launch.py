@@ -9,6 +9,7 @@ from launch.substitutions import LaunchConfiguration as LaunchConfig
 from launch.substitutions import PathJoinSubstitution, TextSubstitution
 from launch.actions import DeclareLaunchArgument as LaunchArg
 from launch.actions import OpaqueFunction
+from launch.conditions import IfCondition
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
@@ -106,6 +107,21 @@ def launch_setup(context, *args, **kwargs):
         output={'stdout': 'log', 'stderr': 'log'},
     )
 
+    # --- Optional feature-track visualization (/basalt/flow_image) ---
+    viz_flow_node = Node(
+        package='basalt_ros',
+        executable='viz_flow_node',
+        name='viz_flow',
+        namespace='basalt',
+        output='screen',
+        parameters=[{'show_tracks': True}],
+        remappings=[
+            ('left_image', LaunchConfig('left_image_topic')),
+            ('optical_flow', 'optical_flow')               # frontend output, /basalt/optical_flow
+        ],
+        condition=IfCondition(LaunchConfig('viz_flow')),
+    )
+
     # --- Basalt -> EKF bridge ---
     basalt_to_ekf_node = Node(
         package='state_estimation',
@@ -156,7 +172,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # return [camera_node, static_tf_node_camera_link, static_tf_node_camera_imu]
-    return [camera_node, static_tf_node_camera_link, static_tf_node_camera_imu, vio_container, basalt_to_ekf_node]
+    return [camera_node, static_tf_node_camera_link, static_tf_node_camera_imu, vio_container, basalt_to_ekf_node, viz_flow_node]
 
 
 def generate_launch_description():
@@ -200,6 +216,9 @@ def generate_launch_description():
         LaunchArg('tf_timeout',
                   default_value='30.0',
                   description='Seconds the bridge node yields for driver transforms to wake up'),
+        LaunchArg('viz_flow',
+                  default_value='false',
+                  description='Publish /basalt/flow_image with tracked features drawn on the left image'),
 
         OpaqueFunction(function=launch_setup),
     ])
