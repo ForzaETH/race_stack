@@ -17,9 +17,8 @@
   <exec_depend>rosidl_runtime_py</exec_depend>
   <exec_depend>forza_config</exec_depend>
   <exec_depend>forza_config_ros</exec_depend>
-  <exec_depend>on_track_sysid</exec_depend>
   <exec_depend>python3-matplotlib</exec_depend>
-  <!-- on_track_node also needs torch: pip install torch -->
+  <!-- on_track_sysid (with torch for on_track_node) is a pip package, see system_identification/README.md -->
 
   <test_depend>python3-pytest</test_depend>
 

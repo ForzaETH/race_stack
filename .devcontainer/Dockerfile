@@ -50,6 +50,12 @@ ENV ACADOS_SOURCE_DIR=/acados
 ENV LD_LIBRARY_PATH=/acados/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
 ADD ./.install_utils /.install_utils
+
+# On-Track-SysID with its on_track extra (torch); needs the submodule checked out.
+# On x86 take torch from the CPU index first, so pip does not pull the CUDA wheels.
+ADD ./system_identification/lateral/on_track_sysid /tmp/on_track_sysid
+RUN if [[ "$(uname -m)" == "x86_64" ]]; then pip3 install torch --index-url https://download.pytorch.org/whl/cpu; fi &&\
+    pip3 install "/tmp/on_track_sysid[on_track]" && rm -rf /tmp/on_track_sysid
 RUN useradd -ms /bin/bash -u ${UID} -G sudo ${USER} && groupadd -fg ${GID} ${USER} \
     && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 USER $USER
