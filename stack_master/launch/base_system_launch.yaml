@@ -31,6 +31,14 @@ launch:
     - value: "true"
     - value: "false"
 
+- arg:
+    name: "bringup"
+    default: "true"
+    description: "Start car drivers and teleop; false when replaying a bag"
+    choice:
+    - value: "true"
+    - value: "false"
+
 # check if arguments the base_system does not accept are passed
 - check_args: {}
 
@@ -42,6 +50,11 @@ launch:
 - let:
     name: "map_path"
     value: "$(env MAPS_DIR)/$(var map)"
+
+# true in sim, or when replay_launch.yaml already set it for a bag replay
+- let:
+    name: "use_sim_time"
+    value: "$(eval \"$(var sim) or '$(var use_sim_time false)'.lower() == 'true'\")"
 
 - let:
     name: "base_frame"
@@ -75,6 +88,7 @@ launch:
     # launch teleop stack
     - include:
         file: "$(find-pkg-share stack_master)/launch/teleop_launch.xml"
+        if: "$(var bringup)"
         arg:
         - name: "racecar_version"
           value: "$(var racecar)"
@@ -110,10 +124,8 @@ launch:
       value: "$(var laser_frame)"
     - name: "map_path"
       value: "$(var map_path)"
-    # Fails with l1 params for some reason
-    # - from: "$(find-pkg-share stack_master)/config/$(var racecar)/l1_params.yaml"
     - name: "use_sim_time"
-      value: "$(var sim)"
+      value: "$(var use_sim_time)"
 
 # launch global trajectory republisher
 - include:

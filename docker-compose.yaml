@@ -33,6 +33,7 @@ services:
       - ws-install:/ws/install
       - ws-log:/ws/log
       - ../race_stack_maps:/ws/maps:rw
+      - ../race_stack_bags:/ws/bags:rw
     environment:
       - USER=race_crew
       - USERNAME=race_crew
@@ -43,6 +44,7 @@ services:
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
       - RACECAR_VERSION=${RACECAR_VERSION:-SIM}
       - MAPS_DIR=/ws/maps
+      - BAGS_DIR=/ws/bags
       - PYTHONPYCACHEPREFIX=/ws/build/.pycache
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
 

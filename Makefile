@@ -1,4 +1,5 @@
 MAPS_DIR := ../race_stack_maps
+BAGS_DIR := ../race_stack_bags
 DEPS_DIR := ../race_stack_deps
 
 .PHONY: setup deps help
@@ -20,7 +21,7 @@ deps:
 	done < .install_utils/dependencies.txt
 
 setup: deps
-	@mkdir -p $(MAPS_DIR)
+	@mkdir -p $(MAPS_DIR) $(BAGS_DIR)
 
 	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env

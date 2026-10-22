@@ -6,7 +6,7 @@
   <description>The package to rule them all: Launch files, configs, maps you name it</description>
   <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
-
+  
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>rs_launch</exec_depend>
   <depend>rclpy</depend>

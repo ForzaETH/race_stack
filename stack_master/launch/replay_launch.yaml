@@ -1,0 +1,27 @@
+launch:
+
+# Allows one to use a launch file against a bag instead of the car
+
+- arg:
+    name: "launch_file"
+    description: "Launch file in stack_master/launch to replay, e.g. mapping_launch.yaml"
+
+# Sim-Time Parameter to force it downstream
+- set_parameter:
+    name: "use_sim_time"
+    value: "true"
+
+# Launch files that set use_sim_time read this
+- let:
+    name: "use_sim_time"
+    value: "true"
+
+# Do not start the actual car
+- let:
+    name: "bringup"
+    value: "false"
+
+# No check args as here we want to explicitely allow parameters to traveldownstream 
+
+- include:
+    file: "$(find-pkg-share stack_master)/launch/$(var launch_file)"
