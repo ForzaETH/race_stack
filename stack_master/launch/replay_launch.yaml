@@ -4,7 +4,7 @@ launch:
 
 - arg:
     name: "launch_file"
-    description: "Launch file in stack_master/launch to replay, e.g. mapping_launch.yaml"
+    description: "Launch file in stack_master/launch to replay"
 
 # Sim-Time Parameter to force it downstream
 - set_parameter:
@@ -21,7 +21,7 @@ launch:
     name: "bringup"
     value: "false"
 
-# No check args as here we want to explicitely allow parameters to traveldownstream 
+# No check args as here we want to allow parameters to travel downstream 
 
 - include:
     file: "$(find-pkg-share stack_master)/launch/$(var launch_file)"
