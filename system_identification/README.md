@@ -18,7 +18,7 @@ Results go to `stack_master/config/<racecar_version>/`:
 
 ```shell
 git submodule update --init system_identification/lateral/on_track_sysid
-pip install torch   # only needed for on-track identification
+pip install "system_identification/lateral/on_track_sysid[on_track]"   # the Docker image does this at build time
 ```
 
 ## On-track identification (about a minute of driving)

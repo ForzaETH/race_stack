@@ -31,5 +31,12 @@ vcs import --recursive < "$BASALT_WS/src/basalt_wrapper/basalt_wrapper.repos"
 
 
 source /opt/ros/${ROS_DISTRO}/setup.bash
-colcon build --merge-install --symlink-install \
+# One package at a time, with as many compile jobs as cores and available RAM allow
+# (~2 GB per Eigen-heavy basalt TU): full parallelism otherwise freezes the host.
+MEM_JOBS=$(( $(awk '/MemAvailable/ {print $2}' /proc/meminfo) / (2 * 1024 * 1024) ))
+JOBS=$(( MEM_JOBS < $(nproc) ? MEM_JOBS : $(nproc) ))
+JOBS=$(( JOBS > 0 ? JOBS : 1 ))
+echo "Building basalt with $JOBS parallel jobs"
+MAKEFLAGS="-j$JOBS" colcon build --merge-install --symlink-install \
+    --executor sequential \
     --cmake-args -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
