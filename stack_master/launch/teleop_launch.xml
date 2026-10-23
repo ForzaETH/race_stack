@@ -1,11 +1,15 @@
 <!-- -*- mode: XML -*- -->
 <launch>
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
-    <arg name="use_vio" default="$(env USE_VIO false)" description="Launch the RealSense D455 camera (set via USE_VIO in .env)" />
+    <arg name="use_vio" default="$(env USE_VIO false)"
+        description="Launch the RealSense D455 camera (set via USE_VIO in .env)" />
 
-    <let name="joy_teleop_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
-    <let name="vesc_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
+    <let name="joy_teleop_config"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
+    <let name="vesc_config"
+        value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
     <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
+
 
     <!-- launch teleop -->
     <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
@@ -14,14 +18,13 @@
         <arg name="sensors_config" value="$(var sensors_config)" />
     </include>
 
-    <!-- RealSense D455 camera (only on cars with VIO) -->
+    <!-- RealSense D435 camera (only on cars with VIO) -->
     <group if="$(var use_vio)">
-        <node pkg="realsense2_camera" exec="realsense2_camera_node" name="camera" namespace="camera" output="screen">
-            <param from="$(find-pkg-share stack_master)/config/d455_config.yaml" />
+        <node pkg="realsense2_camera" exec="realsense2_camera_node" name="camera" namespace="camera"
+            output="screen">
+            <param from="$(find-pkg-share stack_master)/config/camera/d435_config.yaml" />
         </node>
         <node pkg="tf2_ros" exec="static_transform_publisher" name="static_baselink_to_camera_link"
-            args="--x 0.262377 --y 0.043761 --z 0.120451 --qx -0.0003105 --qy 0.0140676 --qz 0.0045111 --qw 0.9998908 --frame-id base_link --child-frame-id camera_link" />
-        <node pkg="tf2_ros" exec="static_transform_publisher" name="static_camera_link_to_camera_imu"
-            args="--x -0.016020 --y -0.030220 --z 0.007400 --qx -0.5 --qy 0.5 --qz -0.5 --qw 0.5 --frame-id camera_link --child-frame-id camera_imu" />
+            args="--x 0.317004 --y 0.017500 --z 0.094818 --qx 0.0 --qy -0.1305262 --qz 0.0 --qw 0.9914449 --frame-id base_link --child-frame-id camera_link" />
     </group>
 </launch>
