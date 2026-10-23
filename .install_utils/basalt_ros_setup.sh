@@ -56,4 +56,5 @@ else
 fi
 colcon build --merge-install --symlink-install \
     --cmake-args -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-    -DCMAKE_DISABLE_FIND_PACKAGE_realsense2=ON  # basalt_ros' T265 tool needs a library the trimmed basalt no longer has
+    -DCMAKE_DISABLE_FIND_PACKAGE_realsense2=ON \
+    -DJUST_INSTALL_CEREAL=ON  # basalt_ros' T265 tool needs a library the trimmed basalt no longer has; cereal's sandbox/docs need Boost
