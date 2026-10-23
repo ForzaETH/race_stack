@@ -22,15 +22,11 @@ mapping:
     read_only: true
     validation:
       bounds<>: [0, 100]
-  filter_kernel_size:
-    type: int
-    default_value: 9
-    description: "Side length of the square kernel for the morphological opening in cells"
-    read_only: true
-    validation:
-      bounds<>: [1, 31]
   min_free_width_m:
     type: double
     default_value: 0.85
     description: "Free regions narrower than this are treated as occupied (morphological opening)"
+    read_only: true
+    validation:
+      bounds<>: [0.05, 2.0]
 

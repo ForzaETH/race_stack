@@ -85,7 +85,8 @@ class OvertakingSectorSlicer(Node):
         # plot raceline without sector points
         fig, (ax1, axslider, axselect, axfinish) = plt.subplots(4, 1, gridspec_kw={'height_ratios': [5, 1, 1, 1]})
         ax1.plot(x, y, "b-", linewidth=0.7)
-        ax1.plot([mrk.pose.position.x for mrk in self.track_bounds.markers], [mrk.pose.position.y for mrk in self.track_bounds.markers], 'g-', linewidth=0.4)
+        for mrk in self.track_bounds.markers:  # one LINE_STRIP per bound
+            ax1.plot([p.x for p in mrk.points], [p.y for p in mrk.points], 'g-', linewidth=0.4)
         ax1.plot([wpnt.x_m for wpnt in self.glb_sp_wpnts.wpnts], [wpnt.y_m for wpnt in self.glb_sp_wpnts.wpnts], 'r-', linewidth=0.7)
         ax1.grid()
         ax1.set_aspect("equal", "datalim")
@@ -124,7 +125,8 @@ class OvertakingSectorSlicer(Node):
         def update_map(x, y, cur_s):
             ax1.cla()
             ax1.plot(x, y, "b-", linewidth=0.7)
-            ax1.plot([mrk.pose.position.x for mrk in self.track_bounds.markers], [mrk.pose.position.y for mrk in self.track_bounds.markers], 'g-', linewidth=0.4)
+            for mrk in self.track_bounds.markers:  # one LINE_STRIP per bound
+                ax1.plot([p.x for p in mrk.points], [p.y for p in mrk.points], 'g-', linewidth=0.4)
             ax1.plot([wpnt.x_m for wpnt in self.glb_sp_wpnts.wpnts], [wpnt.y_m for wpnt in self.glb_sp_wpnts.wpnts], 'r-', linewidth=0.7)
             ax1.grid()
             ax1.set_aspect("equal", "datalim")

@@ -1,0 +1,36 @@
+# Parameter definition for the global planner.
+# Values are set in stack_master/config/global_planner/global_planner_params.yaml, map_path by planner_launch.yaml
+
+global_planner:
+  map_path:
+    type: string
+    description: "Map directory with the map PNG/YAML; the global plan is written here"
+    read_only: true
+    validation:
+      not_empty<>: []
+  reverse_mapping:
+    type: bool
+    default_value: false
+    description: "Plan the track in reverse driving direction"
+    read_only: true
+  safety_width:
+    type: double
+    default_value: 0.6
+    description: "Width kept free around the raceline incl. the car, for the minimum curvature optimization in meters"
+    read_only: true
+    validation:
+      bounds<>: [0.2, 2.0]
+  safety_width_sp:
+    type: double
+    default_value: 0.6
+    description: "Width kept free around the raceline incl. the car, for the shortest path optimization in meters"
+    read_only: true
+    validation:
+      bounds<>: [0.2, 2.0]
+  centerline_smoothing_window_m:
+    type: double
+    default_value: 2.0
+    description: "Savitzky-Golay window for smoothing the centerline in meters"
+    read_only: true
+    validation:
+      bounds<>: [0.2, 10.0]

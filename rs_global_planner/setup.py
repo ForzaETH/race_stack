@@ -1,8 +1,10 @@
-import os
-from glob import glob
 from setuptools import setup
+from generate_parameter_library_py.setup_helper import generate_parameter_module
 
-package_name = 'global_planner'
+package_name = 'rs_global_planner'
+
+# Generates the typed parameters_codegen module from its YAML definition
+generate_parameter_module('parameters_codegen', 'rs_global_planner/parameters.yaml')
 
 setup(
     name=package_name,
@@ -12,8 +14,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/**/*.xml', recursive=True)),
-        (os.path.join('share', package_name, 'rviz'), glob(os.path.join('rviz', '*.rviz'))),
 
     ],
     install_requires=['setuptools'],
@@ -25,8 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'global_planner = global_planner.global_planner_node:main',
-            'global_trajectory_publisher = global_planner.global_trajectory_publisher:main'
+            'global_planner = rs_global_planner.planner_node:main',
+            'global_plan_publisher = rs_global_planner.publisher_node:main'
         ],
     },
 )

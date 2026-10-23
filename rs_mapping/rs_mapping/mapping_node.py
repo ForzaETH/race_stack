@@ -52,7 +52,6 @@ class MappingNode(Node):
         self.finish_trajectory_client = self.create_client(FinishTrajectory, '/finish_trajectory')
         self.write_state_client = self.create_client(WriteState, '/write_state')
 
-        
         # Subscribe to Cartographer
         self.create_subscription(OccupancyGrid, '/map', self.map_cb, 10)
         
@@ -66,12 +65,7 @@ class MappingNode(Node):
         self.create_timer(1 / self.params.rate_hz, self.loop)
         
     def latch_initial_pose(self) -> None:
-        """
-        Latch the start pose from the map -> base_link transform, once it exists.
-
-        Called every loop until it succeeds; the first transform available is the
-        one saved as the map's ``initial_pose``.
-        """
+        """Latch the initial pose from the map -> base_link transform, once it exists."""
         try:
             tf_msg = self.tf_buffer.lookup_transform(
                 self.map_frame, self.base_frame, Time())
@@ -94,9 +88,8 @@ class MappingNode(Node):
         self.filter_map_occupancy_grid()
 
     def filter_map_occupancy_grid(self) -> None:
-        """
-        Filters the occupancy grid map by performing morphological opening and binarization.
-        """
+        """Filters the occupancy grid map by performing morphological opening and binarization."""
+        
 
         # Reshape and cast OccupancyGrid to int8
         original_map = np.asarray(self.map.data, dtype=np.int8).reshape(self.map.info.height, self.map.info.width)

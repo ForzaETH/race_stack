@@ -1,7 +1,6 @@
 global_planner:
   ros__parameters:
-    rate: 10 # [hz]
     safety_width: 0.6 # [m] including the width of the car
     safety_width_sp: 0.6 # [m] including the width of the car for shortest path optimization
     reverse_mapping: False # By default, do not reverse the direction of the track
-    show_plots: False
+    centerline_smoothing_window_m: 2.0 # [m] Savitzky-Golay window for smoothing the centerline

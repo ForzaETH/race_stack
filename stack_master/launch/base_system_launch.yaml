@@ -127,10 +127,12 @@ launch:
     - name: "use_sim_time"
       value: "$(var use_sim_time)"
 
-# launch global trajectory republisher
-- include:
-    file: "$(find-pkg-share global_planner)/launch/global_trajectory_publisher_launch.xml"
-    arg:
+# publish the stored global plan of the map
+- node:
+    pkg: "rs_global_planner"
+    exec: "global_plan_publisher"
+    name: "global_plan_publisher"
+    param:
     - name: "map_path"
       value: "$(var map_path)"
 

@@ -2,4 +2,4 @@ mapping_node:
   ros__parameters:
     rate_hz: 10 # [hz]
     occupancy_grid_threshold: 10
-    filter_kernel_size: 9
+    min_free_width_m: 0.85 # [m] free regions narrower than this are treated as occupied
