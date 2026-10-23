@@ -24,3 +24,6 @@ apt-get -y install librealsense2-dbg
 if [ "$ARCH" = "amd64" ]; then
     apt-get -y install librealsense2-dkms
 fi
+
+# ROS 2 wrapper (ros-humble-realsense2-camera & co.)
+apt-get -y install "ros-humble-realsense2-*"

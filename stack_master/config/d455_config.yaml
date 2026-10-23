@@ -1,5 +1,5 @@
 # RealSense D400-series config, converted from the original ROS1 XML defaults.
-# Loaded by realsense_launch.py via `--params-file`.
+# Loaded by stack_master/launch/teleop_launch.xml when USE_VIO=true.
 #
 # Node parameter namespace must match: /<camera_name>/<camera_name>
 # (ROS2 convention: the realsense2_camera_node is both named and

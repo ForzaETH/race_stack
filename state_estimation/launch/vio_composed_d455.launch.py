@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
-# Full VIO bringup, single file: RealSense D455 driver -> Basalt VIO -> EKF bridge
-# Camera config lives in config/d400_vio.yaml (this package).
+# Basalt VIO -> EKF bridge. The RealSense D455 driver itself is launched with
+# the other sensors in stack_master/launch/teleop_launch.xml (USE_VIO=true).
 # Basalt calibration/VIO config lives in the state_estimation package.
 # Component layout based on Bernd Pfrommer <bernd.pfrommer@gmail.com>
 # -----------------------------------------------------------------------------
@@ -30,21 +30,7 @@ def camera_topic(*parts):
 
 
 def launch_setup(context, *args, **kwargs):
-    """Dynamically set up parameters and assemble camera + VIO nodes."""
-
-    # --- RealSense camera node ---
-    camera_name = LaunchConfig('camera_name')
-    serial_no = LaunchConfig('serial_no')
-    params_file = LaunchConfig('params_file')
-
-    camera_node = Node(
-        package='realsense2_camera',
-        executable='realsense2_camera_node',
-        name=camera_name,
-        namespace=camera_name,
-        output='screen',
-        parameters=[params_file, {'serial_no': serial_no}],
-    )
+    """Dynamically set up parameters and assemble VIO nodes."""
 
     # --- Basalt VIO container ---
     racecar_version = LaunchConfig('racecar_version').perform(context)
@@ -121,62 +107,18 @@ def launch_setup(context, *args, **kwargs):
         }]
     )
     
-    static_tf_node_camera_link = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_baselink_to_3dlidar',
-        arguments=[
-            '--x', '0.262377',
-            '--y', '0.043761',
-            '--z', '0.120451',
-            '--qx', '-0.0003105',
-            '--qy', '0.0140676',
-            '--qz', '0.0045111',
-            '--qw', '0.9998908',
-            '--frame-id', 'base_link',
-            '--child-frame-id', 'camera_link'
-        ]
-    )
-    
-    static_tf_node_camera_imu = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_camera_link_to_camera_imu',
-        arguments=[
-            '--x', '-0.016020',
-            '--y', '-0.030220',
-            '--z', '0.007400',
-            '--qx', '-0.5',
-            '--qy', '0.5',
-            '--qz', '-0.5',
-            '--qw', '0.5',
-            '--frame-id', 'camera_link',
-            '--child-frame-id', 'camera_imu',
-        ]
-    )
-
-    # return [camera_node, static_tf_node_camera_link, static_tf_node_camera_imu]
-    return [camera_node, static_tf_node_camera_link, static_tf_node_camera_imu, vio_container, basalt_to_ekf_node]
+    return [vio_container, basalt_to_ekf_node]
 
 
 def generate_launch_description():
-    """Declare all args, then assemble camera + VIO stack via OpaqueFunction
+    """Declare all args, then assemble the VIO stack via OpaqueFunction
     (needed because racecar_version has to be resolved at runtime to build
     the calibration filename)."""
 
-    default_params_file = state_estimation_file('d455_config.yaml') 
-
     return launch.LaunchDescription([
-        # --- camera identity + config ---
         LaunchArg('camera_name',
                   default_value='camera',
-                  description='Name/namespace the RealSense node is launched under'),
-        LaunchArg('serial_no',
-                  default_value='',
-                  description='RealSense device serial number (blank = first device found)'),
-        LaunchArg('params_file',
-                  default_value=default_params_file,
-                  description='YAML file with realsense2_camera_node parameters'),
+                  description='Name/namespace the RealSense node is launched under (see teleop_launch.xml)'),
 
         # --- Basalt / EKF bridge args ---
         LaunchArg('racecar_version',

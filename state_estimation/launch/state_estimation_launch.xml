@@ -4,7 +4,7 @@
     <arg name="map_name" default="hangar" />
     <arg name="skip_early_fusion" default="False" />
     <arg name="use_sim_time" default="False" />
-    <arg name="use_vio" default="False" />
+    <arg name="use_vio" default="$(env USE_VIO false)" description="Run Basalt VIO (set via USE_VIO in .env)" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
 
     <node pkg="imu_transformer" name="imu_transformer_node" exec="imu_transformer_node">

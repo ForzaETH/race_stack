@@ -4,15 +4,17 @@ ARG PLATFORM=arm
 ARG USER
 ARG UID
 ARG GID
+ARG USE_VIO=false
 
 SHELL [ "/bin/bash", "-c" ]
 ARG DEBIAN_FRONTEND=noninteractive
 
+# VIO (RealSense D455 + Basalt) is optional, controlled by USE_VIO in .env
 ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
-RUN chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh
+RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh; fi
 
 ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
-RUN chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh
+RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
 
 
 ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt
