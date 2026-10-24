@@ -14,6 +14,9 @@ ros-humble-rqt-reconfigure
 ros-humble-asio-cmake-module
 ros-humble-realsense2-camera
 ros-humble-foxglove-bridge
+ros-humble-ackermann-msgs
+ros-humble-nav2-msgs
+ros-humble-bond
 libbz2-dev
 libtbb-dev
 libopencv-dev
