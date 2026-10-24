@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import rclpy
+import yaml
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rcl_interfaces.msg import ParameterDescriptor
@@ -27,7 +28,25 @@ class GlobalPlanPublisherNode(Node):
         plan = GlobalPlan.load(map_dir)
         self.plan_publisher = GlobalPlanPublisher(self)
         self.plan_publisher.publish(plan)
+        self.plan_publisher.publish_sectors(plan.raceline, self.load_speed_sector_starts(map_dir, len(plan.raceline.wpnts)))
         self.get_logger().info(f"Published global plan of {map_dir.name}")
+
+    def load_speed_sector_starts(self, map_dir: Path, n_wpnts: int) -> list[int]:
+        """Start waypoint indices of the speed sectors in speed_scaling.yaml; a single whole-lap sector without them."""
+        path = map_dir / 'speed_scaling.yaml'
+        if not path.exists():
+            self.get_logger().warn(f"No {path.name} in {map_dir}, publishing the whole lap as one sector")
+            return [0]
+
+        params = yaml.safe_load(path.read_text())['sector_tuner']['ros__parameters']
+        starts = [int(params[f'Sector{i}']['start']) for i in range(params['n_sectors'])]
+
+        # Sectors sliced on a different raceline (e.g. re-planned since) no longer fit it
+        if not starts or starts[0] != 0 or starts != sorted(starts) or starts[-1] >= n_wpnts:
+            self.get_logger().error(f"Sectors in {path.name} don't fit the raceline ({n_wpnts} waypoints), "
+                                    "publishing the whole lap as one sector; slice the sectors again")
+            return [0]
+        return starts
 
 
 def main(args=None):

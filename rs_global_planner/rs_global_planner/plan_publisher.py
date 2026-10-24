@@ -3,7 +3,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from geometry_msgs.msg import Point
 from std_msgs.msg import Bool, ColorRGBA, Float64
-from rs_msgs.msg import WpntArray
+from rs_msgs.msg import Sector, SectorArray, WpntArray
 from visualization_msgs.msg import Marker, MarkerArray
 
 from .plan import GlobalPlan
@@ -26,11 +26,11 @@ class GlobalPlanPublisher:
         # For tools like the sector slicer panel: lap length of the raceline in meters, and that a plan is available
         self.track_length_pub = node.create_publisher(Float64, '/global_waypoints/track_length', LATCHED)
         self.ready_pub = node.create_publisher(Bool, '/global_waypoints/ready', LATCHED)
+        # Speed sectors along the raceline, e.g. for the lap analyser; always at least one
+        self.sectors_pub = node.create_publisher(SectorArray, '/sectors', LATCHED)
 
     def publish(self, plan: GlobalPlan) -> None:
-        xy = _xy(plan.raceline)
-        last_s = float(next(reversed([w.s_m for w in plan.raceline.wpnts])))
-        self.track_length_pub.publish(Float64(data=last_s + float(np.linalg.norm(xy[0] - xy[-1]))))  # + closing gap
+        self.track_length_pub.publish(Float64(data=_track_length(plan.raceline)))
         self.raceline_pub.publish(plan.raceline)
         self.shortest_path_pub.publish(plan.shortest_path)
         self.centerline_pub.publish(plan.centerline)
@@ -58,6 +58,19 @@ class GlobalPlanPublisher:
 
         self.ready_pub.publish(Bool(data=True))  # last, once everything of the plan is out
 
+    def publish_sectors(self, raceline: WpntArray, start_idxs: list[int]) -> None:
+        """
+        Sectors starting at the given raceline waypoint indices (the first must be 0).
+
+        They tile the lap: each ends where the next one starts, the last at the end of the lap.
+        """
+        s = [float(w.s_m) for w in raceline.wpnts]
+        end_idxs = [i - 1 for i in start_idxs[1:]] + [len(s) - 1]
+        end_s = [s[i] for i in start_idxs[1:]] + [_track_length(raceline)]
+        self.sectors_pub.publish(SectorArray(sectors=[
+            Sector(start_idx=start, end_idx=end, start_s=s[start], end_s=stop)
+            for start, end, stop in zip(start_idxs, end_idxs, end_s)]))
+
 
 RACELINE_COLOR = ColorRGBA(r=0.9, g=0.1, b=0.1, a=1.0)
 SHORTEST_PATH_COLOR = ColorRGBA(r=0.1, g=0.4, b=1.0, a=1.0)
@@ -67,6 +80,13 @@ TRACK_BOUNDS_COLOR = ColorRGBA(r=0.1, g=0.8, b=0.1, a=1.0)
 
 def _xy(wpnts: WpntArray) -> np.ndarray:
     return np.array([[w.x_m, w.y_m] for w in wpnts.wpnts])
+
+
+def _track_length(wpnts: WpntArray) -> float:
+    """Lap length in meters: s of the last waypoint plus the gap that closes the loop back to the first."""
+    xy = _xy(wpnts)
+    last_s = float(next(reversed([w.s_m for w in wpnts.wpnts])))
+    return last_s + float(np.linalg.norm(xy[0] - xy[-1]))
 
 
 def _track_bounds(wpnts: WpntArray) -> tuple[np.ndarray, np.ndarray]:
@@ -84,7 +104,7 @@ def _track_bounds(wpnts: WpntArray) -> tuple[np.ndarray, np.ndarray]:
     return xy - d_right * left_normal, xy + d_left * left_normal
 
 
-# Anchors of matplotlib's inferno colormap from 0.2 to 1.0 (the darkest part is skipped, it vanishes on dark backgrounds)
+# Anchors of matplotlib's inferno colormap from 0.2 to 1.0
 SPEED_COLORMAP = np.array([[0.258, 0.039, 0.406],
                            [0.578, 0.148, 0.404],
                            [0.865, 0.317, 0.226],

@@ -154,7 +154,7 @@ launch:
 
 # launch lap analyser
 - node:
-    pkg: "lap_analyser"
+    pkg: "rs_lap_analysis"
     exec: "lap_analyser"
     name: "lap_analyser"
     output: "screen"

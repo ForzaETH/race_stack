@@ -1,8 +1,6 @@
 from setuptools import setup
-import os
-from glob import glob
 
-package_name = 'lap_analyser'
+package_name = 'rs_lap_analysis'
 
 setup(
     name=package_name,
@@ -12,18 +10,17 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*launch.[pxy][yma]*'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
     maintainer_email='contact@forzaeth.ch',
-    description='The lap_analyser package',
+    description='Lap and sector statistics of the race car',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'lap_analyser = lap_analyser.lap_analyser:main', # runs main in lap_analyser.py
+            'lap_analyser = rs_lap_analysis.lap_analyser:main',
         ],
     },
 )
