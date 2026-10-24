@@ -29,14 +29,17 @@ class GlobalPlanPublisher:
         self.shortest_path_pub.publish(plan.shortest_path)
         self.centerline_pub.publish(plan.centerline)
 
-        # Raceline and shortest path colored by their speed profile
+        # Raceline and shortest path colored by their speed profile; each line with an arrow for the driving direction
         self.raceline_markers_pub.publish(MarkerArray(markers=[
-            _line_strip(_xy(plan.raceline), 'raceline', RACELINE_COLOR, colors=_speed_colors(plan.raceline))]))
+            _line_strip(_xy(plan.raceline), 'raceline', RACELINE_COLOR, colors=_speed_colors(plan.raceline)),
+            _direction_arrow(plan.raceline, 'raceline_direction', RACELINE_COLOR)]))
         self.shortest_path_markers_pub.publish(MarkerArray(markers=[
             _line_strip(_xy(plan.shortest_path), 'shortest_path', SHORTEST_PATH_COLOR,
-                        colors=_speed_colors(plan.shortest_path))]))
-        self.centerline_markers_pub.publish(
-            MarkerArray(markers=[_line_strip(_xy(plan.centerline), 'centerline', CENTERLINE_COLOR)]))
+                        colors=_speed_colors(plan.shortest_path)),
+            _direction_arrow(plan.shortest_path, 'shortest_path_direction', SHORTEST_PATH_COLOR)]))
+        self.centerline_markers_pub.publish(MarkerArray(markers=[
+            _line_strip(_xy(plan.centerline), 'centerline', CENTERLINE_COLOR),
+            _direction_arrow(plan.centerline, 'centerline_direction', CENTERLINE_COLOR)]))
 
         bound_right, bound_left = _track_bounds(plan.centerline)
         self.track_bounds_markers_pub.publish(MarkerArray(markers=[
@@ -91,4 +94,16 @@ def _line_strip(points: np.ndarray, ns: str, color: ColorRGBA, width: float = 0.
     marker.points = [Point(x=float(x), y=float(y)) for x, y in np.vstack((points, points[:1]))]
     if colors is not None:
         marker.colors = colors + colors[:1]  # the closing point repeats the first one
+    return marker
+
+
+def _direction_arrow(wpnts: WpntArray, ns: str, color: ColorRGBA, length: float = 0.6) -> Marker:
+    """Arrow at the first waypoint, pointing in the driving direction (its heading)."""
+    start = next(iter(wpnts.wpnts))  # first waypoint; the generated field type allows a set, which can't be indexed
+    marker = Marker(ns=ns, id=0, type=Marker.ARROW, action=Marker.ADD, color=color)
+    marker.header.frame_id = 'map'
+    marker.pose.orientation.w = 1.0
+    marker.scale.x, marker.scale.y, marker.scale.z = 0.08, 0.2, 0.2  # shaft diameter, head diameter, head length
+    marker.points = [Point(x=start.x_m, y=start.y_m),
+                     Point(x=start.x_m + length * np.cos(start.psi_rad), y=start.y_m + length * np.sin(start.psi_rad))]
     return marker

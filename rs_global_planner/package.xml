@@ -20,7 +20,7 @@
   <depend>visualization_msgs</depend>
   <exec_depend>rosidl_runtime_py</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
-  <exec_depend>global_racetrajectory_optimization</exec_depend>
+  <!-- also needs global_racetrajectory_optimization (workspace dependency, no package.xml so not declarable here) -->
   <exec_depend>stack_master</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
