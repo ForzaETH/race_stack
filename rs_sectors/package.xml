@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>rs_sectors</name>
+  <version>0.0.0</version>
+  <description>Sector slicing (Lichtblick panel backend) and runtime tuning of speed and overtaking sectors</description>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
+  <license>MIT</license>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <depend>rclpy</depend>
+  <depend>rs_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>rcl_interfaces</depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>frenet_conversion</exec_depend>
+  <exec_depend>stack_master</exec_depend>
+  <exec_depend>tf_transformations</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

@@ -1,37 +1,21 @@
-# Sector Tuner
+# rs_sectors
 Small package for handling the sector tuning (i.e. speed scaling and overtaking sectors).
 It takes care of providing the GUIs for slicing the racing line in sectors (done for speed scaling and overtaking separately) and then publishes the sectors and the corresponding scaled trajectories and scaling parameters once the system is running. 
 
-## (OT) Sector Slicer
-### Basic usage
+## Sector Slicer
+`sector_slicer` splits the raceline into speed sectors and overtaking sectors. It is started by
+`stack_master/launch/planner_launch.yaml` and controlled from the Lichtblick sector slicer panel (one panel per
+sector set, "Sector set" setting `speed` or `overtaking`).
 
-An example usage is in `<race_stack folder>/stack_master/launch/mapping_launch.xml`, where the sector slicers are launched as follows:
-```xml
-<!-- Launch Sector Slicer from Utils -->
-<node pkg="sector_tuner" exec="sector_slicer" name="sector_slicer" output="screen">
-    <param name="map_name" value="$(var map_name)" />
-</node>
+Per sector set `<set>` (`speed`, `overtaking`):
+- `/sector_slicer/<set>/cursor_s` (`std_msgs/Float64`, from the panel): slider position in meters along the raceline
+- `/sector_slicer/<set>/add_boundary` (`rs_msgs/AddBoundary`, `s_m`): add a sector boundary there
+- `/sector_slicer/<set>/save` (`std_srvs/Trigger`): write `speed_scaling.yaml` / `ot_sectors.yaml` into the map folder
+- `/sector_slicer/<set>/sectors` (`visualization_msgs/MarkerArray`): boundaries and slider position for the 3D panel
+  (speed blue, overtaking red)
 
-<!-- Launch Overtaking Sector Slicer from Utils -->
-<node pkg="sector_tuner" exec="ot_sector_slicer" name="ot_sector_slicer" output="screen">
-    <param name="map_name" value="$(var map_name)" />
-</node>
-```
-This specifically provides the functionality to slice the sectors.
-
-### How does it work
-
-One may launch the simulator plus the mapping routine:
-```
-ros2 launch stack_master base_system_launch.xml racecar_version:=SIM sim:=True map_name:=hangar_1905_v0 mapping_bool:=True
-ros2 launch stack_master mapping_launch.xml map_name:=hangar_1905_v0
-```
-Then the sector slicers will open GUIs for defining the sectors and generating a `speed_scaling.yaml` and a `ot_sectors.yaml`, respectively, within the maps folder. 
-
-Additionally, it will rebuild the `stack_master` package to install the new `yaml` configurations.
-**You will need to use a freshly sourced ros installation from here on.**
-
-Now you can launch the sim without the mapping routine and launch `rqt > Plugins > Configuration > Dynamic Reconfigure`. Enjoy dynamic reconfigure from here on.
+Boundaries snap to the nearest raceline waypoint. Saving overwrites the file with default `scaling`/`ot_flag` values.
+Once both sets are saved the node exits, which ends the planner launch.
 
 ## Sector Tuner and OT Interpolator
 
@@ -39,13 +23,13 @@ Now you can launch the sim without the mapping routine and launch `rqt > Plugins
 An example is in `<race_stack folder>/stack_master/launch/base_system_launch.xml`, where the sector tuner and ot interpolator are launched as follows:
 ```xml
 <!-- launch sector tuner -->
-<node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
+<node pkg="rs_sectors" name="sector_tuner" exec="sector_tuner">
     <param name="map_name" value="$(var map_name)" />
     <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/speed_scaling.yaml" />
 </node>
 
 <!-- launch ot sector tuner -->
-<node pkg="sector_tuner" name="ot_interpolator" exec="ot_interpolator">
+<node pkg="rs_sectors" name="ot_interpolator" exec="ot_interpolator">
     <param name="map_name" value="$(var map_name)" />
     <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/ot_sectors.yaml" />
 </node>

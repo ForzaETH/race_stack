@@ -1,0 +1,5 @@
+# Add a sector boundary at s_m (meters along the raceline); the node snaps it to the nearest waypoint
+float64 s_m
+---
+bool success
+string message

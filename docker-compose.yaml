@@ -47,6 +47,7 @@ services:
       - BAGS_DIR=/ws/bags
       - PYTHONPYCACHEPREFIX=/ws/build/.pycache
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - COLCON_DEFAULTS_FILE=/ws/src/race_stack/.install_utils/colcon_defaults.yaml
 
   zenoh_router:
     image: race_stack:humble_dev_${HOST_UID:-1000}
@@ -78,6 +79,10 @@ services:
     restart: unless-stopped
     volumes:
       - ws-install:/ws/install:ro
+      # symlink-install: install/ links into build/ and src/ (e.g. the .msg definitions of custom messages)
+      - ws-build:/ws/build:ro
+      - ../race_stack_deps:/ws/src:ro
+      - ./:/ws/src/race_stack:ro
     command: >
       bash -c "source /opt/ros/humble/setup.bash
       && if [ -f /ws/install/setup.bash ]; then source /ws/install/setup.bash; fi

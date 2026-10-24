@@ -124,11 +124,17 @@ class GlobalPlannerNode(Node):
             d_right, d_left = dist_to_bounds(trajectory[:, 1:3], bound_right, bound_left, reverse=self.params.reverse_mapping)
             return _trajectory_wpnts(trajectory, d_right, d_left)
 
+        # Bounds were extracted for the original driving direction; reverse_mapping swaps right and left
+        if self.params.reverse_mapping:
+            bound_right, bound_left = bound_left, bound_right
+
         return GlobalPlan(map_info=map_info,
                           est_lap_time=est_t_sp,
                           centerline=_centerline_wpnts(cent_with_dist),
                           raceline=trajectory_wpnts(raceline),
-                          shortest_path=trajectory_wpnts(shortest_path))
+                          shortest_path=trajectory_wpnts(shortest_path),
+                          bound_right=bound_right,
+                          bound_left=bound_left)
 
 
 def _trajectory_wpnts(trajectory: np.ndarray, d_right: np.ndarray, d_left: np.ndarray) -> WpntArray:

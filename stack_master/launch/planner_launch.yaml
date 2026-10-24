@@ -44,21 +44,13 @@ launch:
     - name: "node_names"
       value: ["map_server"]
 
-# Sector slicers
+# Sector slicer (speed and overtaking sectors); once both are saved, the whole launch ends
 - node:
-    pkg: "sector_tuner"
+    pkg: "rs_sectors"
     exec: "sector_slicer"
     name: "sector_slicer"
     output: "screen"
-    param:
-    - name: "map_path"
-      value: "$(var map_path)"
-
-- node:
-    pkg: "sector_tuner"
-    exec: "ot_sector_slicer"
-    name: "ot_sector_slicer"
-    output: "screen"
+    on_exit: "shutdown"
     param:
     - name: "map_path"
       value: "$(var map_path)"

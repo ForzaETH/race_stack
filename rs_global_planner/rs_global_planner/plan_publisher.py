@@ -2,7 +2,7 @@ import numpy as np
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile
 from geometry_msgs.msg import Point
-from std_msgs.msg import ColorRGBA
+from std_msgs.msg import Bool, ColorRGBA, Float64
 from rs_msgs.msg import WpntArray
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -23,8 +23,14 @@ class GlobalPlanPublisher:
         self.centerline_pub = node.create_publisher(WpntArray, '/centerline_waypoints', LATCHED)
         self.centerline_markers_pub = node.create_publisher(MarkerArray, '/centerline_waypoints/markers', LATCHED)
         self.track_bounds_markers_pub = node.create_publisher(MarkerArray, '/trackbounds/markers', LATCHED)
+        # For tools like the sector slicer panel: lap length of the raceline in meters, and that a plan is available
+        self.track_length_pub = node.create_publisher(Float64, '/global_waypoints/track_length', LATCHED)
+        self.ready_pub = node.create_publisher(Bool, '/global_waypoints/ready', LATCHED)
 
     def publish(self, plan: GlobalPlan) -> None:
+        xy = _xy(plan.raceline)
+        last_s = float(next(reversed([w.s_m for w in plan.raceline.wpnts])))
+        self.track_length_pub.publish(Float64(data=last_s + float(np.linalg.norm(xy[0] - xy[-1]))))  # + closing gap
         self.raceline_pub.publish(plan.raceline)
         self.shortest_path_pub.publish(plan.shortest_path)
         self.centerline_pub.publish(plan.centerline)
@@ -41,10 +47,16 @@ class GlobalPlanPublisher:
             _line_strip(_xy(plan.centerline), 'centerline', CENTERLINE_COLOR),
             _direction_arrow(plan.centerline, 'centerline_direction', CENTERLINE_COLOR)]))
 
-        bound_right, bound_left = _track_bounds(plan.centerline)
+        # The stored walls; plans saved before they were stored only allow rebuilding them from the centerline widths
+        if plan.bound_right is not None and plan.bound_left is not None:
+            bound_right, bound_left = plan.bound_right, plan.bound_left
+        else:
+            bound_right, bound_left = _track_bounds(plan.centerline)
         self.track_bounds_markers_pub.publish(MarkerArray(markers=[
             _line_strip(bound_right, 'track_bound_right', TRACK_BOUNDS_COLOR),
             _line_strip(bound_left, 'track_bound_left', TRACK_BOUNDS_COLOR)]))
+
+        self.ready_pub.publish(Bool(data=True))  # last, once everything of the plan is out
 
 
 RACELINE_COLOR = ColorRGBA(r=0.9, g=0.1, b=0.1, a=1.0)
@@ -58,7 +70,12 @@ def _xy(wpnts: WpntArray) -> np.ndarray:
 
 
 def _track_bounds(wpnts: WpntArray) -> tuple[np.ndarray, np.ndarray]:
-    """Right and left track bound, rebuilt from waypoint positions and their distances to the bounds."""
+    """
+    Right and left track bound, rebuilt from waypoint positions and their distances to the bounds.
+
+    Only a fallback: the distances are to the nearest wall point, not along the normal, so in corners the result
+    deviates and loops where the normals cross.
+    """
     xy = _xy(wpnts)
     psi = np.array([w.psi_rad for w in wpnts.wpnts])
     left_normal = np.column_stack((-np.sin(psi), np.cos(psi)))

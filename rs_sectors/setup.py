@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'sector_tuner'
+package_name = 'rs_sectors'
 
 setup(
     name=package_name,
@@ -20,11 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'sector_tuner = sector_tuner.sector_tuner:main',
-            'sector_slicer = sector_tuner.sector_slicer:main',
-            'ot_interpolator = sector_tuner.ot_interpolator:main',
-            'ot_sector_slicer = sector_tuner.ot_sector_slicer:main'
+            'sector_tuner = rs_sectors.sector_tuner:main',
+            'sector_slicer = rs_sectors.sector_slicer:main',
+            'ot_interpolator = rs_sectors.ot_interpolator:main',
         ],
     },
-    scripts=["scripts/finish_sector.sh"]
 )

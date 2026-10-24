@@ -44,6 +44,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/WpntArray.msg"
   "msg/OpponentTrajectory.msg"
   "msg/OppWpnt.msg"
+  "srv/AddBoundary.srv"
   DEPENDENCIES 
   "std_msgs"
   "geometry_msgs"

@@ -3,7 +3,8 @@
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages",
         "/ws/install/rs_msgs/local/lib/python3.10/dist-packages",
-        "/ws/install/rs_mapping/lib/python3.10/site-packages"
+        "/ws/install/rs_mapping/lib/python3.10/site-packages",
+        "/ws/install/rs_global_planner/lib/python3.10/site-packages"
     ],
     "ignore": ["**/parameters_codegen.py"],
     "typeCheckingMode": "basic",
