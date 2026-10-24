@@ -1,84 +1,76 @@
-# Current State
-This branch is highly experimental and may not work on all (any) devices yet. It is recommended to avoid using this branch for race stack developement.
+# Installation
 
-# Docker Structure and Guidelines
-**Note:** Currently only installation via docker has been tested and is supported.
+The ForzaETH race stack is designed to be used in Linux-based environment; in order to provide the same experience on as many devices as possible, it is containerised with [Docker](https://www.docker.com/). 
+## Dependencies
+### Ubuntu
 
-## Clone Repo
-Be aware to clone the ROS 2 branch!
+Download [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) and also follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/). 
+
+Although any code editor can be used with the stack, we recommend installing [Visual Studio Code](https://code.visualstudio.com/docs/setup/linux), as well as the [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) and [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extensions.
+
+Then install the required packages (git, git-credential manager, make):
 ```bash
-git clone -b ros2-humble --recurse-submodules git@github.com:ForzaETH/race_stack.git 
+sudo apt update
+sudo apt install git wget make
+
+wget https://github.com/git-ecosystem/git-credential-manager/releases/download/v2.7.0
+/gcm-linux-x64-2.7.0.deb
+sudo dpkg -i gcm-linux-x64-2.7.0.deb
+git-credential-manager configure
+git config --global credential.credentialStore secretservice
+```
+
+### MacOS
+
+If not installed already, download the MacOS package manager [Homebrew](https://brew.sh/):
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Download [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/), [Visual Studio Code](https://code.visualstudio.com/docs/setup/mac) as well as the [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker) and [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extensions.
+
+Then install the required packages (git, git credential manager, make, openssh, docker-cli):
+```bash
+brew update
+brew install git make
+brew install --cask git-credential-manager
+brew install docker
+```
+
+## Windows
+
+On Windows first install Ubuntu [Windows Subsystem for Linux](https://apps.microsoft.com/detail/9pdxgncfsczv?ocid=webpdpshare) (WSL2). 
+
+Download and setup Docker Desktop [Windows](https://docs.docker.com/desktop/setup/install/windows-install/). Enable WSL integration by accessing the Docker dashboard and navigating to **Settings > Resources > WSL Integration** and selecting Ubuntu, and then clicking on **Apply & Restart**.
+
+Download [Visual Studio Code](https://code.visualstudio.com/docs/setup/windows) as well as the [Docker](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-docker),  [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) and [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) extensions.
+
+From here, open the Terminal app on the previously downloaded Ubuntu app for Windows (do not use PowerShell or Windows Terminal). You will need to setup a username and password.
+
+Install [Git for Windows](https://gitforwindows.org/) and download the required packages in **the WSL / Ubuntu terminal**:
+```bash
+sudo apt update
+sudo apt install git make
+git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe"
+```
+## Stack installation
+
+In terminal (WSL terminal for Windows), clone the repository:
+```bash
+git clone -b revamp https://github.com/ForzaETH/race_stack.git
+```
+
+Navigate to the the folder and run the setup:
+```bash
 cd race_stack
+make setup
 ```
 
-## Structure
-The docker image is defined with the [Dockerfile](../.devcontainer/Dockerfile).
-
-
-**NOTE**: it is suggested to set a static IP for the robot with the ROS_HOSTNAME environment variable, so that the IP of the robot is always the same, as from [networking structure](../stack_master/checklists/networking.md).
-Setting up a static ip at this moment will allow you to set extra computers (that can ping such IP) to listen to the ROS messags on the robot, enabling fast and quick development. 
-
-
-## How to use (docker container)
-**Note 1**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
-
-**Step 1/2: Build the container**
-The build process is managed by the Makefile. The command `default_setup` creates a cache folder (`setup_cache`) and a .env file (`export_env`) before it builds the container (`build`). It also detects if you are on a x86 or arm machine and builds the correct image. 
-
+Open the the folder in Visual Studio Code
 ```bash
-make default_setup
+code .
 ```
 
+and type `CTRL + SHIFT + P` (or `CMD + SHIFT + P` on MacOS) and select *Dev Containers: Rebuild Container*.
 
-**Step 2/2: Set up X forwarding and launch the container**
-To get GUI application properly forwarded, run the additional setup script that sets up the xauth file for the container. The launch command does this automatically. If you are on an arm machine (such as a macbook) this step is omitted. It is recommended to use [this](https://github.com/ETH-PBL/remote-novnc) for display support. To launch the container you can then run:
-
-```bash
-cd <race_stack folder>
-make launch
-```
-This spins up the container and runs some post installation steps. This is only done the first time and the next time the script will detect the correct container and restarts it. After the post installation finished you can run `make launch` again to attach a terminal to the container.
-
-
-## How to use (VSCode devcontainer)
-
-**Note**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
-
-**Step 1/2: Building** 
- The build step is the same as above for a docker container.
-
-**Step 2/2: Open the devcontainer**
-
-**Note** this step must be done strictly after the completion of step 1, as otherwise the permission file mounted in the devcontainer might be wrong.
-
-Open the devcontainer on the car, first by opening up VSCode, then connecting to the car with the remote connection button to the bottom left (Connect to Host...), then open the race stack folder, and reopen in the devcontainer.
-Once in the devcontainer, open a terminal and export the `DISPLAY` variable number. For example:
-```bash
-export DISPLAY=localhost:10.0
-```
-
-You can now enjoy a terminal with GUI forwarding! If you need multiple GUI applications, make sure to export the `DISPLAY` variable in each terminal you want to use GUI applications in.
-
-## How to use GUI applications with the container
-To have more information on how to use GUI applications with remote containers, please refer to the [GUI applications documentation](./README_GUI.md).
-
----
-[Go back to the main README](../README.md)
-
-### To manually install dependencies (should not be necessary if you build in docker):
-```bash
-# general ubuntu packages dependencies
-xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req.txt
-
-# ubuntu packages dependencies for sim
-xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req_sim.txt
-
-# ubuntu packages dependencies for car
-xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req_car.txt
-
-# python dependencies
-pip install -r ~/ws/src/race_stack/.install_utils/python_req.txt
-
-# setup f1tenth_gym
-source ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh
-```
+That's it! You're ready to go.
