@@ -42,7 +42,7 @@ launch:
 
 - let:
     name: "teleop_launch"
-    value: "$(find-pkg-share stack_master)/launch/teleop_launch.xml"
+    value: "$(find-pkg-share stack_master)/launch/teleop_launch.yaml"
 
 - let:
     name: "state_estimation_launch"
@@ -65,7 +65,7 @@ launch:
     file: "$(var teleop_launch)"
     if: "$(var bringup)"
     arg:
-    - name: "racecar_version"
+    - name: "racecar"
       value: "$(var racecar)"
 
 # Launch state estimation

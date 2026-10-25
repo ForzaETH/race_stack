@@ -82,7 +82,7 @@ The localization package is launched via the aformentioned main state estimation
 
 ### Parameters
 
-The parameters associated with SLAM localization can be modified in the configuration files located under `stack_master/config/[racecar_version]/slam/`, where `[racecar_version]` is the subfolder corresponding to the vehicle in question. When mapping, edit the `f110_2d.lua` (for Mapping) or `f110_2d_loc.lua` (for Localization) file.
+The parameters associated with SLAM localization can be modified in the configuration files located under `stack_master/config/slam/`, shared by all cars. When mapping, edit the `f110_2d.lua` (for Mapping) or `f110_2d_loc.lua` (for Localization) file.
 
 Based on our trust on Odometry values:
 - `TRAJECTORY_BUILDER_2D.ceres_scan_matcher.rotation_weight`

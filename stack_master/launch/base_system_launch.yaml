@@ -87,10 +87,10 @@ launch:
     children:
     # launch teleop stack
     - include:
-        file: "$(find-pkg-share stack_master)/launch/teleop_launch.xml"
+        file: "$(find-pkg-share stack_master)/launch/teleop_launch.yaml"
         if: "$(var bringup)"
         arg:
-        - name: "racecar_version"
+        - name: "racecar"
           value: "$(var racecar)"
 
     # launch SE
