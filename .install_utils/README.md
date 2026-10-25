@@ -13,9 +13,8 @@ Then install the required packages (git, git-credential manager, make):
 sudo apt update
 sudo apt install git wget make
 
-wget https://github.com/git-ecosystem/git-credential-manager/releases/download/v2.7.0
-/gcm-linux-x64-2.7.0.deb
-sudo dpkg -i gcm-linux-x64-2.7.0.deb
+wget https://github.com/git-ecosystem/git-credential-manager/releases/download/v3.0.1/gcm-linux-x64-3.0.1.deb
+sudo dpkg -i gcm-linux-x64-3.0.1.deb
 git-credential-manager configure
 git config --global credential.credentialStore secretservice
 ```
@@ -64,6 +63,12 @@ Navigate to the the folder and run the setup:
 ```bash
 cd race_stack
 make setup
+```
+
+Disable the Docker Buildx bake filesystem entitlement check, then restart Visual Studio Code so it picks up the new environment variable:
+```bash
+echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.profile
+echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.bashrc
 ```
 
 Open the the folder in Visual Studio Code
