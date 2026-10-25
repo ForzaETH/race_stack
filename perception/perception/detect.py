@@ -75,7 +75,7 @@ class Detect(Node):
 
     It subscribes to the following topics:
         - `/scan`: Publishes the lidar scans
-        - `/global_waypoints`: Publishes the global waypoints
+        - `/global_plan/raceline`: Publishes the global waypoints
         - `/odom_frenet`: Publishes the car state in frenet frame
 
 
@@ -111,7 +111,7 @@ class Detect(Node):
         self.scan_sub = self.create_subscription(
             LaserScan, '/scan', self.laserCb, 10, callback_group=msgs_cb_group)
         self.glob_wpts_sub = self.create_subscription(
-            WpntArray, '/global_waypoints', self.pathCb, LATCHED, callback_group=msgs_cb_group)
+            WpntArray, '/global_plan/raceline', self.pathCb, LATCHED, callback_group=msgs_cb_group)
         self.car_state_sub = self.create_subscription(
             FrenetState, '/car_state/frenet', self.carStateCb, 10, callback_group=msgs_cb_group)
 

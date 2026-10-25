@@ -15,7 +15,7 @@ class LapAnalyser(Node):
                 
         # Get sectors
         self.sector_starts = self.sector_ends = np.array([])
-        self.sectors_sub = self.create_subscription(SectorArray, "/sectors", self.sectors_cb, LATCHED)
+        self.sectors_sub = self.create_subscription(SectorArray, "/global_plan/speed_sectors", self.sectors_cb, LATCHED)
         
         # Publish data per sector
         self.sector_pub = self.create_publisher(SectorData, "~/sector_data", 10)
@@ -26,7 +26,7 @@ class LapAnalyser(Node):
         # Subscribe to the global waypoints
         self.wpnt_s = self.wpnt_d_left = self.wpnt_d_right = np.array([])
         self.track_length = 0.0
-        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED)
+        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_plan/raceline", self.waypoints_cb, LATCHED)
         
         # Update metrics at each state update
         self.frenet_sub = self.create_subscription(FrenetState, "/car_state/frenet", self.frenet_state_cb, 10)

@@ -273,7 +273,7 @@ class StaticDynamic(Node):
 
     It subscribes to the following topics:
         - `/raw_obstacles`: the raw obstacle data.
-        - `/global_waypoints`: the global waypoints.
+        - `/global_plan/raceline`: the global waypoints.
         - `/odom_frenet`: the car state in frenet frame.
         - `/odom`: the car state in glob frame.
         - `/scan`: the lidar scans.
@@ -462,7 +462,7 @@ class StaticDynamic(Node):
         self.obs_sub = self.create_subscription(
             ObstacleArray, '/perception/detection/raw_obstacles', self.obstacleCallback, 10)
         self.glob_wpts_sub = self.create_subscription(
-            WpntArray, '/global_waypoints', self.pathCallback, LATCHED)
+            WpntArray, '/global_plan/raceline', self.pathCallback, LATCHED)
         self.cs_frenet = self.create_subscription(
             FrenetState, '/car_state/frenet', self.carStateCallback, 10)
         self.cs_odom_sub = self.create_subscription(

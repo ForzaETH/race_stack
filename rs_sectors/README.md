@@ -4,7 +4,7 @@ It takes care of providing the GUIs for slicing the racing line in sectors (done
 
 ## Sector Slicer
 `sector_slicer` splits the raceline into speed sectors and overtaking sectors. It is started by
-`stack_master/launch/planner_launch.yaml` and controlled from the Lichtblick sector slicer panel (one panel per
+`stack_master/launch/planner_launch.py` and controlled from the Lichtblick sector slicer panel (one panel per
 sector set, "Sector set" setting `speed` or `overtaking`).
 
 Per sector set `<set>` (`speed`, `overtaking`):

@@ -43,14 +43,14 @@ class OvertakingInterpolator(Node):
 
         # SUBSCRIBE
         self.glb_wpnts_name = "/global_waypoints_scaled"
-        self.glb_wpnts_sp_name = "/global_waypoints/shortest_path"
+        self.glb_wpnts_sp_name = "/global_plan/shortest_path"
         # Add dynamic reconfigure
         self.handler = ParameterEventHandler(self)
         self.callback_handle = self.handler.add_parameter_event_callback(
             callback=self.dyn_param_cb,
         )
         self.glb_wpnt_scaled_sub = self.create_subscription(WpntArray, self.glb_wpnts_name, self.glb_wpnts_cb, LATCHED)
-        self.glb_wpnt_og_sub = self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED)
+        self.glb_wpnt_og_sub = self.create_subscription(WpntArray, "/global_plan/raceline", self.glb_wpnts_og_cb, LATCHED)
         self.glb_wpnt_sp_sub = self.create_subscription(WpntArray, self.glb_wpnts_sp_name, self.glb_wpnts_sp_cb, LATCHED)
 
         # new glb_waypoints

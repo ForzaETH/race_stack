@@ -49,11 +49,11 @@ class ObstaclePublisher(Node):
 
         # choose trajectory
         if self.waypoints_type == 'min_curv':
-            self.waypoints_topic = '/global_waypoints'
+            self.waypoints_topic = '/global_plan/raceline'
         elif self.waypoints_type == 'shortest_path':
-            self.waypoints_topic = '/global_waypoints/shortest_path'
+            self.waypoints_topic = '/global_plan/shortest_path'
         elif self.waypoints_type == 'centerline':
-            self.waypoints_topic = '/centerline_waypoints'
+            self.waypoints_topic = '/global_plan/centerline'
         else:
             self.get_logger().error('Invalid trajectory type')
         
@@ -61,7 +61,7 @@ class ObstaclePublisher(Node):
         # Subscriptions and Publishers
         self.odom_subscriber = self.create_subscription(Odometry, '/car_state/odom_frenet', self.odom_cb, 10)
         self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, LATCHED)
-        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, LATCHED)
+        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_plan/raceline', self.global_waypoints_cb, LATCHED)
         
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,

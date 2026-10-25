@@ -39,7 +39,7 @@ class SectorTuner(Node):
             self.set_descriptor('Sector'+str(i)+'.scaling',descriptor=desc)
 
         # dyn params sub
-        self.glb_wpnts_name = "/global_waypoints"
+        self.glb_wpnts_name = "/global_plan/raceline"
         self.handler = ParameterEventHandler(self)
         self.callback_handle = self.handler.add_parameter_event_callback(
             callback=self.dyn_param_cb,
@@ -51,7 +51,7 @@ class SectorTuner(Node):
             LATCHED)
         self.global_waypoint_sp_sub = self.create_subscription(
             WpntArray,
-            self.glb_wpnts_name+"/shortest_path",
+            "/global_plan/shortest_path",
             self.global_waypoints_sp_cb,
             LATCHED)
         

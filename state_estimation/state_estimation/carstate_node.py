@@ -49,7 +49,7 @@ class Carstate(Node):
 
         # subscribers
         self.ekf_odom_sub = self.create_subscription(Odometry, self.odom_in_topic, self.ekf_odom_cb, 10)
-        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_waypoints", self.gb_wpnts_cb, LATCHED)
+        self.gb_wpnts_sub = self.create_subscription(WpntArray, "/global_plan/raceline", self.gb_wpnts_cb, LATCHED)
 
         # publishers
         self.state_odom_pub = self.create_publisher(Odometry, self.odom_out_topic, 10)

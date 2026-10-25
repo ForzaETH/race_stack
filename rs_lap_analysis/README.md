@@ -7,8 +7,8 @@ raceline, closest approach to a wall and mean/max speed.
 
 Subscribes to:
 - `/car_state/frenet` (`rs_msgs/FrenetState`): position along the raceline, all timing uses its stamps
-- `/global_waypoints` (`rs_msgs/WpntArray`, latched): raceline and its distances to the walls
-- `/sectors` (`rs_msgs/SectorArray`, latched, from `global_plan_publisher`): always at least one sector
+- `/global_plan/raceline` (`rs_msgs/WpntArray`, latched): raceline and its distances to the walls
+- `/global_plan/speed_sectors` (`rs_msgs/SectorArray`, latched, from `global_plan_server`): always at least one sector
 
 Publishes:
 - `/lap_analyser/sector_data` (`rs_msgs/SectorData`): when the car leaves a sector

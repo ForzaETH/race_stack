@@ -80,7 +80,7 @@ class LocalPlanner(Node):
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
         # Subscriptions
-        self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED)  # from og wpnts
+        self.create_subscription(WpntArray, "/global_plan/raceline", self.glb_wpnts_og_cb, LATCHED)  # from og wpnts
         self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, LATCHED)
         self.create_subscription(RaceState, "/state", self.state_cb, 1)
         self.get_logger().info("[Local Planner] Waiting for state machine state message...")

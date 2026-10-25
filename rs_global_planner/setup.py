@@ -26,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'global_planner = rs_global_planner.planner_node:main',
-            'global_plan_publisher = rs_global_planner.publisher_node:main'
+            'global_plan_server = rs_global_planner.server_node:main'
         ],
     },
 )

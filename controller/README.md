@@ -14,7 +14,7 @@ This nodes subscribes to:
 - `/car_state/odom`: Reads the car's state
 - `/car_state/pose`: Reads the car's state
 - `/car_state/frenet`: Reads the car's state in Frenet coordinates
-- `/global_waypoints`: Subscribes to local waypoints.
+- `/global_plan/raceline`: Subscribes to local waypoints.
 - `/vesc/sensors/imu/raw`: Reads the IMU measurements.
 - `/scan`: Reads the LiDAR scans.
 - `/l1_param_cb`: Listens to the L1 parameters.

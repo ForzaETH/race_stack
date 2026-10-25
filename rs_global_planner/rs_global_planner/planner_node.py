@@ -9,14 +9,12 @@ from skimage.morphology import skeletonize
 
 import rclpy
 from rclpy.node import Node
-from rclpy.executors import ExternalShutdownException
 from rclpy.logging import get_logger
 from ament_index_python.packages import get_package_share_directory
 from rs_msgs.msg import Wpnt, WpntArray
 
 from trajectory_planning_helpers.calc_head_curv_num import calc_head_curv_num
 from .plan import GlobalPlan
-from .plan_publisher import GlobalPlanPublisher
 from global_racetrajectory_optimization.trajectory_optimizer import trajectory_optimizer
 from global_racetrajectory_optimization import helper_funcs_glob
 from .track_geometry import extract_centerline, \
@@ -31,7 +29,11 @@ from rs_global_planner.parameters_codegen import global_planner as global_planne
 
 
 class GlobalPlannerNode(Node):
-    """Global planner node"""
+    """
+    Offline tool: computes the global plan of a map and stores it there (global_waypoints.json), then exits.
+
+    Publishes nothing; the global plan server serves the stored plan.
+    """
     
     def __init__(self):
         super().__init__('global_planner')
@@ -44,12 +46,9 @@ class GlobalPlannerNode(Node):
         # Vehicle model and optimizer options of the trajectory optimizer
         self.input_path = Path(get_package_share_directory('stack_master')) / 'config' / 'global_planner'
 
-        self.plan_publisher = GlobalPlanPublisher(self)
-
         self.img, self.map_resolution, self.map_origin, self.initial_pose = self.load_map()
         plan = self.plan()
         plan.save(self.map_dir)
-        self.plan_publisher.publish(plan)
         self.get_logger().info(f'[GLOBAL_PLANNER] Global plan saved to {self.map_dir}')
 
     def load_map(self):
@@ -162,13 +161,14 @@ def _centerline_wpnts(cent_with_dist: np.ndarray) -> WpntArray:
 def main(args=None):
     rclpy.init(args=args)
     try:
-        node = GlobalPlannerNode()
-        rclpy.spin(node)
+        GlobalPlannerNode()  # plans and stores the plan on construction
     except (PlannerError, RuntimeError, ValueError, IOError) as e:
         get_logger('global_planner').fatal(f'[GLOBAL_PLANNER] Planning failed: {e}')
         raise SystemExit(1)
-    except (KeyboardInterrupt, ExternalShutdownException):
-        pass 
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rclpy.try_shutdown()
 
 if __name__ == '__main__':
     main()

@@ -133,9 +133,9 @@ class SectorSlicer(Node):
         self.done = Future()
 
         self.sector_sets = [SectorSet(self, 'speed', overtaking=False), SectorSet(self, 'overtaking', overtaking=True)]
-        self.create_subscription(WpntArray, '/global_waypoints', self.wpnts_cb, LATCHED)
+        self.create_subscription(WpntArray, '/global_plan/raceline', self.wpnts_cb, LATCHED)
 
-        self.get_logger().info('Waiting for the raceline on /global_waypoints...')
+        self.get_logger().info('Waiting for the raceline on /global_plan/raceline...')
 
     def wpnts_cb(self, msg: WpntArray) -> None:
         self.wpnts_s = np.array([w.s_m for w in msg.wpnts])

@@ -1,5 +1,5 @@
 # Parameter definition for the global planner.
-# Values are set in stack_master/config/global_planner/global_planner_params.yaml, map_path by planner_launch.yaml
+# Values are set in stack_master/config/global_planner/global_planner_params.yaml, map_path by planner_launch.py
 
 global_planner:
   map_path:

@@ -1,21 +1,24 @@
 # rs_global_planner
 
-Computes the global plan of a map (centerline, raceline and shortest path) and publishes it for the rest of the stack.
+Computes the global plan of a map (centerline, raceline and shortest path) and serves it to the rest of the stack.
 
-The plan is computed once per map and stored as `global_waypoints.json` in the map directory. Every run of the base system then only loads and publishes it.
+The two jobs are separate executables:
+
+- **Planning is offline:** `global_planner` computes the plan once per map, stores it as `global_waypoints.json` in the map directory and exits. It publishes nothing.
+- **Serving is for running the stack:** `global_plan_server` loads the stored plan and publishes it, latched. It is the only publisher of a plan.
 
 ## Nodes
 
 | Executable | Launched by | Does |
 |---|---|---|
-| `global_planner` | `stack_master/launch/planner_launch.yaml` | map → plan → save `global_waypoints.json` → publish |
-| `global_plan_publisher` | `stack_master/launch/base_system_launch.yaml` | load `global_waypoints.json` → publish (fails if the map has no plan yet) |
-
-Both keep running after publishing: the topics are latched, so late subscribers still get the plan.
+| `global_planner` | `stack_master/launch/planner_launch.py` | map → plan → save `global_waypoints.json` → exit (offline, no topics) |
+| `global_plan_server` | `stack_master/launch/base_system_launch.yaml`, and `planner_launch.py` once the planner succeeded | load `global_waypoints.json` → publish, keeps running so the latched topics stay available (fails if the map has no plan yet) |
 
 ```bash
-ros2 launch stack_master planner_launch.yaml map:=<map name in $MAPS_DIR>
+ros2 launch stack_master planner_launch.py map:=<map name in $MAPS_DIR>
 ```
+
+`planner_launch.py` runs the planner, then starts the server for checking the new plan and slicing its sectors (sector slicer). If the planner fails, the launch shuts down instead of serving the previous plan.
 
 ## How the plan is computed
 
@@ -35,9 +38,8 @@ The vehicle model of the optimizer (`racecar_f110.ini`, `veh_dyn_info/`) is in `
 | Module | Contents |
 |---|---|
 | `planner_node.py` | `global_planner` node |
-| `publisher_node.py` | `global_plan_publisher` node |
+| `server_node.py` | `global_plan_server` node: latched topics of a plan, including the markers and sectors |
 | `plan.py` | `GlobalPlan`: the plan and its JSON file |
-| `plan_publisher.py` | latched topics of a plan, including the markers |
 | `track_geometry.py` | map image → centerline, track bounds, widths (numpy/OpenCV only, no ROS) |
 | `parameters.yaml` | parameter definitions (generate_parameter_library) |
 
@@ -53,18 +55,20 @@ Values are set in `stack_master/config/global_planner/global_planner_params.yaml
 | `safety_width_sp` | 0.6 m | same for the shortest path |
 | `centerline_smoothing_window_m` | 2.0 m | Savitzky-Golay window for smoothing the centerline |
 
-`global_plan_publisher` only takes `map_path`.
+`global_plan_server` only takes `map_path`.
 
-## Published topics (latched)
+## Topics of `global_plan_server` (latched)
 
 | Topic | Type | Contents |
 |---|---|---|
-| `/global_waypoints` | `rs_msgs/WpntArray` | raceline |
-| `/global_waypoints/shortest_path` | `rs_msgs/WpntArray` | shortest path |
-| `/centerline_waypoints` | `rs_msgs/WpntArray` | centerline |
-| `/global_waypoints/markers` | `visualization_msgs/MarkerArray` | raceline, line colored by speed |
-| `/global_waypoints/shortest_path/markers` | `visualization_msgs/MarkerArray` | shortest path, line colored by speed |
-| `/centerline_waypoints/markers` | `visualization_msgs/MarkerArray` | centerline line |
-| `/trackbounds/markers` | `visualization_msgs/MarkerArray` | right and left track bound lines |
+| `/global_plan/raceline` | `rs_msgs/WpntArray` | raceline |
+| `/global_plan/shortest_path` | `rs_msgs/WpntArray` | shortest path |
+| `/global_plan/centerline` | `rs_msgs/WpntArray` | centerline |
+| `/global_plan/raceline/markers` | `visualization_msgs/MarkerArray` | raceline, line colored by speed |
+| `/global_plan/shortest_path/markers` | `visualization_msgs/MarkerArray` | shortest path, line colored by speed |
+| `/global_plan/centerline/markers` | `visualization_msgs/MarkerArray` | centerline line |
+| `/global_plan/track_bounds/markers` | `visualization_msgs/MarkerArray` | right and left track bound lines |
+| `/global_plan/raceline/track_length` | `std_msgs/Float64` | lap length of the raceline in meters |
+| `/global_plan/speed_sectors` | `rs_msgs/SectorArray` | speed sectors from `speed_scaling.yaml` in the map directory; one whole-lap sector if it is missing or doesn't fit the raceline |
 
 All markers are in the `map` frame. In Lichtblick, add them to a 3D panel with display frame `map`, together with `/map`.

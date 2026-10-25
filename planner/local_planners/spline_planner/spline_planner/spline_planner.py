@@ -25,7 +25,7 @@ class ObstacleSpliner(Node):
     It subscribes to the following topics:
         - `/perception/obstacles`: Subscribes to the obstacle array.
         - `/car_state/odom_frenet`: Subscribes to the car state in Frenet coordinates.
-        - `/global_waypoints`: Subscribes to global waypoints.
+        - `/global_plan/raceline`: Subscribes to global waypoints.
         - `/global_waypoints_scaled`: Subscribes to the scaled global waypoints.
 
     The node publishes the following topics:
@@ -71,7 +71,7 @@ class ObstacleSpliner(Node):
         self.create_subscription(
             FrenetState, '/car_state/frenet', self.state_cb, QoSProfile(depth=10))
         self.create_subscription(
-            WpntArray, '/global_waypoints', self.gb_cb, LATCHED)
+            WpntArray, '/global_plan/raceline', self.gb_cb, LATCHED)
         self.create_subscription(
             WpntArray, '/global_waypoints_scaled', self.gb_scaled_cb, LATCHED)
 

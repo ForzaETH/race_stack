@@ -99,7 +99,7 @@ class Controller(Node):
         # '/l1_param_tuner/parameter_updates',self.l1_params_cb) #l1 param
         # tuning/updating
         self.create_subscription(RaceState, '/state', self.state_cb, 10)
-        self.create_subscription(WpntArray, '/global_waypoints', self.track_length_cb, LATCHED)
+        self.create_subscription(WpntArray, '/global_plan/raceline', self.track_length_cb, LATCHED)
         self.create_subscription(ObstacleArray, '/perception/obstacles', self.obstacle_cb, 10)
         self.create_subscription(WpntArray, '/local_waypoints', self.local_waypoint_cb,
                                  10)  # waypoints (x, y, v, norm trackbound, s, kappa)

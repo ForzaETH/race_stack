@@ -21,7 +21,7 @@ class FrenetOdomRepublisher(Node):
 
         self.global_trajectory_sub_ = self.create_subscription(
             WpntArray,
-            '/global_waypoints',
+            '/global_plan/raceline',
             self.global_trajectory_callback,
             LATCHED)
         self.odom_sub_ = self.create_subscription(
