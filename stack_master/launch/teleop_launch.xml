@@ -19,11 +19,4 @@
         <arg name="vesc_config" value="$(var vesc_config)" />
         <arg name="sensors_config" value="$(var sensors_config)" />
     </include>
-
-    <!-- RealSense D455 camera (only on cars with VIO) -->
-    <group if="$(var use_vio)">
-        <node pkg="realsense2_camera" exec="realsense2_camera_node" name="camera" namespace="camera" output="screen">
-            <param from="$(find-pkg-share stack_master)/config/d455_config.yaml" />
-        </node>
-    </group>
 </launch>

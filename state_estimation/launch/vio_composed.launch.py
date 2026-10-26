@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# Basalt VIO -> EKF bridge. The RealSense D455 driver itself is launched with
+# Basalt VIO -> EKF bridge. The RealSense D435 driver itself is launched with
 # the other sensors in stack_master/launch/teleop_launch.xml (USE_VIO=true).
 # Basalt calibration/VIO config lives in the state_estimation package.
 # Component layout based on Bernd Pfrommer <bernd.pfrommer@gmail.com>
@@ -34,8 +34,8 @@ def launch_setup(context, *args, **kwargs):
 
     # --- Basalt VIO container ---
     racecar_version = LaunchConfig('racecar_version').perform(context)
-    calib_file_name = f"d455_calib_{racecar_version}.json"
-    config_file_name = "d455_vio_config.json"
+    calib_file_name = f"d435_calib_{racecar_version}.json"
+    config_file_name = "vio_config.json"
 
     common_parameters = {
         'calibration_file': state_estimation_file(calib_file_name),
@@ -48,7 +48,7 @@ def launch_setup(context, *args, **kwargs):
         'world_frame_id': 'odom',                  # REP-105: VIO outputs to drifting odom frame
         'child_frame_id': LaunchConfig('imu_frame'),
         'publish_tf': False,                       # Let EKF handle global transform publishing
-        'has_split_accel_and_gyro_topics': False    # D455 outputs a unified combined IMU topic
+        'has_split_accel_and_gyro_topics': False    # D435 outputs a unified combined IMU topic
     }
 
     frontend_remappings = [
@@ -106,7 +106,7 @@ def launch_setup(context, *args, **kwargs):
             'tf_timeout': LaunchConfig('tf_timeout')
         }]
     )
-    
+
     return [vio_container, basalt_to_ekf_node]
 
 
@@ -123,7 +123,7 @@ def generate_launch_description():
         # --- Basalt / EKF bridge args ---
         LaunchArg('racecar_version',
                   default_value='NUC6',
-                  description='Selects config/d455_calib_<racecar_version>.json'),
+                  description='Selects config/d435_calib_<racecar_version>.json'),
         LaunchArg('left_image_topic',
                   default_value=camera_topic('infra1', 'image_rect_raw'),
                   description='Left infra camera raw image topic'),

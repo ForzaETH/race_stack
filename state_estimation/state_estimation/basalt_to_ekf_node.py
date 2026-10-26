@@ -20,7 +20,7 @@ class BasaltToEkf(Node):
         self.declare_parameter('input_topic', '/basalt/odomimu')
         self.declare_parameter('output_topic', '/basalt/odom')
         self.declare_parameter('base_frame', 'base_link')
-        self.declare_parameter('imu_frame', 'camera_imu')
+        self.declare_parameter('imu_frame', 'camera_imu_optical_frame')
         self.declare_parameter('world_frame', 'odom')
         self.declare_parameter('imu_topic', '/camera/imu')
         self.declare_parameter('tf_timeout', 30.0)
@@ -74,8 +74,8 @@ class BasaltToEkf(Node):
 
     def _imu_callback(self, msg):
         self._omega = np.array([msg.angular_velocity.x,
-                                 msg.angular_velocity.y,
-                                 msg.angular_velocity.z])
+                                msg.angular_velocity.y,
+                                msg.angular_velocity.z])
 
     def _odom_callback(self, msg):
         omega_imu = self._omega
