@@ -134,7 +134,7 @@ def generate_launch_description():
                   default_value=camera_topic('imu'),
                   description='Combined RealSense IMU data topic'),
         LaunchArg('imu_frame',
-                  default_value='camera_imu',
+                  default_value='camera_imu_optical_frame',
                   description='Basalt body frame identity'),
         LaunchArg('odom_topic',
                   default_value='/basalt/odom',
