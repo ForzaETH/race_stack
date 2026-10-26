@@ -1,0 +1,20 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+    <!-- Single source of truth for the sensor mounting transforms of a car.
+         Included by teleop (car, mapping) and by the simulator group so all three see the same tree. -->
+    <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
+    <arg name="sim" default="False" description="True if the simulator (not cartographer) localises the car" />
+
+    <node pkg="stack_master" exec="static_tf_publisher" name="static_tf_publisher">
+        <param name="config_file" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/static_transforms.yaml" />
+    </node>
+
+    <!-- The stack works in car_state/* frames. On the car cartographer localises base_link,
+         in the simulator the gym bridge localises car_state/base_link, so the identity alias flips. -->
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_baselink_to_car_state" unless="$(var sim)"
+        args="--frame-id base_link --child-frame-id car_state/base_link" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_car_state_to_baselink" if="$(var sim)"
+        args="--frame-id car_state/base_link --child-frame-id base_link" />
+    <node pkg="tf2_ros" exec="static_transform_publisher" name="static_laser_to_car_state"
+        args="--frame-id laser --child-frame-id car_state/laser" />
+</launch>

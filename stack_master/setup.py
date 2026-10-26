@@ -39,6 +39,7 @@ setup(
     entry_points={
         'console_scripts': [
             'global_parameter_node = stack_master.global_parameter_node:main',
+            'static_tf_publisher = stack_master.static_tf_publisher:main',
         ],
     },
 )

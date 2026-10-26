@@ -16,6 +16,11 @@
     <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
       <arg name="map_yaml_path" value="$(var map_path)/$(var map_name).yaml" />
     </include>
+    <!-- same sensor transforms as on the real car -->
+    <include file="$(find-pkg-share stack_master)/launch/static_transforms_launch.xml">
+      <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="sim" value="True" />
+    </include>
   </group>
 
   <!-- launch real car system -->
