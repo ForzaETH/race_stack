@@ -38,12 +38,7 @@
             <param name="use_sim_time" value="$(var use_sim_time)" />
         </node>
 
-            <!-- Map as occ grid -->
-            <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros" exec="cartographer_occupancy_grid_node" args="-resolution 0.05">
-                <param name="use_sim_time" value="$(var use_sim_time)" />
-            </node>
-
-            <!-- Launch map server with regular map name reads from OG MAP-->
+            <!-- Publish the stored map on /map, same file as the sim's map_server -->
             <node pkg="nav2_map_server" name="map_server" exec="map_server" output="screen">
                 <param name="yaml_filename" value="$(var map_path)/$(var map_name).yaml" />
                 <param name="use_sim_time" value="$(var use_sim_time)" />
