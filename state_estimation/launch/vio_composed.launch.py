@@ -46,7 +46,6 @@ def launch_setup(context, *args, **kwargs):
     backend_parameters = {
         **common_parameters,
         'world_frame_id': 'odom',                  # REP-105: VIO outputs to drifting odom frame
-        'child_frame_id': LaunchConfig('imu_frame'),
         'publish_tf': False,                       # Let EKF handle global transform publishing
         'has_split_accel_and_gyro_topics': False    # D435 outputs a unified combined IMU topic
     }
@@ -101,7 +100,6 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'input_topic': '/basalt/odomimu',
             'output_topic': LaunchConfig('odom_topic'),
-            'imu_frame': LaunchConfig('imu_frame'),
             'imu_topic': LaunchConfig('imu_topic'),
             'tf_timeout': LaunchConfig('tf_timeout')
         }]
@@ -133,9 +131,6 @@ def generate_launch_description():
         LaunchArg('imu_topic',
                   default_value=camera_topic('imu'),
                   description='Combined RealSense IMU data topic'),
-        LaunchArg('imu_frame',
-                  default_value='camera_imu_optical_frame',
-                  description='Basalt body frame identity'),
         LaunchArg('odom_topic',
                   default_value='/basalt/odom',
                   description='EKF-ready target destination odometry topic'),
