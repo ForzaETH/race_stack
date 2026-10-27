@@ -6,11 +6,13 @@ import time
 from ackermann_msgs.msg import AckermannDriveStamped
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import Joy
 
 from .actuation_limiter import ActuationLimiter
 from .actuation_limiter import ActuationLimits
 from .actuation_limiter import select_command_source
+from .actuation_limiter import vesc_range_to_physical
 
 
 class ActuationManager(Node):
@@ -21,14 +23,10 @@ class ActuationManager(Node):
 
         self.declare_parameter('navigation_topic', 'drive')
         self.declare_parameter('teleop_topic', 'teleop')
-        self.declare_parameter('output_topic', 'ackermann_cmd_applied')
+        self.declare_parameter('output_topic', 'ackermann_cmd')
         self.declare_parameter('output_rate', 75.0)
-        self.declare_parameter('speed_min', 0.0)
-        self.declare_parameter('speed_max', 0.0)
         self.declare_parameter('max_acceleration', 2.5)
         self.declare_parameter('max_deceleration', 2.5)
-        self.declare_parameter('steering_min', 0.0)
-        self.declare_parameter('steering_max', 0.0)
         self.declare_parameter('max_steering_rate', 3.2)
         self.declare_parameter('command_timeout', 0.2)
         self.declare_parameter('joy_timeout', 0.2)
@@ -49,13 +47,30 @@ class ActuationManager(Node):
         if self.human_deadman_button == self.autonomous_deadman_button:
             raise ValueError('human and autonomous deadman buttons must differ')
 
+        # Speed and steering bounds are what the VESC can reach, derived from
+        # the shared vesc parameters so they cannot drift from the calibration.
+        # speed_min/speed_max are the VESC's ERPM limits here.
+        speed_min, speed_max = vesc_range_to_physical(
+            self._vesc_parameter('speed_min'),
+            self._vesc_parameter('speed_max'),
+            self._vesc_parameter('speed_to_erpm_gain'),
+            self._vesc_parameter('speed_to_erpm_offset'))
+        steering_min, steering_max = vesc_range_to_physical(
+            self._vesc_parameter('servo_min'),
+            self._vesc_parameter('servo_max'),
+            self._vesc_parameter('steering_angle_to_servo_gain'),
+            self._vesc_parameter('steering_angle_to_servo_offset'))
+        self.get_logger().info(
+            f'Speed limits [{speed_min:.3f}, {speed_max:.3f}] m/s, '
+            f'steering limits [{steering_min:.4f}, {steering_max:.4f}] rad')
+
         limits = ActuationLimits(
-            speed_min=float(self.get_parameter('speed_min').value),
-            speed_max=float(self.get_parameter('speed_max').value),
+            speed_min=speed_min,
+            speed_max=speed_max,
             max_acceleration=self._positive_parameter('max_acceleration'),
             max_deceleration=self._positive_parameter('max_deceleration'),
-            steering_min=float(self.get_parameter('steering_min').value),
-            steering_max=float(self.get_parameter('steering_max').value),
+            steering_min=steering_min,
+            steering_max=steering_max,
             max_steering_rate=self._positive_parameter(
                 'max_steering_rate'),
         )
@@ -89,6 +104,10 @@ class ActuationManager(Node):
         if not math.isfinite(value) or value <= 0.0:
             raise ValueError(f'{name} must be finite and positive')
         return value
+
+    def _vesc_parameter(self, name):
+        self.declare_parameter(name, Parameter.Type.DOUBLE)
+        return float(self.get_parameter(name).value)
 
     def _read_command(self, message):
         speed = float(message.drive.speed)

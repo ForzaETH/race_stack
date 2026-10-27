@@ -7,6 +7,28 @@ import pytest
 from rs_bringup.actuation_limiter import ActuationLimiter
 from rs_bringup.actuation_limiter import ActuationLimits
 from rs_bringup.actuation_limiter import select_command_source
+from rs_bringup.actuation_limiter import vesc_range_to_physical
+
+
+def test_vesc_range_inverts_positive_gain():
+    assert vesc_range_to_physical(0.15, 0.85, 1.131, 0.57) == pytest.approx(
+        (-0.3713528, 0.2475685))
+
+
+def test_vesc_range_orders_negative_gain():
+    assert vesc_range_to_physical(0.15, 0.85, -1.131, 0.458) == pytest.approx(
+        (-0.3465959, 0.2723254))
+
+
+def test_vesc_range_converts_erpm_to_speed():
+    assert vesc_range_to_physical(-69000.0, 69000.0, 4800.0, 0.0) == (
+        pytest.approx(-14.375), pytest.approx(14.375))
+
+
+@pytest.mark.parametrize('gain', [0.0, math.nan])
+def test_vesc_range_rejects_invalid_gain(gain):
+    with pytest.raises(ValueError):
+        vesc_range_to_physical(0.15, 0.85, gain, 0.5)
 
 
 @pytest.fixture

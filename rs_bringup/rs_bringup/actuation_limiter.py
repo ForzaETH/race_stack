@@ -44,6 +44,21 @@ class ActuationState:
     steering_angle: float = 0.0
 
 
+def vesc_range_to_physical(lower, upper, gain, offset):
+    """Convert a VESC range (servo or ERPM) to physical units.
+
+    Uses ``physical = (vesc - offset) / gain``, the inverse of what
+    ackermann_to_vesc applies. Returns ``(minimum, maximum)``. With a
+    negative gain the ends come out swapped, so they are re-ordered.
+    """
+    if not all(math.isfinite(value) for value in (lower, upper, gain, offset)):
+        raise ValueError('VESC range, gain and offset must be finite')
+    if gain == 0.0:
+        raise ValueError('VESC gain must not be zero')
+    ends = ((lower - offset) / gain, (upper - offset) / gain)
+    return min(ends), max(ends)
+
+
 def _clip(value, lower, upper):
     return min(max(value, lower), upper)
 

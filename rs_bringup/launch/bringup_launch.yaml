@@ -1,0 +1,102 @@
+launch:
+
+- arg:
+    name: "racecar"
+    default: "$(env RACECAR_VERSION)"
+    description: "Car version: NUCX"
+    choice:
+    - value: "NUC2"
+    - value: "NUC4"
+    - value: "NUC5"
+    - value: "NUC6"
+    - value: "NUC7"
+    - value: "NUC10"
+
+- check_args: {}
+
+- let:
+    name: "joy_teleop_config"
+    value: "$(find-pkg-share stack_master)/config/joy_teleop.yaml"
+
+- let:
+    name: "vesc_config"
+    value: "$(find-pkg-share stack_master)/config/$(var racecar)/vesc.yaml"
+
+- let:
+    name: "sensors_config"
+    value: "$(find-pkg-share stack_master)/config/sensors.yaml"
+
+
+# Launch joystick
+- node:
+    pkg: "joy_linux"
+    exec: "joy_linux_node"
+    name: "joy"
+    param:
+    - from: "$(var joy_teleop_config)"
+
+- node:
+    pkg: "joy_teleop"
+    exec: "joy_teleop"
+    name: "joy_teleop"
+    param:
+    - from: "$(var joy_teleop_config)"
+
+# Launch actuation manager (enforces limits and allows deadman control)
+- node:
+    pkg: "rs_bringup"
+    exec: "actuation_manager"
+    name: "actuation_manager"
+    param:
+    - from: "$(var vesc_config)"
+
+# Launch VESC
+- node:
+    pkg: "vesc_ackermann"
+    exec: "ackermann_to_vesc_node"
+    name: "ackermann_to_vesc_node"
+    param:
+    - from: "$(var vesc_config)"
+
+- node:
+    pkg: "vesc_ackermann"
+    exec: "vesc_to_odom_node"
+    name: "vesc_to_odom_node"
+    param:
+    - from: "$(var vesc_config)"
+
+- node:
+    pkg: "vesc_driver"
+    exec: "vesc_driver_node"
+    name: "vesc_driver_node"
+    param:
+    - from: "$(var vesc_config)"
+
+
+# Launch LiDAR
+- node:
+    pkg: "urg_node"
+    exec: "urg_node_driver"
+    name: "urg_node"
+    param:
+    - from: "$(var sensors_config)"
+
+
+# Launch static transforms
+- node:
+    pkg: "tf2_ros"
+    exec: "static_transform_publisher"
+    name: "static_baselink_to_laser"
+    args: "--x 0.27 --y 0.0 --z 0.11 --roll 0.0 --pitch 0.0 --yaw 0.0 --frame-id base_link --child-frame-id laser --ros-args --log-level warn"
+
+- node:
+    pkg: "tf2_ros"
+    exec: "static_transform_publisher"
+    name: "static_baselink_to_imu"
+    args: "--x 0.07 --y 0.0 --z 0.05 --qx 0.0 --qy 0.0 --qz 0.7071068 --qw 0.7071068 --frame-id base_link --child-frame-id imu --ros-args --log-level warn"
+
+- node:
+    pkg: "tf2_ros"
+    exec: "static_transform_publisher"
+    name: "static_map_to_odom"
+    args: "--x 0.0 --y 0.0 --z 0.0 --roll 0.0 --pitch 0.0 --yaw 0.0 --frame-id map --child-frame-id odom --ros-args --log-level warn"

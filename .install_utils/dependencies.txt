@@ -1,4 +1,3 @@
 f1tenth_gym_ros https://github.com/ForzaETH/f1tenth_gym_ros revamp
-f1tenth_system https://github.com/ForzaETH/f1tenth_system humble
 vesc https://github.com/ForzaETH/vesc humble
 global_racetrajectory_optimization https://github.com/ForzaETH/global_racetrajectory_optimization 1fb71387a507a19077b6641adcbc2ca1e811d253

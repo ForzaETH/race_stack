@@ -15,31 +15,9 @@ launch:
 # fail on arguments this launch file does not declare
 - check_args: {}
 
-- let:
-    name: "joy_teleop_config"
-    value: "$(find-pkg-share stack_master)/config/joy_teleop.yaml"
-
-- let:
-    name: "vesc_config"
-    value: "$(find-pkg-share stack_master)/config/$(var racecar)/vesc.yaml"
-
-- let:
-    name: "sensors_config"
-    value: "$(find-pkg-share stack_master)/config/sensors.yaml"
-
-- let:
-    name: "mux_config"
-    value: "$(find-pkg-share stack_master)/config/mux.yaml"
-
 # launch teleop
 - include:
-    file: "$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py"
+    file: "$(find-pkg-share rs_bringup)/launch/bringup_launch.yaml"
     arg:
-    - name: "joy_teleop_config"
-      value: "$(var joy_teleop_config)"
-    - name: "vesc_config"
-      value: "$(var vesc_config)"
-    - name: "sensors_config"
-      value: "$(var sensors_config)"
-    - name: "mux_config"
-      value: "$(var mux_config)"
+    - name: "racecar"
+      value: "$(var racecar)"
