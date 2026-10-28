@@ -587,6 +587,7 @@ class Controller(Node):
             if status not in (0, 2):
                 self.get_logger().warning(f"STMPC solver status {status}, falling back to MAP", throttle_duration_sec=1.0)
                 speed, steering_angle = self.map_cycle()
+                self.waypoint_safety_counter -= 1  # map_cycle() already counted this cycle
                 acceleration, jerk = 0.0, 0.0
             else:
                 self.mpc_cost_pub.publish(Float32(data=float(self.mpc_controller.acados_solver.get_cost())))
