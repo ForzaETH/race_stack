@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="LU_table" default="NUC5_hangar_pacejka" />
+    <arg name="mode" default="MAP"
+        description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented" /> <!--
+    TODO implement PP and MAPPING -->
+    <arg
+        name="sim_opp" default="True"
+        description="True to remap topics to the simulated opponent ones" />
+
+    <!-- bags folder in the source tree (not the install space), same convention as stack_master
+    maps -->
+    <arg name="bag_path" description="ros2 input bag"
+        default="$(find-pkg-prefix se_evaluation)/../../src/race_stack/se_evaluation/bags" />
+    <arg name="input" description="Name of the bag to convert" />
+
+    <group>
+        <!-- bag is played with clock, so every node (incl. ones without a use_sim_time param) runs
+        on sim time -->
+        <set_parameter name="use_sim_time" value="True" />
+
+        <node pkg="se_evaluation" name="se_evaluation" exec="rosbag_recordings_input"
+            args="-input $(var bag_path)/$(var input)"
+            output="screen" />
+    </group>
+</launch>

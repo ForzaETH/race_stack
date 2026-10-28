@@ -24,16 +24,16 @@
         on sim time -->
         <set_parameter name="use_sim_time" value="True" />
 
-        <node pkg="se_evaluation" name="se_evaluation" exec="se_evaluation" output="screen" />
-
         <!-- only replay raw sensor data, the rest (tf, imu, ekf, cartographer) is recomputed below.
         shut the whole launch down once playback finishes, which also stops the recorder cleanly -->
         <executable
             cmd="ros2 bag play $(var bag_path)/$(var input) --clock --rate $(var bag_rate) --topics /scan /odom /sensors/imu/raw /tf_static"
             output="screen" on_exit="shutdown" />
 
-        <!-- default bag name is timestamped, so reruns don't collide -->
-        <executable cmd="ros2 bag record -a" cwd="$(var output)" output="screen" />
+        <!-- record to the next free output-<N> folder, so reruns don't collide -->
+        <let name="record_path"
+            value="$(command 'ros2 run se_evaluation next_output $(var output)')" />
+        <executable cmd="ros2 bag record -a -o $(var record_path)" output="screen" />
 
         <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
             <arg name="racecar_version" value="$(var racecar_version)" />

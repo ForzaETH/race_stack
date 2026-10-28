@@ -27,7 +27,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'se_evaluation = se_evaluation.se_evaluation:main'
+            'se_evaluation = se_evaluation.se_evaluation:main',
+            'next_output = se_evaluation.next_output:main',
+            'rosbag_recordings_input = se_evaluation.rosbag_recordings_input:main'
         ],
     },
 )
