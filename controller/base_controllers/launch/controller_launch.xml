@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented"/> <!-- TODO implement PP and MAPPING -->
+  <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / STMPC / KMPC / FTG. STMPC and KMPC need acados"/>
   <arg name="sim_opp" default="False" description="True to remap topics to the simulated opponent ones" />
 
   <!--  launch L1 controller -->
@@ -14,6 +14,9 @@
     <set_remap from="/local_waypoints" to="/opp_racecar/local_waypoints" if="$(var sim_opp)" />
     <set_remap from="/perception/obstacles" to="/opp_racecar/perception/obstacles" if="$(var sim_opp)" />
     <node pkg="controller" name="controller" exec="controller">
+        <param name="mode" value="$(var mode)"/>
+    </node>
+    <node pkg="controller" name="mpc_visualizer" exec="mpc_visualizer" if="$(eval '\'$(var mode)\' in [\'STMPC\', \'KMPC\']')">
         <param name="mode" value="$(var mode)"/>
     </node>
   </group>
