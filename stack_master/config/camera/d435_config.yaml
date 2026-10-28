@@ -14,7 +14,7 @@ camera:
 
       # --- depth stream ---
       enable_depth: false
-      depth_module.profile: 640x360x30
+      depth_module.depth_profile: 848x480x30
 
       # --- color stream ---
       enable_color: false
@@ -23,8 +23,9 @@ camera:
       # --- infra streams ---
       enable_infra1: true
       enable_infra2: true
-      # infra profile shares depth_module.profile in recent realsense-ros;
-      # set depth_module width/height/fps to control both.
+      # realsense2_camera >= 4.54 sets infra and depth profiles separately;
+      # must match the resolution in state_estimation/config/d435_calib_*.json
+      depth_module.infra_profile: 848x480x30
 
       # --- imu ---
       enable_gyro: true

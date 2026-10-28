@@ -5,7 +5,7 @@ repositories:
   src/basalt_ros:
     type: git
     url: https://github.com/ForzaETH/basalt_ros.git
-    version: f32e019a19e5874e87025ae1caed378d7080056c
+    version: fc5439c151fbf782fadc64d96ee7c4951fb9585f
   src/basalt_vio_msgs:
     type: git
     url: https://github.com/berndpfrommer/basalt_vio_msgs.git
