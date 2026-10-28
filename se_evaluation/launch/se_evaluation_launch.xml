@@ -8,11 +8,15 @@
         name="sim_opp" default="True"
         description="True to remap topics to the simulated opponent ones" />
 
-    <arg name="bag_path" description="ros2 input bag" />
+    <!-- bags folder in the source tree (not the install space), same convention as stack_master
+    maps -->
+    <arg name="bag_path" description="ros2 input bag"
+        default="$(find-pkg-prefix se_evaluation)/../../src/race_stack/se_evaluation/bags" />
+    <arg name="input" description="Name of the input bag" />
     <arg name="bag_rate" default="1.0" description="the rate of bag playback" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
     <arg name="map_name" default="hangar_1905_v0" description="Map name in stack_master/maps" />
-    <arg name="record_dir" default="$(bag_path)_result"
+    <arg name="output" default="$(var bag_path)/results/"
         description="Folder the recorded bags are written to" />
 
     <group>
@@ -22,16 +26,14 @@
 
         <node pkg="se_evaluation" name="se_evaluation" exec="se_evaluation" output="screen" />
 
-        <!-- only replay raw sensor data, the rest (tf, imu, ekf, cartographer) is recomputed below -->
+        <!-- only replay raw sensor data, the rest (tf, imu, ekf, cartographer) is recomputed below.
+        shut the whole launch down once playback finishes, which also stops the recorder cleanly -->
         <executable
-            cmd="ros2 bag play $(var bag_path) --clock --rate $(var bag_rate) --topics /scan /odom /sensors/imu/raw /tf_static"
-            output="screen" />
+            cmd="ros2 bag play $(var bag_path)/$(var input) --clock --rate $(var bag_rate) --topics /scan /odom /sensors/imu/raw /tf_static"
+            output="screen" on_exit="shutdown" />
 
-        <!-- default bag name is timestamped, so reruns don't collide; exec so SIGINT reaches ros2
-        bag -->
-        <executable
-            cmd="bash -c 'mkdir -p &quot;$0&quot; &amp;&amp; cd &quot;$0&quot; &amp;&amp; exec ros2 bag record -a' $(var record_dir)"
-            output="screen" />
+        <!-- default bag name is timestamped, so reruns don't collide -->
+        <executable cmd="ros2 bag record -a" cwd="$(var output)" output="screen" />
 
         <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
             <arg name="racecar_version" value="$(var racecar_version)" />
