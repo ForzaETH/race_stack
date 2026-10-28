@@ -2,6 +2,7 @@
   <arg name="opp_domain" description="ROS_DOMAIN_ID of the opponent car (40 + NUC number)" />
   <arg name="gt" default="True" description="publish the opponent as ground-truth /perception/obstacles" />
   <arg name="size" default="0.5" description="opponent obstacle size [m]" />
+  <arg name="obstacles_topic" default="/perception/obstacles" description="set to /perception/ground_truth to run alongside perception" />
 
   <node pkg="car_to_car_sync" exec="domain_bridge" name="domain_bridge" output="screen">
     <param from="$(find-pkg-share car_to_car_sync)/config/topics.yaml" />
@@ -10,5 +11,12 @@
 
   <node pkg="car_to_car_sync" exec="opp_gt_publisher" name="opp_gt_publisher" output="screen" if="$(var gt)">
     <param name="size" value="$(var size)" />
+    <param name="obstacles_topic" value="$(var obstacles_topic)" />
+  </node>
+
+  <!-- same robot model the simulator uses for its opponent, placed by the TF from opp_gt_publisher -->
+  <node pkg="robot_state_publisher" exec="robot_state_publisher" name="opp_robot_state_publisher">
+    <param name="robot_description" value="$(command 'xacro $(find-pkg-share f1tenth_gym_ros)/config/opp_racecar.xacro')" />
+    <remap from="/robot_description" to="/opp_robot_description" />
   </node>
 </launch>

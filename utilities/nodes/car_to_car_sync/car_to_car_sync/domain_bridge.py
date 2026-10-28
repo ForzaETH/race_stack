@@ -21,7 +21,7 @@ class DomainBridge(Node):
         self.pending = set(self.declare_parameter('topics', ['/car_state/frenet/odom']).value)
 
         self.remote_ctx = rclpy.Context()
-        rclpy.init(context=self.remote_ctx, domain_id=opp_domain)
+        rclpy.init(args=[], context=self.remote_ctx, domain_id=opp_domain)  # args=[]: ignore CLI remaps/params
         self.remote = rclpy.create_node('domain_bridge_remote', context=self.remote_ctx)
         self.remote_exec = SingleThreadedExecutor(context=self.remote_ctx)
         self.remote_exec.add_node(self.remote)

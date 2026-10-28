@@ -24,8 +24,9 @@ subscribes to it.
 | ego topic | source |
 |---|---|
 | `/opp/car_state/frenet/odom` | opponent `/car_state/frenet/odom` |
-| `/opp/car_state/odom` | opponent `/car_state/odom` |
-| `/perception/obstacles` | built from `/opp/car_state/frenet/odom`, empty when the stream stops for >0.5 s |
+| `/opp/car_state/pose` | opponent `/car_state/pose` (map frame) |
+| TF `map -> opp_racecar/base_link` | from `/opp/car_state/pose`; `opp_robot_state_publisher` puts the sim opponent model there, shown by the stock rviz configs |
+| `/perception/obstacles` | built from `/opp/car_state/frenet/odom`, empty when the stream stops for >0.5 s. Launch with `obstacles_topic:=/perception/ground_truth` to run alongside perception |
 
 Both cars must run the same `map_name`, otherwise `s`/`d` do not match.
 

@@ -12,6 +12,10 @@
   <depend>rosidl_runtime_py</depend>
   <depend>nav_msgs</depend>
   <depend>f110_msgs</depend>
+  <depend>tf2_ros</depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>f1tenth_gym_ros</exec_depend>
   <exec_depend>stack_master</exec_depend>
 
   <export>

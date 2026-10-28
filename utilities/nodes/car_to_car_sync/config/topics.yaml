@@ -4,4 +4,4 @@
     prefix: /opp
     topics:
       - /car_state/frenet/odom
-      - /car_state/odom
+      - /car_state/pose
