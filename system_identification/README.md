@@ -18,7 +18,7 @@ Results go to `stack_master/config/<racecar_version>/`:
 
 ```shell
 git submodule update --init system_identification/lateral/on_track_sysid
-pip install "system_identification/lateral/on_track_sysid[on_track]"   # the Docker image does this at build time
+rosdep install --from-paths ~/ws/src --ignore-src -y   # torch (python3-torch), only needed for on-track identification
 ```
 
 ## On-track identification (about a minute of driving)
@@ -55,7 +55,13 @@ Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a r
 
 ## In simulation
 
-Both methods work with `racecar_version:=SIM`. The sim odometry reports `v_y` at the center of gravity: `on_track_node` handles that automatically for SIM, and `steady_state_from_bag` needs `--vy-at-cog`. The sim publishes no IMU, so also pass `--imu-topic ''`. The sim uses linear tires, so the identified Pacejka curve matches them only inside the slip range that was driven.
+Both methods work with `racecar_version:=SIM`. The sim odometry reports `v_y` at the center of gravity: `on_track_node` handles that automatically for SIM, and `steady_state_from_bag` needs `--vy-at-cog`. The sim publishes no IMU, so also pass `--imu-topic ''`. The sim simulates the Pacejka tires of `config/<racecar_version>/pacejka/<floor>`, so identification in simulation should recover them.
+
+## Plot the tires
+
+```shell
+ros2 run lateral_sysid_ros pacejka_visualizer --racecar_version <NUCx> --floor <floor>
+```
 
 ## Regenerate the LUT only
 

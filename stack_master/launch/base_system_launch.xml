@@ -14,6 +14,8 @@
   <group if="$(var sim)">
     <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
       <arg name="map_yaml_path" value="$(var map_path)/$(var map_name).yaml" />
+      <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="floor" value="$(var floor)" />
     </include>
   </group>
 

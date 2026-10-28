@@ -17,7 +17,6 @@
     <!-- launch controller manager -->
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
         <arg name="mode" value="$(var ctrl_algo)" />
-        <arg name="LU_table" value="$(var LU_table)" />
         <arg name="sim_opp" value="$(var sim_opp)" />
     </include>
 
