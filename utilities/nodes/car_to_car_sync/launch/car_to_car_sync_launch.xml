@@ -1,0 +1,14 @@
+<launch>
+  <arg name="opp_domain" description="ROS_DOMAIN_ID of the opponent car (40 + NUC number)" />
+  <arg name="gt" default="True" description="publish the opponent as ground-truth /perception/obstacles" />
+  <arg name="size" default="0.5" description="opponent obstacle size [m]" />
+
+  <node pkg="car_to_car_sync" exec="domain_bridge" name="domain_bridge" output="screen">
+    <param from="$(find-pkg-share car_to_car_sync)/config/topics.yaml" />
+    <param name="opp_domain" value="$(var opp_domain)" />
+  </node>
+
+  <node pkg="car_to_car_sync" exec="opp_gt_publisher" name="opp_gt_publisher" output="screen" if="$(var gt)">
+    <param name="size" value="$(var size)" />
+  </node>
+</launch>

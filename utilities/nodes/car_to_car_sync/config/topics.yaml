@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    # topics subscribed in the opponent's ROS domain, republished in ours under <prefix><topic>
+    prefix: /opp
+    topics:
+      - /car_state/frenet/odom
+      - /car_state/odom
