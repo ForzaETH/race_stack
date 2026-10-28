@@ -12,8 +12,8 @@
     <arg name="bag_rate" default="1.0" description="the rate of bag playback" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
     <arg name="map_name" default="hangar_1905_v0" description="Map name in stack_master/maps" />
-    <arg name="record_dir" default="/tmp/test"
-        description="Folder the recorded bags (rosbag2_TIMESTAMP) are written to" />
+    <arg name="record_dir" default="$(bag_path)_result"
+        description="Folder the recorded bags are written to" />
 
     <group>
         <!-- bag is played with clock, so every node (incl. ones without a use_sim_time param) runs
