@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="LU_table" default="NUC5_hangar_pacejka" />
+    <arg name="mode" default="MAP"
+        description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented" /> <!--
+    TODO implement PP and MAPPING -->
+    <arg
+        name="sim_opp" default="True"
+        description="True to remap topics to the simulated opponent ones" />
+
+    <arg name="bag_path" description="ros2 input bag" />
+    <arg name="bag_rate" default="1.0" description="the rate of bag playback" />
+    <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
+    <arg name="map_name" default="hangar_1905_v0" description="Map name in stack_master/maps" />
+    <arg name="record_dir" default="/tmp/test"
+        description="Folder the recorded bags (rosbag2_TIMESTAMP) are written to" />
+
+    <group>
+        <!-- bag is played with clock, so every node (incl. ones without a use_sim_time param) runs
+        on sim time -->
+        <set_parameter name="use_sim_time" value="True" />
+
+        <node pkg="se_evaluation" name="se_evaluation" exec="se_evaluation" output="screen" />
+
+        <!-- only replay raw sensor data, the rest (tf, imu, ekf, cartographer) is recomputed below -->
+        <executable
+            cmd="ros2 bag play $(var bag_path) --clock --rate $(var bag_rate) --topics /scan /odom /sensors/imu/raw /tf_static"
+            output="screen" />
+
+        <!-- default bag name is timestamped, so reruns don't collide; exec so SIGINT reaches ros2
+        bag -->
+        <executable
+            cmd="bash -c 'mkdir -p &quot;$0&quot; &amp;&amp; cd &quot;$0&quot; &amp;&amp; exec ros2 bag record -a' $(var record_dir)"
+            output="screen" />
+
+        <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
+            <arg name="racecar_version" value="$(var racecar_version)" />
+            <arg name="mapping_bool" value="False" />
+            <arg name="map_name" value="$(var map_name)" />
+            <arg name="use_sim_time" value="True" />
+        </include>
+
+        <include
+            file="$(find-pkg-share frenet_odom_republisher)/launch/frenet_odom_republisher_launch.xml">
+            <arg name="use_sim_time" value="True" />
+        </include>
+    </group>
+
+
+</launch>
