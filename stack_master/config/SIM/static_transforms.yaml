@@ -1,0 +1,5 @@
+# Static transforms of SIM: where the sensors sit relative to base_link (rear axle centre, on the ground).
+# Remeasure after remounting hardware. xyz in metres, rpy in radians (or quat as [x, y, z, w]).
+transforms:
+  - {parent: base_link, child: laser, xyz: [0.27, 0.0, 0.11], rpy: [0.0, 0.0, 0.0]}
+  - {parent: base_link, child: imu, xyz: [0.07, 0.0, 0.05], rpy: [0.0, 0.0, 1.5707963]}
