@@ -10,11 +10,12 @@ subscribes to it.
 ## Setup
 
 1. Each car has its own domain id (`remote_car.sh` convention: `40 + NUC number`).
-2. On the **ego** car start the zenoh router peered with the opponent router:
+2. Stop the automatically started `Start Zenoh Router` task before starting a peered router.
+3. On the **ego** car start the zenoh router peered with the opponent router:
    ```bash
    ./stack_master/scripts/run_zenoh.sh <OPP_IP>
    ```
-3. Launch the ego stack **without** perception, then:
+4. Launch the ego stack **without** perception, then:
    ```bash
    ros2 launch car_to_car_sync car_to_car_sync_launch.xml opp_domain:=46
    ```
