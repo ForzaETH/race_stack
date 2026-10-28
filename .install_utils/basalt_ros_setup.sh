@@ -45,7 +45,10 @@ vcs import --shallow --workers 1 < "$SCRIPT_DIR/basalt.repos"
 BASALT_SRC="$BASALT_WS/src/basalt_wrapper/basalt"
 git -C "$BASALT_SRC" submodule update --init --depth 1 \
     thirdparty/basalt-headers thirdparty/magic_enum
-git -C "$BASALT_SRC/thirdparty/basalt-headers" submodule update --init --depth 1 \
+# basalt-headers pins Eigen 3.4.0 on gitlab.com, which often rejects requests
+# under load; fetch the identical commit from the GitHub mirror instead.
+git -c url."https://github.com/eigen-mirror/eigen.git".insteadOf="https://gitlab.com/libeigen/eigen.git" \
+    -C "$BASALT_SRC/thirdparty/basalt-headers" submodule update --init --depth 1 \
     thirdparty/eigen thirdparty/Sophus thirdparty/cereal
 
 
