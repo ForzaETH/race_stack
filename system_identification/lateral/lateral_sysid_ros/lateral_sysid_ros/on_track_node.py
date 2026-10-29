@@ -44,6 +44,8 @@ class OnTrackSysIdNode(Node):
         self.init_tires = load_tires(self.racecar_version, self.floor, self.get_logger().warn)
 
         self.data = np.zeros((int(self.params['data_duration'] * RATE), 4))
+        self.segment_starts = np.zeros(len(self.data), dtype=bool)
+        self.after_gap = True
         self.counter = 0
         self.state = np.zeros(4)
         self.done = Future()
@@ -64,8 +66,11 @@ class OnTrackSysIdNode(Node):
 
     def collect(self):
         if self.state[0] <= self.params['min_speed']:
+            self.after_gap = True
             return
         self.data[self.counter] = self.state
+        self.segment_starts[self.counter] = self.after_gap
+        self.after_gap = False
         self.counter += 1
         if self.counter % RATE == 0:
             self.get_logger().info(f"Collected {self.counter // RATE} / {len(self.data) // RATE} s")
@@ -77,7 +82,9 @@ class OnTrackSysIdNode(Node):
     def identify(self):
         log = self.get_logger()
         if self.params['save_raw_data']:
-            log.info(f"Saved raw data to {save_raw_data(self.data, self.racecar_version, self.floor, 'on_track')}")
+            path = save_raw_data(np.column_stack((self.data, self.segment_starts)), self.racecar_version,
+                                 self.floor, 'on_track', header='v_x,v_y,omega,delta,segment_start')
+            log.info(f"Saved raw data to {path}")
 
         cfg = OnTrackConfig(num_of_iterations=self.params['num_of_iterations'],
                             num_of_epochs=self.params['num_of_epochs'],
@@ -97,7 +104,8 @@ class OnTrackSysIdNode(Node):
                            (alpha_f, F_yf, alpha_r, F_yr))
 
         log.info("Training...")
-        tires = identify_on_track(self.data, self.vehicle, self.init_tires, cfg, on_iteration)
+        tires = identify_on_track(self.data, self.vehicle, self.init_tires, cfg, on_iteration,
+                                  segment_starts=self.segment_starts, log=log.info)
         if plot_stem is not None:
             log.info(f"Saved fit plots to {plot_stem}")
         save_results(tires, self.vehicle, self.racecar_version, self.floor, self.params['update_latest'], log.info)

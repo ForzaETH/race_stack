@@ -61,7 +61,7 @@ def check_imu_frame(frame_ids, a_x, a_y, a_z, v_x, omega, expected_frame='base_l
 
 
 def bag_to_data(uri, args, C_0d, C_d):
-    """Samples v_x, v_y, omega, delta (and a_x) at the odometry stamps."""
+    """Samples v_x, v_y, omega, delta (and a_x) at the odometry stamps; also returns their median period."""
     steer_topic = args.servo_topic or args.steer_topic
     topics = [args.odom_topic, steer_topic] + ([args.imu_topic] if args.imu_topic else [])
     bag = read_bag(uri, topics)
@@ -90,7 +90,7 @@ def bag_to_data(uri, args, C_0d, C_d):
         if error:
             raise SystemExit(f"{uri}: {error}. Use an IMU topic in the car frame, or --imu-topic '' "
                              "to use static axle loads.")
-    return data, a_x
+    return data, a_x, np.median(np.diff(t))
 
 
 def main():
@@ -118,12 +118,13 @@ def main():
     init = load_tires(args.car, args.floor)
 
     runs = [bag_to_data(uri, args, car.C_0d, car.C_d) for uri in args.bags]
-    data = np.concatenate([d for d, _ in runs])
-    a_x = None if not args.imu_topic else np.concatenate([a for _, a in runs])
+    data = np.concatenate([d for d, _, _ in runs])
+    a_x = None if not args.imu_topic else np.concatenate([a for _, a, _ in runs])
+    dt = float(np.median([p for _, _, p in runs]))
     print(f"Loaded {len(data)} samples from {len(args.bags)} bag(s)")
 
     tires = identify_steady_state(data, vehicle, init, a_x=a_x, vy_at_rear_axle=not args.vy_at_cog,
-                                  equal_tires=args.equal_tires)
+                                  equal_tires=args.equal_tires, dt=dt, log=print)
     print(f"Identified front {np.round(tires.front, 4)}, rear {np.round(tires.rear, 4)}")
     if not args.no_plot:
         v_x, v_y, omega, delta = data[data[:, 0] > 1.0].T

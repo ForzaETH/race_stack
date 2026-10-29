@@ -68,6 +68,22 @@ Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a r
    It warns if the two radii differ (re-center the servo) or if you drove too fast. `--debug` plots the fits.
 4. Copy the printed values into `car_model.yaml`, `vesc.yaml`, `*_mpc_params.yaml` and `joy_teleop.yaml`, then commit. `stack_master/test/test_configs.py` checks that the MPC steering limits match `vesc.yaml`.
 
+## Speed to erpm
+
+`speed_to_erpm_gain` in `vesc.yaml` turns the commanded speed into motor erpm and the measured erpm back into the odometry speed. The offset stays fixed; only the gain is identified.
+
+1. Start `base_system` and record a bag:
+   ```shell
+   ros2 bag record /car_state/pose /sensors/core
+   ```
+   Meanwhile, drive slowly (0.5 to 1.5 m/s) and mostly straight, at a steady speed, for at least half a minute in total. Faster driving or hard acceleration makes the wheels slip, so those samples are left out.
+2. Run:
+   ```shell
+   ros2 run lateral_sysid_ros speed_to_erpm_from_bag <bag> --car <NUCx> [--debug]
+   ```
+   It compares the localized speed with the motor erpm, both averaged over 1 s, on steady, nearly straight samples. `--debug` plots the selection and the fit.
+3. Copy the printed `speed_to_erpm_gain` into `vesc.yaml`, then commit. The `actuation_manager` `speed_min` / `speed_max` must stay within the printed range; `stack_master/test/test_configs.py` checks it.
+
 ## In simulation
 
 Both methods work with `racecar_version:=SIM`. The sim odometry reports `v_y` at the center of gravity: `on_track_node` handles that automatically for SIM, and `steady_state_from_bag` needs `--vy-at-cog`. The sim publishes no IMU, so also pass `--imu-topic ''`. The sim simulates the Pacejka tires of `config/<racecar_version>/pacejka/<floor>`, so identification in simulation should recover them.
