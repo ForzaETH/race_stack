@@ -37,9 +37,9 @@ def data_dir(racecar_version: str, floor: str) -> Path:
     return path
 
 
-def save_raw_data(data, racecar_version: str, floor: str, name: str) -> Path:
+def save_raw_data(data, racecar_version: str, floor: str, name: str, header: str = 'v_x,v_y,omega,delta') -> Path:
     path = data_dir(racecar_version, floor) / f'{datetime.now():%Y%m%d_%H%M%S}_{name}.csv'
-    np.savetxt(path, data, delimiter=',', header='v_x,v_y,omega,delta', comments='')
+    np.savetxt(path, data, delimiter=',', header=header, comments='')
     return path
 
 
