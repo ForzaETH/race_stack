@@ -46,12 +46,14 @@ class GlobalPlannerNode(Node):
         self.map_name = self.get_parameter('map_name').value
         self.reverse_mapping = self.get_parameter('reverse_mapping').value
         self.show_plots = self.get_parameter('show_plots').value
-        self.safety_width = self.get_parameter('safety_width').value
-        self.safety_width_sp = self.get_parameter('safety_width_sp').value
         car = load_car_config_ros(self.get_parameter('racecar_version').value)
+        # full width the trajectory keeps free: half the car plus the margin on each side
+        self.safety_width = car.width_m + 2 * self.get_parameter('safety_margin').value
+        self.safety_width_sp = car.width_m + 2 * self.get_parameter('safety_margin_sp').value
         self.veh_params = {'mass': car.m, 'width': car.width_m, 'v_max': car.v_max,
                            'curvlim': 1 / car.min_radius_curv_m}
-        self.get_logger().info(f"Vehicle parameters of {car.racecar_version}: {self.veh_params}")
+        self.get_logger().info(f"Vehicle parameters of {car.racecar_version}: {self.veh_params}, "
+                               f"safety width {self.safety_width:.3f} m (shortest path {self.safety_width_sp:.3f} m)")
 
         
         self.map_resolution = None
