@@ -31,11 +31,11 @@ class PP_Controller:
 
                 loop_rate,
                 wheelbase,
-                
+
                 logger_info = logging.info,
                 logger_warn = logging.warn
             ):
-        
+
         # Parameters from manager
         self.t_clip_min = t_clip_min
         self.t_clip_max = t_clip_max
@@ -77,11 +77,11 @@ class PP_Controller:
         self.curvature_waypoints = 0
         self.d_vs = np.zeros(10)
         self.acceleration_command = 0
-                
+
         self.logger_info = logger_info
         self.logger_warn = logger_warn
 
-    # main loop    
+    # main loop
     def main_loop(self, state, position_in_map, waypoint_array_in_map, speed_now, opponent, position_in_map_frenet, acc_now, track_length):
         # Updating parameters from manager
         self.state = state
@@ -102,7 +102,7 @@ class PP_Controller:
 
         ### LONGITUDINAL CONTROL ###
         self.speed_command = self.calc_speed_command(v, lat_e_norm)
-        
+
         # POSTPROCESS for acceleration/speed decision
         if self.speed_command is not None:
             speed = np.max(self.speed_command, 0)
@@ -111,22 +111,22 @@ class PP_Controller:
         else:
             speed = 0
             jerk = 0
-            acceleration = 0                
+            acceleration = 0
             self.logger_warn("[Controller] speed was none")
 
         ### LATERAL CONTROL ###
         steering_angle = None
         L1_point, L1_distance = self.calc_L1_point(lateral_error)
-        
+
         if L1_point.any() is not None: 
             steering_angle = self.calc_steering_angle(L1_point, L1_distance, yaw, lat_e_norm, v)
         else: 
             raise Exception("L1_point is None")
-        
+
         return speed, acceleration, jerk, steering_angle, L1_point, L1_distance, self.idx_nearest_waypoint
-    
+
     def calc_steering_angle(self, L1_point, L1_distance, yaw, lat_e_norm, v):
-        """ 
+        """
         The purpose of this function is to calculate the steering angle based on the L1 point, desired lateral acceleration and velocity
 
         Inputs:
@@ -139,7 +139,7 @@ class PP_Controller:
         Returns:
             steering_angle: calculated steering angle
 
-        
+
         """
         # lookahead for steer (steering delay incorporation by propagating position)
         if self.state == "TRAILING" and (self.opponent is not None):
@@ -167,7 +167,7 @@ class PP_Controller:
 
         # modifying steer based on velocity
         steering_angle *= np.clip(1 + (self.speed_now/10), 1, 1.25)
-        
+
         # limit change of steering angle
         threshold = 0.4
         if abs(steering_angle - self.curr_steering_angle) > threshold:
@@ -179,20 +179,20 @@ class PP_Controller:
     def calc_L1_point(self, lateral_error):
         """
         The purpose of this function is to calculate the L1 point and distance
-        
+
         Inputs:
             lateral_error: frenet d distance from car's position to nearest waypoint
         Returns:
             L1_point: point in frenet coordinates at L1 distance in front of the car
             L1_distance: distance of the L1 point to the car
         """
-        
+
         self.idx_nearest_waypoint = self.nearest_waypoint(self.position_in_map[0, :2], self.waypoint_array_in_map[:, :2]) 
-        
+
         # if all waypoints are equal set self.idx_nearest_waypoint to 0
         if np.isnan(self.idx_nearest_waypoint): 
             self.idx_nearest_waypoint = 0
-        
+
         if len(self.waypoint_array_in_map[self.idx_nearest_waypoint:]) > 2:
             # calculate curvature of global optimizer waypoints
             self.curvature_waypoints = np.mean(abs(self.waypoint_array_in_map[self.idx_nearest_waypoint:,5]))
@@ -206,12 +206,12 @@ class PP_Controller:
 
         L1_point = self.waypoint_at_distance_before_car(L1_distance, self.waypoint_array_in_map[:,:2], self.idx_nearest_waypoint)
         return L1_point, L1_distance
-    
-    
+
+
     def calc_speed_command(self, v, lat_e_norm):
         """
         The purpose of this function is to isolate the speed calculation from the main control_loop
-        
+
         Inputs:
             v: speed vector
             lat_e_norm: normed lateral error
@@ -235,7 +235,7 @@ class PP_Controller:
         speed_command = self.speed_adjust_lat_err(speed_command, lat_e_norm)
 
         return speed_command
-    
+
     def trailing_controller(self, global_speed):
         """
         Adjust the speed of the ego car to trail the opponent at a fixed distance
@@ -253,18 +253,18 @@ class PP_Controller:
         self.gap_error = self.gap_should - self.gap_actual
         self.v_diff =  self.position_in_map_frenet[2] - self.opponent[2]
         self.i_gap = np.clip(self.i_gap + self.gap_error/self.loop_rate, -10, 10)
-    
+
         p_value = self.gap_error * self.trailing_p_gain
         d_value = self.v_diff * self.trailing_d_gain
         i_value = self.i_gap * self.trailing_i_gain
 
-        
+
         self.trailing_command = np.clip(self.opponent[2] - p_value - i_value - d_value, 0, global_speed) 
         if not self.opponent[4] and self.gap_actual > self.gap_should:
             self.trailing_command = max(self.blind_trailing_speed, self.trailing_command)
 
         return self.trailing_command
-    
+
 
     def distance(self, point1, point2):
         return np.linalg.norm(point2 - point1)
@@ -305,7 +305,6 @@ class PP_Controller:
             lat_e_norm: normalization of the lateral error
             lateral_error: distance from car's position to nearest waypoint
         """
-        # DONE rename function and adapt
         lateral_error = abs(self.position_in_map_frenet[1]) # frenet coordinates d
 
         max_lat_e = 0.5
@@ -328,16 +327,16 @@ class PP_Controller:
         lat_e_coeff = self.lat_err_coeff # must be in [0, 1]
         lat_e_norm *= 2 
         curv = np.clip(2*(np.mean(self.curvature_waypoints)/0.8) - 2, a_min = 0, a_max = 1) # 0.8 ca. max curvature mean
-        
+
         global_speed *= (1 - lat_e_coeff + lat_e_coeff*np.exp(-lat_e_norm*curv))
         return global_speed
-    
+
     def speed_adjust_heading(self, speed_command):
         """
         Reduce speed from the global_speed based on the heading error.
         If the difference between the map heading and the actual heading
         is larger than 20 degrees, the speed gets scaled down linearly up to 0.5x
-        
+
         Returns:
             global_speed: the speed we want to follow
         """
@@ -357,14 +356,14 @@ class PP_Controller:
             scaler = 0.5
         self.logger_info(f"[MAP Controller] heading error decreasing velocity by {scaler}")
         return speed_command * scaler
-        
+
     def nearest_waypoint(self, position, waypoints):
         """
         Calculates index of nearest waypoint to the car
 
         Returns:
             index of nearest waypoint to the car
-        """        
+        """
         position_array = np.array([position]*len(waypoints))
         distances_to_position = np.linalg.norm(abs(position_array - waypoints), axis=1)
         return np.argmin(distances_to_position)

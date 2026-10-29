@@ -187,7 +187,7 @@ class Controller(Node):
                        {'name': 'blind_trailing_speed',
                         'default': self.l1_params["blind_trailing_speed"],
                         'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])}]
-        params = self.delcare_dyn_parameters(param_dicts)
+        params = self.declare_dyn_parameters(param_dicts)
         self.set_parameters(params)
 
         # main loop
@@ -215,7 +215,7 @@ class Controller(Node):
 
         self.get_logger().info('All required messages received. Continuing...')
 
-    def delcare_dyn_parameters(self, param_dicts):
+    def declare_dyn_parameters(self, param_dicts):
         params = []
         for param_dict in param_dicts:
             param = self.declare_parameter(param_dict['name'], param_dict['default'], param_dict['descriptor'])
@@ -273,7 +273,7 @@ class Controller(Node):
             car_params = yaml.safe_load(f)
             self.wheelbase = car_params['lr'] + car_params['lf']
 
-        self.create_subscription(Imu, '/vesc/sensors/imu/raw', self.imu_cb,
+        self.create_subscription(Imu, '/imu', self.imu_cb,
                                  10)  # acceleration subscriber for steer change
         self.acc_now = np.zeros(10)  # rolling buffer for acceleration
 
@@ -316,6 +316,7 @@ class Controller(Node):
         s, d = self.position_in_map_frenet[:2]
         pose_frenet = np.array([s, d, self.heading_to_track()])
         if self.mode == "STMPC":
+            MPCConfigClass = STMPCConfig
             from forzaeth_mpc.stmpc import STMPC
             self.mpc_config = load_model_ros(STMPCConfig, self.racecar_version, 'single_track_mpc_params.yaml')
             dyn_config = load_model_ros(STMPCConfigDyn, 'DEFAULT', 'single_track_mpc_dyn_params.yaml')
@@ -330,6 +331,7 @@ class Controller(Node):
                                         using_gokart=False)
             self.mpc_cost_pub = self.create_publisher(Float32, '/mpc_controller/horizon_cost', 10)
         else:
+            MPCConfigClass = KMPCConfig
             from forzaeth_mpc.kmpc import Kinematic_MPC_Controller
             self.mpc_config = load_model_ros(KMPCConfig, self.racecar_version, 'kinematic_mpc_params.yaml')
             dyn_config = load_model_ros(KMPCConfigDyn, 'DEFAULT', 'kinematic_mpc_dyn_params.yaml')
@@ -342,8 +344,8 @@ class Controller(Node):
         self.compute_time = 0.0
 
         # online tuning: the ranges of config/DEFAULT/*_mpc_dyn_params.yaml, the values of the car's config
-        self.mpc_dyn_keys = list(dyn_config.model_fields)
-        self.delcare_dyn_parameters([
+        self.mpc_dyn_keys = list(MPCConfigClass.model_fields)
+        self.declare_dyn_parameters([
             {'name': key,
              'default': float(getattr(self.mpc_config, key)),
              'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[
@@ -495,7 +497,7 @@ class Controller(Node):
     def imu_cb(self, data):
         # save acceleration in a rolling buffer
         self.acc_now[1:] = self.acc_now[:-1]
-        self.acc_now[0] = -data.linear_acceleration.y  # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
+        self.acc_now[0] = data.linear_acceleration.x
 
     def car_state_frenet_cb(self, data: Odometry):
         s = data.pose.pose.position.x
