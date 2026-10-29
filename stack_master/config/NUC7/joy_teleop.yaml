@@ -33,5 +33,5 @@ joy_teleop:
           offset: 0.0
         drive-steering_angle:
           axis: 3
-          scale: 0.34
+          scale: 0.4430
           offset: 0.0
