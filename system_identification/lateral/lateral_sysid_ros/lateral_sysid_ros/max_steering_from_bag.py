@@ -3,6 +3,8 @@ import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
+from forza_config_ros import get_stack_master_path
 
 from lateral_sysid_ros.config_io import load_vehicle
 from lateral_sysid_ros.steady_state_from_bag import read_bag
@@ -76,6 +78,29 @@ def main():
         ax.grid()
     if args.debug:
         plt.show()
+
+    config = get_stack_master_path(f'config/{args.car}')
+    with open(config / 'vesc.yaml') as f:
+        vesc = yaml.safe_load(f)['/**']['ros__parameters']
+    # servo_min/servo_max are full lock; the sign of the current gain tells which one is left
+    servo_left, servo_right = ((vesc['servo_max'], vesc['servo_min']) if vesc['steering_angle_to_servo_gain'] > 0
+                               else (vesc['servo_min'], vesc['servo_max']))
+    delta_left, delta_right = np.arctan(L / radii['left']), np.arctan(L / radii['right'])
+    gain = (servo_left - servo_right) / (delta_left + delta_right)
+    print(f"\nUpdate {config / 'car_model.yaml'}:\n"
+          f"  max_steering_angle: {np.arctan(L / R):.4f}\n"
+          f"  min_radius_curv_m: {R:.3f}\n"
+          f"Update {config / 'vesc.yaml'} (servo mapping from servo_min/servo_max = full lock):\n"
+          f"  steering_angle_to_servo_gain: {gain:.4f}\n"
+          f"  steering_angle_to_servo_offset: {servo_left - gain * delta_left:.4f}\n"
+          f"  steering_min: {-delta_right:.4f}  # actuation_manager\n"
+          f"  steering_max: {delta_left:.4f}  # actuation_manager\n"
+          f"Update every {config / '*_mpc_params.yaml'} to match vesc.yaml:\n"
+          f"  delta_min: {-delta_right:.4f}\n"
+          f"  delta_max: {delta_left:.4f}\n"
+          f"Update human_control drive-steering_angle in {config / 'joy_teleop.yaml'} so full stick reaches "
+          f"full lock on both sides:\n"
+          f"  scale: {max(delta_left, delta_right):.4f}")
 
 
 if __name__ == '__main__':

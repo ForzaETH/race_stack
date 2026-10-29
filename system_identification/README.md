@@ -53,6 +53,21 @@ Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a r
    Pass `--servo-topic /vesc/commands/servo/position` to use servo commands instead of `/drive`. Pass `--imu-topic ''` when there is no IMU in the car frame. Pass `--vy-at-cog` for simulation data.
 4. Check `pacejka/<floor>/data/steady_state_fit.png`, then commit the new config.
 
+## Maximum steering angle
+
+1. Center the servo mechanically. Then find the servo positions where each side reaches full lock without straining the servo, and write them as `servo_min` / `servo_max` in `vesc.yaml`. Make sure full stick reaches them: widen `steering_min` / `steering_max` and the joystick `scale` if needed.
+2. Start `base_system` and record a bag:
+   ```shell
+   ros2 bag record /car_state/pose /imu
+   ```
+   Meanwhile, drive slowly (about 0.5 m/s) at full lock: a few continuous circles to one side, then a few to the other.
+3. Run:
+   ```shell
+   ros2 run lateral_sysid_ros max_steering_from_bag <bag> --car <NUCx> [--debug]
+   ```
+   It warns if the two radii differ (re-center the servo) or if you drove too fast. `--debug` plots the fits.
+4. Copy the printed values into `car_model.yaml`, `vesc.yaml`, `*_mpc_params.yaml` and `joy_teleop.yaml`, then commit. `stack_master/test/test_configs.py` checks that the MPC steering limits match `vesc.yaml`.
+
 ## In simulation
 
 Both methods work with `racecar_version:=SIM`. The sim odometry reports `v_y` at the center of gravity: `on_track_node` handles that automatically for SIM, and `steady_state_from_bag` needs `--vy-at-cog`. The sim publishes no IMU, so also pass `--imu-topic ''`. The sim simulates the Pacejka tires of `config/<racecar_version>/pacejka/<floor>`, so identification in simulation should recover them.
