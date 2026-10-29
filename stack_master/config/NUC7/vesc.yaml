@@ -7,8 +7,8 @@
 
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
     # Includes the former x1.3 steering correction from ackermann_mux.
-    steering_angle_to_servo_gain: 1.1709
-    steering_angle_to_servo_offset: 0.568
+    steering_angle_to_servo_gain: 1.1755
+    steering_angle_to_servo_offset: 0.5173
 
     port: /dev/sensors/vesc
     duty_cycle_min: 0.0
@@ -36,8 +36,8 @@ actuation_manager:
     speed_max: 14.3760416667
     max_acceleration: 2.5
     max_deceleration: 2.5
-    steering_min: -0.4430
-    steering_max: 0.4111
+    steering_min: -0.4401
+    steering_max: 0.4106
     max_steering_rate: 2.4615384615
     output_rate: 75.0
     command_timeout: 0.2

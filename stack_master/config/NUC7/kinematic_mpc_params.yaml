@@ -30,8 +30,8 @@ Zu: !!float 1000 # quadratic coefficient input slack variable
 # Model constraints #
 #####################
 # steering constraints
-delta_min: !!float -0.4430  # = actuation_manager steering_min in vesc.yaml [rad]
-delta_max: !!float 0.4111  # = actuation_manager steering_max in vesc.yaml [rad]
+delta_min: !!float -0.4401  # = actuation_manager steering_min in vesc.yaml [rad]
+delta_max: !!float 0.4106  # = actuation_manager steering_max in vesc.yaml [rad]
 # Velocity constraint
 v_min: !!float 2.0 # minimum velocity [m/s]
 v_max: !!float 12.0 # maximum velocity [m/s]

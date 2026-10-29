@@ -29,9 +29,9 @@ joy_teleop:
       axis_mappings:
         drive-speed:
           axis: 1
-          scale: 3.0
+          scale: 3
           offset: 0.0
         drive-steering_angle:
           axis: 3
-          scale: 0.4430
+          scale: 0.4401
           offset: 0.0
