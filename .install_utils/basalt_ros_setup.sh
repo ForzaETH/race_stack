@@ -15,7 +15,6 @@ if [ -f /etc/nv_tegra_release ] || grep -qiE "nvidia|tegra" /proc/device-tree/mo
 	echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" > /etc/apt/sources.list.d/ros2.list
 fi
 
-BASALT_REPO_URL=https://github.com/ForzaETH/basalt_ros.git
 BASALT_WS=/opt/basalt_ws
 
 apt update
@@ -31,6 +30,7 @@ fi
 
 apt install -y \
     python3-vcstool \
+    ccache \
     libbz2-dev \
     libtbb-dev \
     libboost-all-dev \
@@ -43,10 +43,9 @@ apt install -y \
     $OPENCV_PKGS
 
 mkdir -p "$BASALT_WS/src"
-git clone "$BASALT_REPO_URL" "$BASALT_WS/src/basalt_ros"
 cd "$BASALT_WS"
-vcs import --recursive < "$BASALT_WS/src/basalt_ros/basalt_ros.repos"
-vcs import --recursive < "$BASALT_WS/src/basalt_wrapper/basalt_wrapper.repos"
+# one worker: basalt clones inside basalt_wrapper, so the order of the file matters
+vcs import --recursive --workers 1 < "$(dirname "$0")/basalt.repos"
 
 # One package at a time, with as many compile jobs as cores and available RAM allow
 # (~2 GB per Eigen-heavy basalt TU): full parallelism otherwise freezes the host.
