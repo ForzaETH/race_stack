@@ -316,7 +316,6 @@ class Controller(Node):
         s, d = self.position_in_map_frenet[:2]
         pose_frenet = np.array([s, d, self.heading_to_track()])
         if self.mode == "STMPC":
-            MPCConfigClass = STMPCConfig
             from forzaeth_mpc.stmpc import STMPC
             self.mpc_config = load_model_ros(STMPCConfig, self.racecar_version, 'single_track_mpc_params.yaml')
             dyn_config = load_model_ros(STMPCConfigDyn, 'DEFAULT', 'single_track_mpc_dyn_params.yaml')
@@ -331,7 +330,6 @@ class Controller(Node):
                                         using_gokart=False)
             self.mpc_cost_pub = self.create_publisher(Float32, '/mpc_controller/horizon_cost', 10)
         else:
-            MPCConfigClass = KMPCConfig
             from forzaeth_mpc.kmpc import Kinematic_MPC_Controller
             self.mpc_config = load_model_ros(KMPCConfig, self.racecar_version, 'kinematic_mpc_params.yaml')
             dyn_config = load_model_ros(KMPCConfigDyn, 'DEFAULT', 'kinematic_mpc_dyn_params.yaml')
@@ -344,7 +342,7 @@ class Controller(Node):
         self.compute_time = 0.0
 
         # online tuning: the ranges of config/DEFAULT/*_mpc_dyn_params.yaml, the values of the car's config
-        self.mpc_dyn_keys = list(MPCConfigClass.model_fields)
+        self.mpc_dyn_keys = list(type(dyn_config).model_fields)
         self.declare_dyn_parameters([
             {'name': key,
              'default': float(getattr(self.mpc_config, key)),
