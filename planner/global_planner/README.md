@@ -5,8 +5,8 @@ The Global Planner package is a ROS2 package designed to generate a global traje
 
 ## Parameters
  - `rate`: Sets the rate in hertz at which the ROS node is running.
- - `safety_width`: Sets the width of the car in meters including a safety margin for the calculation of the global trajectory.
- - `safety_width_sp`: Sets the width of the car in meters including a safety margin for the calculation of the shortest path trajectory.
+ - `safety_margin`: Free space in meters on each side of the car, on top of half the car's `width_m` from `car_model.yaml`, for the calculation of the global trajectory.
+ - `safety_margin_sp`: Same, for the calculation of the shortest path trajectory.
  - `occupancy_grid_threshold`: Sets the threshold above which a cell in the occupancy grid is considered occupied and below it is considered free.
  - `filter_kernel_size`: The size of the kernel for the morphological filtering.
  - `show_plots`: Show additional plots for debugging during generation of the global trajectory.
