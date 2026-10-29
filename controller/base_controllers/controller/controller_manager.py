@@ -25,6 +25,7 @@ from controller.pp import PP_Controller
 from controller.ftg import FTG_Controller
 from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange
 from tf_transformations import quaternion_from_euler
+from tf2_ros import Buffer, TransformListener
 from stack_master.parameter_event_handler import ParameterEventHandler
 
 from forza_config_ros import get_remote_parameter
@@ -53,6 +54,10 @@ class Controller(Node):
         self.mapping = self.get_parameter('mapping').value
 
         # Publishers
+        self.base_frame = 'car_state/base_link'
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         self.publish_topic = '/drive'  # TODO adapt car topic name here
         self.drive_pub = self.create_publisher(AckermannDriveStamped, self.publish_topic, 10)
         self.steering_pub = self.create_publisher(Marker, 'steering', 10)
@@ -66,7 +71,7 @@ class Controller(Node):
         self.opponent = None
         self.waypoint_array_in_map = None
         self.speed_now = None
-        self.position_in_odom = None
+        self.position_in_map = None
         self.position_in_map_frenet = None
         self.waypoint_safety_counter = 0
 
@@ -204,7 +209,7 @@ class Controller(Node):
             if self.waypoint_array_in_map is not None and not waypoint_array_print:
                 self.get_logger().info('Received waypoint array')
                 waypoint_array_print = True
-            if self.speed_now is not None and self.position_in_odom is not None and self.position_in_map_frenet is not None and not state_print:
+            if self.speed_now is not None and self.position_in_map is not None and self.position_in_map_frenet is not None and not state_print:
                 self.get_logger().info('Received car state messages')
                 state_print = True
 
@@ -348,7 +353,7 @@ class Controller(Node):
     def heading_to_track(self):
         """Heading of the car relative to the global raceline at its arc length [rad]."""
         psi_track = np.interp(self.position_in_map_frenet[0], self.waypoints_s, self.waypoints_psi_unwrapped)
-        return (self.position_in_odom[0, 2] - psi_track + np.pi) % (2 * np.pi) - np.pi
+        return (self.position_in_map[0, 2] - psi_track + np.pi) % (2 * np.pi) - np.pi
 
     def init_ftg_controller(self):
 
@@ -466,16 +471,20 @@ class Controller(Node):
             self.opponent = None
 
     def odom_cb(self, data: Odometry):
+        # body-frame twist from the odometry; the pose there is in the drifting odom frame on the real car
         self.speed_now = data.twist.twist.linear.x
         self.vel_y = data.twist.twist.linear.y
         self.yaw_rate = data.twist.twist.angular.z
-        x = data.pose.pose.position.x
-        y = data.pose.pose.position.y
-        rot = Rotation.from_quat([data.pose.pose.orientation.x, data.pose.pose.orientation.y,
-                                    data.pose.pose.orientation.z, data.pose.pose.orientation.w])
-        rot_euler = rot.as_euler('xyz', degrees=False)
-        theta = rot_euler[2]
-        self.position_in_odom = np.array([x, y, theta])[np.newaxis]
+        # pose from localization, in the same frame as the waypoints and the Frenet state
+        try:
+            tf = self.tf_buffer.lookup_transform('map', self.base_frame, rclpy.time.Time())
+        except Exception as e:
+            self.get_logger().warn(f"map->{self.base_frame} lookup failed: {e}", throttle_duration_sec=1.0)
+            return
+        t = tf.transform.translation
+        q = tf.transform.rotation
+        theta = Rotation.from_quat([q.x, q.y, q.z, q.w]).as_euler('xyz', degrees=False)[2]
+        self.position_in_map = np.array([t.x, t.y, theta])[np.newaxis]
 
     def local_waypoint_cb(self, data: WpntArray):
         # x, y, vx, d (the MPCs' overtake offset), s, kappa, psi, ax
@@ -503,7 +512,7 @@ class Controller(Node):
 
     def map_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.map_controller.main_loop(self.state,
-                                                                                                                               self.position_in_odom,
+                                                                                                                               self.position_in_map,
                                                                                                                                self.waypoint_array_in_map,
                                                                                                                                self.speed_now,
                                                                                                                                self.opponent,
@@ -536,7 +545,7 @@ class Controller(Node):
 
     def pp_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.pp_controller.main_loop(self.state,
-                                                                                                                              self.position_in_odom,
+                                                                                                                              self.position_in_map,
                                                                                                                               self.waypoint_array_in_map,
                                                                                                                               self.speed_now,
                                                                                                                               self.opponent,
@@ -575,7 +584,7 @@ class Controller(Node):
         start = time.perf_counter()
         if self.mode == "STMPC":
             speed, acceleration, jerk, steering_angle, states, status = self.mpc_controller.main_loop(
-                self.state, self.position_in_odom, self.waypoint_array_in_map, self.speed_now, self.opponent,
+                self.state, self.position_in_map, self.waypoint_array_in_map, self.speed_now, self.opponent,
                 self.position_in_map_frenet, self.heading_to_track(), np.array([self.vel_y, self.yaw_rate]),
                 self.track_length, self.compute_time, False)
             if status not in (0, 2):
@@ -587,7 +596,7 @@ class Controller(Node):
                 self.mpc_cost_pub.publish(Float32(data=float(self.mpc_controller.acados_solver.get_cost())))
         else:
             speed, acceleration, jerk, steering_angle, states = self.mpc_controller.main_loop(
-                self.state, self.position_in_odom, self.waypoint_array_in_map, self.speed_now, self.opponent,
+                self.state, self.position_in_map, self.waypoint_array_in_map, self.speed_now, self.opponent,
                 self.position_in_map_frenet, self.heading_to_track(), self.acc_now, self.track_length,
                 self.compute_time)
         if states is not None:
