@@ -5,5 +5,6 @@ parse_git_branch() {
 }
 
 if [[ $TERM == *"color"* ]]; then
-    PS1="${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\e[91m\]\$(parse_git_branch)\[\e[00m\]$ "
+    # docker tag + magenta/cyan so the container shell differs from the host's green/blue
+    PS1="${debian_chroot:+($debian_chroot)}\[\033[01;30;43m\][docker]\[\033[00m\] \[\033[01;35m\]\u@\h\[\033[00m\]:\[\033[01;36m\]\w\[\e[91m\]\$(parse_git_branch)\[\e[00m\]$ "
 fi
