@@ -14,7 +14,7 @@ camera:
 
       # --- depth stream ---
       enable_depth: false
-      depth_module.profile: 640x360x30
+      depth_module.depth_profile: 848x480x30
 
       # --- color stream ---
       enable_color: false
@@ -23,8 +23,9 @@ camera:
       # --- infra streams ---
       enable_infra1: true
       enable_infra2: true
-      # infra profile shares depth_module.profile in recent realsense-ros;
-      # set depth_module width/height/fps to control both.
+      # realsense2_camera >= 4.54 sets infra and depth profiles separately;
+      # must match the resolution in state_estimation/config/d435_calib_*.json
+      depth_module.infra_profile: 848x480x30
 
       # --- imu ---
       enable_gyro: true
@@ -45,11 +46,8 @@ camera:
       wait_for_device_timeout: -1.0
       clip_distance: -2.0
 
-      # --- fixed manual exposure/gain for VIO ---
-      # equivalent of the old ROS1 "camera_dynparam" nodelet call that forced
-      # IR emitter off and locked exposure/gain for visual-inertial odometry.
+      # --- turn off IR emitter ---
+      # equivalent of the old ROS1 "camera_dynparam" nodelet call 
       depth_module.emitter_enabled: 0
       depth_module.enable_auto_exposure: true
-      depth_module.exposure: 3000
-      depth_module.gain: 16
       rgb_camera.power_line_frequency: 0

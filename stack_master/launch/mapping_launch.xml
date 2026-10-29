@@ -3,9 +3,7 @@
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
     <arg name="floor" default="dubi" />
     <arg name="map_name" description="Name of the map to be created" default="latest"/>
-    <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
-    <let name="joy_teleop_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
-    <let name="vesc_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
+    <arg name="use_vio" default="$(env USE_VIO false)" description="Run RealSense camera + Basalt VIO (set via USE_VIO in .env)" />
 
     <!-- Crawl backwards to find the maps in the src folder. -->
     <let name="map_src_path" value="$(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/maps/$(var map_name)" />
@@ -18,11 +16,10 @@
         <param name="map_name" value="$(var map_name)" />
     </node>
 
-    <!-- launch teleop -->
-    <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">
-        <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
-        <arg name="vesc_config" value="$(var vesc_config)" />
-        <arg name="sensors_config" value="$(var sensors_config)" />
+    <!-- launch teleop + sensors -->
+    <include file="$(find-pkg-share stack_master)/launch/teleop_launch.xml">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+        <arg name="use_vio" value="$(var use_vio)" />
     </include>
 
     <!-- launch SE -->
@@ -31,6 +28,7 @@
         <arg name="mapping_bool" value="True" />
         <arg name="map_name" value="$(var map_name)" />
         <arg name="use_sim_time" value="False" />
+        <arg name="use_vio" value="$(var use_vio)" />
     </include>
 
     <!-- launch global parameter node -->

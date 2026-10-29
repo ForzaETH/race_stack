@@ -1,18 +1,21 @@
 ARG IMAGE=ros:humble
 FROM ${IMAGE}
+ARG USE_VIO=false
+
+SHELL [ "/bin/bash", "-c" ]
+ARG DEBIAN_FRONTEND=noninteractive
+
+ADD ./.install_utils/basalt.repos /.install_utils/basalt.repos
+ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
+RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh; fi
+
 ARG PLATFORM=arm
 ARG USER
 ARG UID
 ARG GID
 
-SHELL [ "/bin/bash", "-c" ]
-ARG DEBIAN_FRONTEND=noninteractive
-
-ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
-RUN chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh
-
 ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
-RUN chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh
+RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
 
 
 ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt

@@ -20,6 +20,8 @@ Setting up a static ip at this moment will allow you to set extra computers (tha
 **Note**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
 The build process is managed by the Makefile. The command `default_setup` creates a cache folder (`setup_cache`) and a .env file (`export_env`) before it builds the container (`build`). It also detects if you are on a x86 or arm machine and builds the correct image. 
 
+`export_env` asks whether the machine uses VIO (`USE_VIO`, default `false`). With `USE_VIO=true` the image additionally builds librealsense, the `realsense2_camera` ROS wrapper and `basalt_ros`, and the launch files start the RealSense D455 camera (with the sensors in `teleop_launch.xml`) and Basalt VIO (in `state_estimation_launch.xml`). With `false` all of this is skipped. Changing the value requires `make build` again.
+
 ```bash
 make default_setup
 ```

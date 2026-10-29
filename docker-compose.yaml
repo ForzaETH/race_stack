@@ -6,6 +6,7 @@ x-user-args: &user-args
   USER: ${USER}
   UID: ${HOST_UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
   GID: ${HOST_GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
+  USE_VIO: ${USE_VIO:-false} # true: build librealsense + basalt_ros into the image
 
 x-common-settings: &common-settings
   network_mode: host
@@ -35,6 +36,7 @@ x-common-settings: &common-settings
     - TERM=xterm-256color
     - RMW_IMPLEMENTATION=rmw_zenoh_cpp
     - RACECAR_VERSION=${RACECAR_VERSION:-NUC5}
+    - USE_VIO=${USE_VIO:-false}
 
 services:
   jet:

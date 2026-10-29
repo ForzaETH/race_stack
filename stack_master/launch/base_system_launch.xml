@@ -5,6 +5,8 @@
   <arg name="map_name" default="latest" description="Map name in stack_master/maps" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
+  <arg name="use_vio" default="$(env USE_VIO false)" description="Run RealSense camera + Basalt VIO (set via USE_VIO in .env)" />
+  <arg name="viz_flow" default="False" description="Publish /basalt/flow_image with tracked VIO features" />
 
   <!-- Note: This is merely the share path (read-only) as the base_system
     is not expected to modify maps in any way. -->
@@ -15,6 +17,11 @@
     <include file="$(find-pkg-share f1tenth_gym_ros)/launch/gym_bridge_launch.py">
       <arg name="map_yaml_path" value="$(var map_path)/$(var map_name).yaml" />
     </include>
+    <!-- same sensor transforms as on the real car -->
+    <include file="$(find-pkg-share stack_master)/launch/static_transforms_launch.xml">
+      <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="sim" value="True" />
+    </include>
   </group>
 
   <!-- launch real car system -->
@@ -22,6 +29,7 @@
     <!-- launch teleop stack -->
     <include file="$(find-pkg-share stack_master)/launch/teleop_launch.xml">
       <arg name="racecar_version" value="$(var racecar_version)" />
+      <arg name="use_vio" value="$(var use_vio)" />
     </include>
 
     <!-- launch SE -->
@@ -29,6 +37,8 @@
       <arg name="racecar_version" value="$(var racecar_version)" />
       <arg name="mapping_bool" value="False" />
       <arg name="map_name" value="$(var map_name)" />
+      <arg name="use_vio" value="$(var use_vio)" />
+      <arg name="viz_flow" value="$(var viz_flow)" />
     </include>
   </group>
 
