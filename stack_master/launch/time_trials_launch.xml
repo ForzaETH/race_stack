@@ -32,7 +32,6 @@
     <!-- frenet odom of the sim opponent, the ego one comes from base_system -->
     <node pkg="frenet_odom_republisher" exec="frenet_odom_republisher_node" name="frenet_odom_republisher"
         output="screen" if="$(var sim_opp)">
-        <param name="base_frame" value="opp_racecar/base_link" />
         <remap from="/state_estimation/odom" to="/opp_racecar/odom" />
         <remap from="/car_state/frenet/odom" to="/opp_racecar/frenet/odom" />
     </node>

@@ -3,7 +3,6 @@
     rate_hz: 40  # [hz]
     n_loc_wpnts: 80  # number of local waypoints published, 1 waypoint every 0.1 meter
 
-    base_frame: 'car_state/base_link'  # TF frame of the car -> overridden by launch arg for the sim opponent
     raceline: 'mincurv'  # line to track: mincurv, shortest_path, centerline (frenet + sector scaling always on mincurv) -> overridden by launch arg
     ot_planner: 'frenet'  # choose between: frenet, spliner, predictive_spliner, graph_based
 
