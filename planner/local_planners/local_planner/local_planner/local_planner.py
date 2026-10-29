@@ -379,6 +379,7 @@ class LocalPlanner(Node):
             return
         trans, rot = map_to_odom
         T = concatenate_matrices(translation_matrix(trans), quaternion_matrix(rot))
+        yaw = euler_from_quaternion(rot)[2]
 
         loc_wpnts.wpnts = [copy.copy(w) for w in loc_wpnts.wpnts]
         for i, wpnt in enumerate(loc_wpnts.wpnts):
@@ -388,6 +389,7 @@ class LocalPlanner(Node):
 
             wpnt.x_m = float(p_odom[0])
             wpnt.y_m = float(p_odom[1])
+            wpnt.psi_rad = float((wpnt.psi_rad + yaw + np.pi) % (2 * np.pi) - np.pi)
 
             mrk = Marker()
             mrk.header.frame_id = "odom"
