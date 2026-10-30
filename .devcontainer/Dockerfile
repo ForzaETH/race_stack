@@ -1,62 +1,63 @@
-ARG IMAGE=ros:humble
-FROM ${IMAGE}
-ARG USE_VIO=false
+# Base image is ros:humble-ros-base or nvcr.io/nvidia/l4t-jetpack:r36.3.0 on Jetson
+ARG BASE_IMAGE=ros:humble-ros-base
+FROM ${BASE_IMAGE}
+
+ARG USER=race_crew
+ARG UID=1000
+ARG GID=1000
 
 SHELL [ "/bin/bash", "-c" ]
 ARG DEBIAN_FRONTEND=noninteractive
 
-ADD ./.install_utils/basalt.repos /.install_utils/basalt.repos
-ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
-RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh; fi
-
-ARG PLATFORM=arm
-ARG USER
-ARG UID
-ARG GID
-
-ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
-RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
-
-
-ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt
-RUN if [[ "$PLATFORM" == "jet" ]]; then \
-      mkdir -p /tmp/ocvdummy/DEBIAN && \
-      printf '%s\n' \
-        'Package: libopencv-dev' \
-        'Version: 4.8.1' \
-        'Architecture: all' \
-        'Maintainer: none <none@localhost>' \
-        'Provides: libopencv-core-dev, libopencv-imgproc-dev, libopencv-imgcodecs-dev, libopencv-videoio-dev, libopencv-highgui-dev, libopencv-calib3d-dev, libopencv-features2d-dev, libopencv-flann-dev, libopencv-ml-dev, libopencv-objdetect-dev, libopencv-photo-dev, libopencv-video-dev, libopencv-dnn-dev, libopencv-contrib-dev, libopencv-stitching-dev, libopencv-shape-dev, libopencv-superres-dev, libopencv-videostab-dev, libopencv-viz-dev, opencv-data' \
-        'Description: Dummy, OpenCV 4.8.1 is provided by the base image' \
-        > /tmp/ocvdummy/DEBIAN/control && \
-      dpkg-deb --build /tmp/ocvdummy /tmp/libopencv-dev_4.8.1_all.deb && \
-      dpkg -i /tmp/libopencv-dev_4.8.1_all.deb && \
-      rm -rf /tmp/ocvdummy /tmp/libopencv-dev_4.8.1_all.deb; \
+# Install ROS 2 Humble if the image doesn't come with it. This is needed for the base image for Nvidia Jetsons.
+RUN if [ ! -f /opt/ros/humble/setup.bash ]; then \
+      apt-get update && apt-get install -y --no-install-recommends curl gnupg lsb-release ca-certificates \
+      && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg \
+      && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2.list \
+      && apt-get update && apt-get install -y --no-install-recommends \
+           ros-humble-ros-base build-essential git python3-rosdep \
+           python3-colcon-common-extensions python3-colcon-mixin \
+      && rosdep init && rm -rf /var/lib/apt/lists/*; \
     fi
+ENV ROS_DISTRO=humble LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req.txt
-ADD ./.install_utils/python_req.txt /tmp/.install_utils/python_req.txt
-RUN pip3 install --index-url https://pypi.org/simple -r /tmp/.install_utils/python_req.txt || true
+# Create user with matching UID/GID so bind-mounted files stay owned by
+# the host user. Also give access to serial (VESC) and USB devices.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends sudo \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd -fg ${GID} ${USER} \
+    && useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev ${USER} \
+    && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
+    && chmod 0440 /etc/sudoers.d/${USER}
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3-dev && \
-    pip3 install --index-url https://pypi.org/simple "setuptools==58.2.0" wheel "cython<3" && \
-    SETUPTOOLS_USE_DISTUTILS=stdlib \
-    pip3 install --index-url https://pypi.org/simple --no-build-isolation "quadprog~=0.1.11"
+# Install system (apt) dependencies
+COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
+RUN apt-get update \
+    && xargs apt-get install -y < /tmp/linux_req.txt \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
 
-ADD ./.install_utils /.install_utils
-RUN useradd -ms /bin/bash -u ${UID} -G sudo ${USER} && groupadd -fg ${GID} ${USER} \
-    && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-USER $USER
+# Install python dependencies
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
+COPY .install_utils/requirements/python_req.txt .install_utils/requirements/python_overrides.txt /tmp/
+RUN uv pip install --system --no-cache -r /tmp/python_req.txt --override /tmp/python_overrides.txt \
+    && rm /tmp/python_req.txt /tmp/python_overrides.txt
 
-ADD .install_utils/bashrc/ /tmp/.install_utils/
-RUN echo "export USERNAME=$USER" >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_git >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_forzaeth >> /home/$USER/.bashrc
+# Bashrc: source ROS and workspaces, git completion and branch in terminal
+RUN echo '' >> /home/${USER}/.bashrc \
+    && echo '# --- race_stack ---' >> /home/${USER}/.bashrc \
+    && echo 'source /opt/ros/$ROS_DISTRO/setup.bash' >> /home/${USER}/.bashrc \
+    && echo '[ -f /ws/install/setup.bash ] && source /ws/install/setup.bash' >> /home/${USER}/.bashrc \
+    && echo 'export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u) && mkdir -p -m 0700 $XDG_RUNTIME_DIR' >> /home/${USER}/.bashrc \
+    && echo 'source /usr/lib/git-core/git-sh-prompt' >> /home/${USER}/.bashrc \
+    && echo 'PS1="\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$(__git_ps1 \" (%s)\")\$ "' >> /home/${USER}/.bashrc
 
-USER root
-# Clean up
-RUN rm -rf /tmp/.install_utils
+# Create mount points for persistent volumes (extensions, home storage, colcon workspace)
+RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist \
+        /ws/build /ws/install /ws/log \
+    && chown -R ${UID}:${GID} /home/${USER}/.vscode-server /home/${USER}/.persist /ws
 
-USER $USER
-WORKDIR /home/$USER/ws
+# Set runtime environment
+USER ${USER}
+WORKDIR /ws
 CMD ["/bin/bash"]

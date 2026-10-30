@@ -1,35 +1,57 @@
 {
-    "name": "ForzaETH Race Stack Humble",
-    "dockerComposeFile": "../docker-compose.yaml",
-    "service": "x86",
-    "runServices": [
-        "x86"
+    "name": "ForzaETH Race Stack",
+    "initializeCommand": {
+        "local-compose": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
+        "x11-access": "if [ \"$(uname -s)\" = Linux ] && [ -n \"$DISPLAY\" ] && command -v xhost >/dev/null; then xhost +SI:localuser:$(id -un) >/dev/null || true; fi"
+    },
+    "dockerComposeFile": [
+        "../docker-compose.yaml",
+        "docker-compose.local.yaml"
     ],
-    "initializeCommand": "/bin/bash -c 'source ${localWorkspaceFolder}/.devcontainer/xauth_setup.sh'",
-    "workspaceFolder": "/home/${localEnv:USER}/ws/src/race_stack/",
+    "service": "race_stack",
+    "forwardPorts": [
+        20501
+    ],
+    "portsAttributes": {
+        "20501": {
+            "label": "noVNC"
+        }
+    },
+    "otherPortsAttributes": {
+        "onAutoForward": "ignore"
+    }, // ignore ports not explicitly listed
+    "workspaceFolder": "/ws",
+    "remoteUser": "race_crew",
     "customizations": {
         "vscode": {
             "extensions": [
                 "ms-vscode.cpptools",
-                "ms-vscode.cpptools-themes",
                 "ms-vscode.cpptools-extension-pack",
-                "twxs.cmake",
-                "donjayamanne.python-extension-pack",
-                "aaron-bond.better-comments",
-                "eamodio.gitlens",
-                "ms-iot.vscode-ros",
-                "Github.copilot",
-                "redhat.vscode-xml",
-                "ms-python.autopep8",
-                "xaver.clang-format",
-                "cschlosser.doxdocgen",
-                "foxundermoon.shell-format",
-                "timonwong.shellcheck"
-            ]
+                "ms-python.python",
+                "Ranch-Hand-Robotics.rde-ros-2"
+            ],
+            "settings": {
+                "ROS2.distro": "humble",
+                // Python setup
+                "python.defaultInterpreterPath": "/usr/bin/python3",
+                "python.envFile": "",
+                "python.analysis.extraPaths": [
+                    "/opt/ros/humble/lib/python3.10/site-packages",
+                    "/opt/ros/humble/local/lib/python3.10/dist-packages"
+                ],
+                "C_Cpp.default.compileCommands": "/ws/build/compile_commands.json",
+                // Editor
+                "editor.rulers": [
+                    120
+                ],
+                "editor.renderWhitespace": "trailing",
+                "search.exclude": {
+                    "**/build": true,
+                    "**/install": true,
+                    "**/log": true
+                }
+            }
         }
     },
-    "containerEnv": {
-        "DISPLAY": "${localEnv:DISPLAY}"
-    },
-    "postCreateCommand": "~/ws/src/race_stack/.install_utils/post_create_command.sh"
+    "postCreateCommand": "bash /ws/src/race_stack/.install_utils/post_create_command.sh"
 }

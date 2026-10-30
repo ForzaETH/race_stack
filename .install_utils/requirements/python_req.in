@@ -1,0 +1,41 @@
+# Must be pinned; ROS 2 Humble packages require numpy 1.x, and scipy 1.7.3 caps numpy <1.23
+numpy==1.22.0
+scipy==1.7.3
+
+# GUI forwarded plotting will be deprecated
+matplotlib~=3.5.1
+
+# Built against numpy 1.x and does not declare an upper bound itself
+scikit-image==0.19.2
+
+# pbl_config uses ConfigDict, which only exists in v2
+pydantic>=2,<3
+
+# EKF and tracking were written against the 1.x API
+filterpy<2
+
+# Optimizer and EKF models; bundled solver changes between releases
+casadi==3.8.2
+
+# Global planner; pins quadprog==0.1.7 (no py3.10 wheels), resolve with an
+# override of quadprog==0.1.12 (same solve_qp API)
+trajectory-planning-helpers~=0.79
+
+# Global planner image processing; no cv2 windows are opened anywhere
+opencv-python-headless
+
+# Optimizer friction map
+scikit-learn
+
+# tf_transformations dependency; the rosdep key python-transforms3d-pip was removed
+transforms3d>0.4
+
+pyyaml>=5.3.1
+pandas
+tqdm
+
+# Clones the external repositories (.install_utils/dependencies.repos); maintained fork of vcstool
+vcs2l
+
+# Simulator; pin it with the commit
+f110_gym @ git+https://github.com/ForzaETH/f1tenth_gym@09f3686e9c50b44a3d05ab8f41ec033049c787f0

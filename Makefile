@@ -1,89 +1,58 @@
-# Makefile for setting up ROS Noetic build cache and cloning repos
-# NOTE: this is not a traditional Makefile, but a script-like structure
-# Usage: make [target]
+MAPS_DIR := ../race_stack_maps
+BAGS_DIR := ../race_stack_bags
+DEPS_DIR := ../race_stack_deps
 
-# Configurable variables (edit as needed)
-CACHE_DIR := ../race_stack_cache/humble
+CONTAINER := forzaeth_devcontainer_$(shell id -u)
+LOCAL_COMPOSE := .devcontainer/docker-compose.local.yaml
+COMPOSE := docker compose -f docker-compose.yaml -f $(LOCAL_COMPOSE)
 
-# Phony targets
-.PHONY: \
-	help \
-	default_setup \
-	setup_cache \
-	build \
-	launch\
-	export_env
+.PHONY: setup launch help
 
-help: ## Show available targets and their descriptions
-	@echo "\n\033[33mHelper Makefile for the ForzaETH race_stack setup.\033[0m"
-	@echo "\nUsage:\n\tmake [target]"
-	@echo "\nAvailable [target]s:"
-	@grep -E '^[a-zA-Z_-]+:.*?## ' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
+help:
+	@echo "Usage: make setup"
+	@echo "Prepares the host folders and environment variables for the VS Code DevContainer setup."
+	@echo "       make launch"
+	@echo "Starts the containers without VS Code and opens a shell (runs the post-create setup on first start)."
 
-# HIGH-LEVEL TARGETS
-default_setup: export_env edit-json-arm check-registry setup_cache build ## Setup the race_stack on a new computer, with the simulator
-# LEAF TARGETS
-export_env:
-	@echo "Exporting environment variables to .env file..."
+setup:
+	@mkdir -p $(MAPS_DIR) $(BAGS_DIR) $(DEPS_DIR)
+
+	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env
-	@printf "Enter racecar_version [NUC5]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-NUC5}" >> .env
-	@printf "Use VIO (RealSense + Basalt)? [false]: " && read use_vio && echo "USE_VIO=$${use_vio:-false}" >> .env
-	@echo "HOST_UID=$(shell id -u)" >> .env
-	@echo "HOST_GID=$(shell id -g)" >> .env
-setup_cache: ## Create cache folder structure
-	@echo "Creating ros cache directories..."
-	mkdir -p $(CACHE_DIR)/build \
-		$(CACHE_DIR)/install \
-		$(CACHE_DIR)/log
-	@echo "Cache directories ready at $(CACHE_DIR)"
+	@printf "Enter RACECAR_VERSION (SIM for laptops, NUCx for cars) [SIM]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-SIM}" >> .env
+	@echo "HOST_UID=$$(id -u)" >> .env
+	@echo "HOST_GID=$$(id -g)" >> .env
+	@echo "COMPOSE_BAKE=false" >> .env
 
-
-build: ## Build the base workspace
-	@echo "Detecting system architecture..."
-	@if [ "$$(uname -m)" = "x86_64" ]; then \
-		echo "Building for x86 architecture..."; \
-		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build x86; \
-	elif [ "$$(uname -m)" = "aarch64" ]; then \
-		echo "Building for Jetson ARM architecture..."; \
-		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build jet; \
-	elif [ "$$(uname -m)" = "arm64" ]; then \
-		echo "Building for Apple ARM architecture..."; \
-		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build arm; \
+	@echo "Selecting base image..."
+	@if [ -f /etc/nv_tegra_release ]; then \
+		l4t=$$(sed -n 's/^# R\([0-9]*\) (release), REVISION: \([0-9.]*\).*/r\1.\2/p' /etc/nv_tegra_release); \
+		echo "Jetson detected (L4T $$l4t)"; \
+		echo "BASE_IMAGE=nvcr.io/nvidia/l4t-jetpack:$$l4t" >> .env; \
+		echo "DOCKER_RUNTIME=nvidia" >> .env; \
 	else \
-		echo "Unsupported architecture: $$(uname -m)"; \
-		exit 1; \
+		echo "BASE_IMAGE=ros:humble-ros-base" >> .env; \
 	fi
-	@echo "Base workspace built successfully."
+
+	@echo "Configuring Display for X11 GUI Forwarding..."
+	@if [ "$$(uname -s)" = "Darwin" ]; then \
+		echo "DISPLAY=:501" >> .env; \
+		echo "COMPOSE_PROFILES=novnc" >> .env; \
+	else \
+		echo "DISPLAY=$$DISPLAY" >> .env; \
+	fi
+
+	@echo "========================================"
+	@echo "Setup complete! Open VS Code, type CTRL + SHIFT + P and select 'Reopen in Container'."
+	@echo "========================================"
 
 launch:
-	@echo "Detecting system architecture..."
-	@if [ "$$(uname -m)" = "x86_64" ]; then \
-		export SERVICE_NAME="x86"; \
-	elif [ "$$(uname -m)" = "aarch64" ]; then \
-		export SERVICE_NAME="jet"; \
-	elif [ "$$(uname -m)" = "arm64" ]; then \
-		export SERVICE_NAME="arm"; \
-		export DISPLAY=:501; \
-		echo "Setting DISPLAY to :501 for Apple Silicon..."; \
-	else \
-		echo "Unsupported architecture: $$(uname -m)"; \
-		exit 1; \
-	fi; \
-	.devcontainer/launch_helper.sh $$SERVICE_NAME
-
-edit-json-arm:
-	@echo "If on an ARM based device, please edit devcontainer.json as follows"
-	@echo "Edit the service and runServices to end with arm and not x86"
-	@echo "Change display from '\$${localEnv:DISPLAY}' to ':501'"
-	@printf "Have you updated it if needed?  (y/N): " && read ans && [ "$$ans" = "y" -o "$$ans" = "Y" ] || (echo "Aborted."; exit 1)
-	@echo "✅ Proceeding with build..."
-
-edit-json-jetson:
-	@echo "If on an jetson, please edit devcontainer.json as follows"
-	@echo "Edit the image to end with ..jet and not ..x86"
-	@printf "Have you updated it if needed?  (y/N): " && read ans && [ "$$ans" = "y" -o "$$ans" = "Y" ] || (echo "Aborted."; exit 1)
-	@echo "✅ Proceeding with build..."
-
-.DEFAULT: ## Handle unknown commands
-	@echo "Unknown command: $@"
-	@echo "Run 'make help' or 'make' to see available commands."
+	@[ -f .env ] || { echo "No .env found, run 'make setup' first."; exit 1; }
+	@[ -f $(LOCAL_COMPOSE) ] || cp .devcontainer/docker-compose.local.template.yaml $(LOCAL_COMPOSE)
+	@if [ "$$(uname -s)" = Linux ] && [ -n "$$DISPLAY" ] && command -v xhost >/dev/null; then \
+		xhost +SI:localuser:$$(id -un) >/dev/null || true; \
+	fi
+	@$(COMPOSE) up -d
+	@docker exec $(CONTAINER) test -f /ws/install/setup.bash \
+		|| docker exec -it $(CONTAINER) bash /ws/src/race_stack/.install_utils/post_create_command.sh
+	@docker exec -it $(CONTAINER) bash

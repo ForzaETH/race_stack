@@ -60,3 +60,6 @@ sysid_bags/
 .env
 
 bags/
+
+# Personal devcontainer overrides, generated from docker-compose.local.template.yaml
+.devcontainer/docker-compose.local.yaml

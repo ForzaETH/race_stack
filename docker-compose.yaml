@@ -1,52 +1,119 @@
-x-common-settings: &common-settings
-  network_mode: host
-  ipc: host
-  privileged: true
-  shm_size: "1gb"
-  stdin_open: true
-  tty: true
-  command: tail -f /dev/null
-  volumes:
-    - /dev:/dev:rw
-    - $HOME/.Xauthority:/tmp/.Xauthority
-    - /tmp/.X11-unix:/tmp/.X11-unix
-    - ./:/home/${USER}/ws/src/race_stack:rw
-    - ../race_stack_cache/humble/build:/home/${USER}/ws/build:rw
-    - ../race_stack_cache/humble/install:/home/${USER}/ws/install:rw
-    - ../race_stack_cache/humble/logs:/home/${USER}/ws/logs:rw
-    - .vscode:/home/${USER}/ws/.vscode:rw
-  environment:
-    - DISPLAY=${DISPLAY}
-    - XAUTHORITY=/tmp/.Xauthority
-    - USER=${USER}
-    - USERNAME=${USER}
-    - ROS_LOCALHOST_ONLY=0
-    - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
-    - RCUTILS_COLORIZED_OUTPUT=1
-    - TERM=xterm-256color
-    - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-    - RACECAR_VERSION=${RACECAR_VERSION:-NUC5}
-    - USE_VIO=${USE_VIO:-false}
+name: race_stack
 
 services:
-  jet:
-    container_name: forzaeth_devcontainer_jet_$USER
-    image: race_stack:humble_jet_$USER
-    <<: *common-settings
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  race_stack:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        BASE_IMAGE: ${BASE_IMAGE}
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
+    image: race_stack:humble_${HOST_UID:-1000}
+    # Passing the user allows multiple users per machine
+    container_name: forzaeth_devcontainer_${HOST_UID:-1000} 
+    hostname: ${RACECAR_VERSION:-SIM}
+    extra_hosts:
+      - "${RACECAR_VERSION:-SIM}:127.0.1.1"
+    env_file:
+      - .env
+    runtime: ${DOCKER_RUNTIME:-runc} # Nvidia on Jetson
+    network_mode: host
+    ipc: host
+    privileged: true
+    shm_size: "1gb"
+    init: true
+    stdin_open: true
+    tty: true
+    # Named volumes keep the owner they were created with; re-own them to the current UID
+    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; sudo chown $$(id -u):$$(id -g) /ws/build /ws/install /ws/log; exec tail -f /dev/null"
+    volumes:
+      - /dev:/dev:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../race_stack_deps:/ws/src:rw
+      - ./:/ws/src/race_stack:rw
+      - ../race_stack_maps:/ws/maps:rw
+      - ../race_stack_bags:/ws/bags:rw
+      - ws-build:/ws/build
+      - ws-install:/ws/install
+      - ws-log:/ws/log
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - ROS_LOCALHOST_ONLY=0
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - RACECAR_VERSION=${RACECAR_VERSION:-SIM}
+      - MAPS_DIR=/ws/maps
+      - BAGS_DIR=/ws/bags
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - TERM=xterm-256color
+      - PYTHONPYCACHEPREFIX=/ws/build/.pycache
+      - CMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-  x86:
-    container_name: forzaeth_devcontainer_x86_$USER
-    image: race_stack:humble_x86_$USER
-    <<: *common-settings
-  arm:
-    container_name: forzaeth_devcontainer_arm_$USER
-    image: race_stack:humble_arm_$USER
-    <<: *common-settings
+  zenoh_router:
+    image: race_stack:humble_${HOST_UID:-1000}
+    pull_policy: never
+    depends_on:
+      - race_stack
+    container_name: forzaeth_zenoh_router
+    env_file:
+      - .env
+    network_mode: host
+    restart: unless-stopped
+    command: bash -c "source /opt/ros/humble/setup.bash && exec ros2 run rmw_zenoh_cpp rmw_zenohd"
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+
+  # Foxglove bridge (ws://<host>:8765)
+  foxglove_bridge:
+    image: race_stack:humble_${HOST_UID:-1000}
+    pull_policy: never
+    depends_on:
+      - zenoh_router
+    container_name: forzaeth_foxglove_bridge
+    env_file:
+      - .env
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ws-install:/ws/install:ro
+      - ws-build:/ws/build:ro
+      - ../race_stack_deps:/ws/src:ro
+      - ./:/ws/src/race_stack:ro
+    command: >
+      bash -c "source /opt/ros/humble/setup.bash
+      && if [ -f /ws/install/setup.bash ]; then source /ws/install/setup.bash; fi
+      && exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml address:=${FOXGLOVE_ADDRESS:-0.0.0.0}"
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+
+  # Virtual desktop for visualisations (RVIZ), required for MacOS
+  novnc:
+    build: https://github.com/ForzaETH/remote-novnc.git#main
+    image: forzaeth_novnc:latest
+    container_name: forzaeth_novnc
+    profiles: ["novnc"] # Only start if this profile is enabled (only MacOS)
+    restart: unless-stopped
+    tmpfs:
+      - /tmp
+    environment:
+      - USER_ID=501
+    ports:
+      - "127.0.0.1:6501:6501"
+      - "127.0.0.1:20501:20501"
+    command:
+      - bash
+      - -c
+      - |
+        echo '<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&resize=scale">' > /usr/share/novnc/index.html
+        exec /start_vnc.sh
+
+# Named per host user, so users sharing a machine never share build artifacts
+volumes:
+  ws-build:
+    name: race_stack_humble_build_${HOST_UID:-1000}
+  ws-install:
+    name: race_stack_humble_install_${HOST_UID:-1000}
+  ws-log:
+    name: race_stack_humble_log_${HOST_UID:-1000}

@@ -1,26 +1,24 @@
 #!/bin/bash
 
+# Stop at error
+set -e
+
 # Setup permissions
-# USER="$(id -u -n)"
-sudo chown -R $USER:$USER ~/ws/
+sudo chown -R race_crew:race_crew /ws/
+
+# Clone or update the external repositories (no-op for repos already at the pinned commit)
+vcs import --recursive /ws/src < /ws/src/race_stack/.install_utils/dependencies.repos
 
 # Install dependencies
-rosdep update &&
-    rosdep install --from-paths /home/$USERNAME/ws/src --ignore-src -y
-
-# Setup race_stack
-bash ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh || echo "Failed to setup f110_sim"
-bash ~/ws/src/race_stack/.install_utils/gb_opt_setup.sh || echo "Failed to setup gb_opt"
+sudo apt-get update
+rosdep update
+# python-transforms3d-pip was removed from rosdistro (transforms3d is installed via pip)
+rosdep install --from-paths /ws/src --ignore-src -y --skip-keys "python-transforms3d-pip"
 
 # Apply Joystick patch
-sudo chmod 666 /dev/input/js0
-sudo chmod 666 /dev/input/event*
+sudo chmod 666 /dev/input/js0 2>/dev/null || true
+sudo chmod 666 /dev/input/event* 2>/dev/null || true
 
-# setup f1tenth_gym
-cd ~/ws &&
-    colcon build --packages-up-to f110_gym --base-paths ~/ws \
-        --cmake-args "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_EXPORT_COMPILE_COMMANDS=On" \
-        -Wall -Wextra -Wpedantic --cmake-clean-cache
-
-cd ~/ws/src/race_stack &&
-    ./.vscode/build.sh Release
+# Build workspace
+cd /ws
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
