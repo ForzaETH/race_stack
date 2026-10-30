@@ -2,7 +2,7 @@
   # general parameters shared by all vesc-related nodes
   ros__parameters:
     # erpm (electrical rpm) = speed_to_erpm_gain * speed (meters / second) + speed_to_erpm_offset
-    speed_to_erpm_gain: 4800.0
+    speed_to_erpm_gain: 3476.3  # speed_to_erpm_from_bag, bags/ontracksysid_test
     speed_to_erpm_offset: -5.0
 
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
@@ -32,8 +32,8 @@ ackermann_to_vesc_node:
 
 actuation_manager:
   ros__parameters:
-    speed_min: -14.3739583333
-    speed_max: 14.3760416667
+    speed_min: -5.0
+    speed_max: 10.0
     max_acceleration: 2.5
     max_deceleration: 2.5
     steering_min: -0.4401

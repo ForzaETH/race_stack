@@ -53,3 +53,17 @@ def test_mpc_steering_matches_vesc(path):
     with open(path) as f:
         mpc = yaml.safe_load(f)
     assert (mpc['delta_min'], mpc['delta_max']) == pytest.approx((limits['steering_min'], limits['steering_max']))
+
+
+# actuation_manager speed limits stay within the VESC erpm limits, converted with the same speed_to_erpm mapping
+VESC = sorted(CONFIG_DIR.glob('*/vesc.yaml'))
+
+
+@pytest.mark.parametrize('path', VESC, ids=lambda p: p.parent.name)
+def test_speed_limits_within_erpm_limits(path):
+    with open(path) as f:
+        vesc = yaml.safe_load(f)
+    general, limits = vesc['/**']['ros__parameters'], vesc['actuation_manager']['ros__parameters']
+    gain, offset = general['speed_to_erpm_gain'], general['speed_to_erpm_offset']
+    assert (general['speed_min'] - offset) / gain - 1e-3 <= limits['speed_min'] < 0
+    assert 0 < limits['speed_max'] <= (general['speed_max'] - offset) / gain + 1e-3
