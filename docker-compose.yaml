@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: .devcontainer/Dockerfile
       args:
-        BASE_IMAGE: ${BASE_IMAGE}
+        BASE_IMAGE: ${BASE_IMAGE:-ros:humble-ros-base}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: race_stack:humble_${HOST_UID:-1000}

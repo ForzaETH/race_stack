@@ -2,6 +2,8 @@
 ARG RACE_STACK_IMAGE=race_stack:humble_1000
 FROM ${RACE_STACK_IMAGE}
 
+ARG USER=race_crew
+
 SHELL [ "/bin/bash", "-c" ]
 ARG DEBIAN_FRONTEND=noninteractive
 USER root
@@ -17,7 +19,7 @@ RUN mkdir -p /etc/apt/keyrings \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/librealsenseai.gpg] https://librealsense.realsenseai.com/Debian/apt-repo $(lsb_release -cs) main" \
        > /etc/apt/sources.list.d/librealsense.list \
     && apt-get update \
-    && apt-get install -y librealsense2-utils librealsense2-dev librealsense2-dbg "ros-humble-realsense2-*" \
+    && apt-get install -y librealsense2-utils librealsense2-dev "ros-humble-realsense2-*" \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up Basalt: build basalt_ros into /opt/basalt_ws (symlink install: keep build/)
@@ -43,7 +45,7 @@ RUN if pkg-config --exists opencv4; then OPENCV_PKGS=""; \
     && rm -rf /tmp/basalt.repos /opt/basalt_ws/log
 
 RUN echo '[ -f /opt/basalt_ws/install/setup.bash ] && source /opt/basalt_ws/install/setup.bash' \
-    >> /home/race_crew/.bashrc
+    >> /home/${USER}/.bashrc
 
-USER race_crew
+USER ${USER}
 WORKDIR /ws

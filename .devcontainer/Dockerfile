@@ -36,7 +36,7 @@ RUN apt-get update \
 COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
 RUN apt-get update \
     && xargs apt-get install -y < /tmp/linux_req.txt \
-    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
+    && rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
 
 # Install python dependencies
 COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/

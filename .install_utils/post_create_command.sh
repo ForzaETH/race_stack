@@ -3,9 +3,6 @@
 # Stop at error
 set -e
 
-# Setup permissions
-sudo chown -R race_crew:race_crew /ws/
-
 # Clone or update the external repositories (no-op for repos already at the pinned commit)
 vcs import --recursive /ws/src < /ws/src/race_stack/.install_utils/dependencies.repos
 
