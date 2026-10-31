@@ -2,13 +2,13 @@
   # general parameters shared by all vesc-related nodes
   ros__parameters:
     # erpm (electrical rpm) = speed_to_erpm_gain * speed (meters / second) + speed_to_erpm_offset
-    speed_to_erpm_gain: 4800.0
+    speed_to_erpm_gain: 3476.3  # speed_to_erpm_from_bag, bags/ontracksysid_test
     speed_to_erpm_offset: -5.0
 
     # servo value (0 to 1) =  steering_angle_to_servo_gain * steering angle (radians) + steering_angle_to_servo_offset
     # Includes the former x1.3 steering correction from ackermann_mux.
-    steering_angle_to_servo_gain: 1.131
-    steering_angle_to_servo_offset: 0.35
+    steering_angle_to_servo_gain: 1.1755
+    steering_angle_to_servo_offset: 0.5173
 
     port: /dev/sensors/vesc
     duty_cycle_min: 0.0
@@ -21,8 +21,8 @@
     speed_max: 69000.0
     position_min: 0.0
     position_max: 0.0
-    servo_min: 0.15
-    servo_max: 0.85
+    servo_min: 0.0
+    servo_max: 1.0
 
 ackermann_to_vesc_node:
   ros__parameters:
@@ -32,12 +32,12 @@ ackermann_to_vesc_node:
 
 actuation_manager:
   ros__parameters:
-    speed_min: -14.3739583333
-    speed_max: 14.3760416667
+    speed_min: -5.0
+    speed_max: 10.0
     max_acceleration: 2.5
     max_deceleration: 2.5
-    steering_min: -0.3465959328
-    steering_max: 0.2723253758
+    steering_min: -0.4401
+    steering_max: 0.4106
     max_steering_rate: 2.4615384615
     output_rate: 75.0
     command_timeout: 0.2
@@ -57,5 +57,3 @@ vesc_to_odom_node:
     # publish odom to base link tf
     publish_tf: false
     use_servo_cmd_to_calc_angular_velocity: true
-    # car wheelbase is about 25cm
-    wheelbase: .321

@@ -1,4 +1,4 @@
-local_planner:
+/**/local_planner:  # any namespace, e.g. the sim opponent
   ros__parameters:
     rate_hz: 40  # [hz]
     n_loc_wpnts: 80  # number of local waypoints published, 1 waypoint every 0.1 meter

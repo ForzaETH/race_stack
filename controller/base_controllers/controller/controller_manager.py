@@ -1,4 +1,6 @@
 import os
+import time
+
 import yaml
 import rclpy
 from stack_master.qos import LATCHED_QOS
@@ -14,16 +16,17 @@ from f110_msgs.msg import (CarStateStamped, GapData, ObstacleArray, PidData, Wpn
 from geometry_msgs.msg import Point, PointStamped, Pose, PoseStamped
 from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import Imu, LaserScan
-from std_msgs.msg import Float64, String
+from std_msgs.msg import Float32, Float32MultiArray, Float64, String
 from visualization_msgs.msg import Marker, MarkerArray
 from frenet_conversion.frenet_converter import FrenetConverter
 
 from controller.map import MAP_Controller
 from controller.pp import PP_Controller
 from controller.ftg import FTG_Controller
-from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange
+from rcl_interfaces.msg import ParameterValue, ParameterType, ParameterDescriptor, FloatingPointRange, IntegerRange, SetParametersResult
+from rclpy.parameter import Parameter
 from tf_transformations import quaternion_from_euler
-from stack_master.parameter_event_handler import ParameterEventHandler
+from tf2_ros import Buffer, TransformListener
 
 from forza_config_ros import get_remote_parameter
 
@@ -37,10 +40,10 @@ class Controller(Node):
                          automatically_declare_parameters_from_overrides=True)
 
         # remote parameters
-        self.map_path = get_remote_parameter(self, 'global_parameters', 'map_path')
-        self.racecar_version = get_remote_parameter(self, 'global_parameters', 'racecar_version')
-        self.floor = get_remote_parameter(self, 'global_parameters', 'floor')
-        self.sim = get_remote_parameter(self, 'global_parameters', 'sim')
+        self.map_path = get_remote_parameter(self, '/global_parameters', 'map_path')
+        self.racecar_version = get_remote_parameter(self, '/global_parameters', 'racecar_version')
+        self.floor = get_remote_parameter(self, '/global_parameters', 'floor')
+        self.sim = get_remote_parameter(self, '/global_parameters', 'sim')
         self.state_machine_rate = get_remote_parameter(self, 'state_machine', 'rate_hz')
 
         # variables
@@ -51,6 +54,9 @@ class Controller(Node):
         self.mapping = self.get_parameter('mapping').value
 
         # Publishers
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         self.publish_topic = '/drive'  # TODO adapt car topic name here
         self.drive_pub = self.create_publisher(AckermannDriveStamped, self.publish_topic, 10)
         self.steering_pub = self.create_publisher(Marker, 'steering', 10)
@@ -59,14 +65,13 @@ class Controller(Node):
         self.waypoint_pub = self.create_publisher(MarkerArray, 'my_waypoints', 10)
         self.l1_pub = self.create_publisher(Point, 'l1_distance', 10)
         self.gap_data = self.create_publisher(PidData, '/trailing/gap_data', 10)
-        # Publisher for steering and speed command
-        self.publish_topic = '/vesc/high_level/ackermann_cmd_mux/input/nav_1'
 
         self.track_length = None
         self.opponent = None
         self.waypoint_array_in_map = None
         self.speed_now = None
-        self.position_in_map = None
+        self.position_in_odom = None
+        self.map_to_odom_yaw = None  # yaw of the odom frame in map, to compare the car's yaw with the global raceline
         self.position_in_map_frenet = None
         self.waypoint_safety_counter = 0
 
@@ -83,6 +88,11 @@ class Controller(Node):
         elif self.mode == "PP":
             self.get_logger().info("Initializing PP controller")
             self.init_pp_controller()
+            self.prioritize_dyn = self.l1_params["prioritize_dyn"]
+        elif self.mode in ("STMPC", "KMPC"):
+            self.get_logger().info(f"Initializing {self.mode} controller")
+            # MAP is the STMPC fallback when the solver fails; it also brings the L1/trailing params
+            self.init_map_controller()
             self.prioritize_dyn = self.l1_params["prioritize_dyn"]
         elif self.mode == "FTG":
             self.get_logger().info("Initializing FTG controller")
@@ -115,11 +125,12 @@ class Controller(Node):
         # Init converter
         self.converter = FrenetConverter(self.waypoints[:, 0], self.waypoints[:, 1], self.waypoints[:, 2])
 
-        # dyn params
-        self.param_handler = ParameterEventHandler(self)
-        self.callback_handle = self.param_handler.add_parameter_event_callback(
-            callback=self.l1_param_cb,
-        )
+        # dyn params: registered before the declarations, so values overridden at launch reach the controllers too
+        self.add_on_set_parameters_callback(self.controller_param_cb)
+
+        if self.mode in ("STMPC", "KMPC"):
+            self.init_mpc_controller()
+
         param_dicts = [{'name': 't_clip_min',
                         'default': self.l1_params["t_clip_min"],
                         'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.5, step=0.01)])},
@@ -174,8 +185,7 @@ class Controller(Node):
                        {'name': 'blind_trailing_speed',
                         'default': self.l1_params["blind_trailing_speed"],
                         'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=3.0, step=0.01)])}]
-        params = self.delcare_dyn_parameters(param_dicts)
-        self.set_parameters(params)
+        self.declare_dyn_parameters(param_dicts)
 
         # main loop
         self.create_timer(1 / self.rate, self.control_loop)
@@ -196,13 +206,13 @@ class Controller(Node):
             if self.waypoint_array_in_map is not None and not waypoint_array_print:
                 self.get_logger().info('Received waypoint array')
                 waypoint_array_print = True
-            if self.speed_now is not None and self.position_in_map is not None and self.position_in_map_frenet is not None and not state_print:
+            if self.speed_now is not None and self.position_in_odom is not None and self.map_to_odom_yaw is not None and self.position_in_map_frenet is not None and not state_print:
                 self.get_logger().info('Received car state messages')
                 state_print = True
 
         self.get_logger().info('All required messages received. Continuing...')
 
-    def delcare_dyn_parameters(self, param_dicts):
+    def declare_dyn_parameters(self, param_dicts):
         params = []
         for param_dict in param_dicts:
             param = self.declare_parameter(param_dict['name'], param_dict['default'], param_dict['descriptor'])
@@ -255,18 +265,12 @@ class Controller(Node):
             self.l1_params = self.l1_params['controller']['ros__parameters']
 
         # get wheelbase
-        if self.sim:
-            config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'car_model.yaml')
-            with open(config_path, 'r') as f:
-                car_params = yaml.safe_load(f)
-                self.wheelbase = car_params['lr'] + car_params['lf']
-        else:
-            config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'vesc.yaml')
-            with open(config_path, 'r') as f:
-                car_params = yaml.safe_load(f)
-                self.wheelbase = car_params['vesc_to_odom_node']['ros__parameters']['wheelbase']
+        config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'car_model.yaml')
+        with open(config_path, 'r') as f:
+            car_params = yaml.safe_load(f)
+            self.wheelbase = car_params['lr'] + car_params['lf']
 
-        self.create_subscription(Imu, '/vesc/sensors/imu/raw', self.imu_cb,
+        self.create_subscription(Imu, '/imu', self.imu_cb,
                                  10)  # acceleration subscriber for steer change
         self.acc_now = np.zeros(10)  # rolling buffer for acceleration
 
@@ -291,6 +295,62 @@ class Controller(Node):
             self.l1_params["blind_trailing_speed"],
             self.rate,
             self.wheelbase)
+
+    def init_mpc_controller(self):
+        # imported here: only the MPC modes need acados
+        from forza_config import TrailingConfig
+        from forza_config_ros import load_car_config_ros, load_model_ros, load_pacejka_tire_config_ros
+        from forzaeth_mpc.config import KMPCConfig, KMPCConfigDyn, STMPCConfig, STMPCConfigDyn
+
+        car_config = load_car_config_ros(self.racecar_version)
+        trailing_config = TrailingConfig(**{key: self.l1_params[key] for key in TrailingConfig.model_fields})
+
+        # acados generates and compiles the solver into the working directory
+        build_dir = os.path.expanduser(f'~/.ros/forzaeth_mpc/{self.mode}')
+        os.makedirs(build_dir, exist_ok=True)
+        os.chdir(build_dir)
+
+        s, d = self.position_in_map_frenet[:2]
+        pose_frenet = np.array([s, d, self.heading_to_track()])
+        if self.mode == "STMPC":
+            from forzaeth_mpc.stmpc import STMPC
+            self.mpc_config = load_model_ros(STMPCConfig, self.racecar_version, 'single_track_mpc_params.yaml')
+            dyn_config = load_model_ros(STMPCConfigDyn, 'DEFAULT', 'single_track_mpc_dyn_params.yaml')
+            self.mpc_controller = STMPC(pose_frenet=pose_frenet,
+                                        waypoints_data=self.waypoints_data,
+                                        racecar_version=self.racecar_version,
+                                        stmpc_config=self.mpc_config,
+                                        car_config=car_config,
+                                        tire_config=load_pacejka_tire_config_ros(self.racecar_version, self.floor),
+                                        trailing_config=trailing_config,
+                                        controller_frequency=self.rate,
+                                        using_gokart=False)
+            self.mpc_cost_pub = self.create_publisher(Float32, '/mpc_controller/horizon_cost', 10)
+        else:
+            from forzaeth_mpc.kmpc import Kinematic_MPC_Controller
+            self.mpc_config = load_model_ros(KMPCConfig, self.racecar_version, 'kinematic_mpc_params.yaml')
+            dyn_config = load_model_ros(KMPCConfigDyn, 'DEFAULT', 'kinematic_mpc_dyn_params.yaml')
+            self.mpc_controller = Kinematic_MPC_Controller(waypoints_data=self.waypoints_data,
+                                                           racecar_version=self.racecar_version,
+                                                           kmpc_config=self.mpc_config,
+                                                           car_config=car_config,
+                                                           trailing_config=trailing_config)
+        self.mpc_states_pub = self.create_publisher(Float32MultiArray, '/mpc_controller/states', 10)
+        self.compute_time = 0.0
+
+        # online tuning: the ranges of config/DEFAULT/*_mpc_dyn_params.yaml, the values of the car's config
+        self.mpc_dyn_keys = list(type(dyn_config).model_fields)
+        self.declare_dyn_parameters([
+            {'name': key,
+             'default': float(getattr(self.mpc_config, key)),
+             'descriptor': ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[
+                 FloatingPointRange(from_value=float(low), to_value=float(high))])}
+            for key, (low, high) in dyn_config.model_dump().items()])
+
+    def heading_to_track(self):
+        """Heading of the car relative to the global raceline at its arc length [rad]."""
+        psi_track = np.interp(self.position_in_map_frenet[0], self.waypoints_s, self.waypoints_psi_unwrapped)
+        return (self.position_in_odom[0, 2] + self.map_to_odom_yaw - psi_track + np.pi) % (2 * np.pi) - np.pi
 
     def init_ftg_controller(self):
 
@@ -318,53 +378,21 @@ class Controller(Node):
     # CALLBACKS #
     #############
 
-    def l1_param_cb(self, parameter_event):
+    def controller_param_cb(self, params: List[Parameter]) -> SetParametersResult:
         """
-        Notices the change in the parameters and alters the spline params accordingly
+        Applies the changed parameters to the active controller. Called before the values are stored, also on
+        declaration: read them from params, not get_parameter().
         """
-
-        if parameter_event.node != "/controller" or self.mode == "FTG":
-            return
-
-        if self.mode == "MAP":
-            self.map_controller.t_clip_min = self.get_parameter('t_clip_min').value
-            self.map_controller.t_clip_max = self.get_parameter('t_clip_max').value
-            self.map_controller.m_l1 = self.get_parameter('m_l1').value
-            self.map_controller.q_l1 = self.get_parameter('q_l1').value
-            self.map_controller.speed_lookahead = self.get_parameter('speed_lookahead').value
-            self.map_controller.lat_err_coeff = self.get_parameter('lat_err_coeff').value
-            self.map_controller.acc_scaler_for_steer = self.get_parameter('acc_scaler_for_steer').value
-            self.map_controller.dec_scaler_for_steer = self.get_parameter('dec_scaler_for_steer').value
-            self.map_controller.start_scale_speed = self.get_parameter('start_scale_speed').value
-            self.map_controller.end_scale_speed = self.get_parameter('end_scale_speed').value
-            self.map_controller.downscale_factor = self.get_parameter('downscale_factor').value
-            self.map_controller.speed_lookahead_for_steer = self.get_parameter('speed_lookahead_for_steer').value
-            self.map_controller.prioritize_dyn = self.get_parameter('prioritize_dyn').value
-            self.map_controller.trailing_gap = self.get_parameter('trailing_gap').value
-            self.map_controller.trailing_p_gain = self.get_parameter('trailing_p_gain').value
-            self.map_controller.trailing_i_gain = self.get_parameter('trailing_i_gain').value
-            self.map_controller.trailing_d_gain = self.get_parameter('trailing_d_gain').value
-            self.map_controller.blind_trailing_speed = self.get_parameter('blind_trailing_speed').value
-        elif self.mode == "PP":
-            self.pp_controller.t_clip_min = self.get_parameter('t_clip_min').value
-            self.pp_controller.t_clip_max = self.get_parameter('t_clip_max').value
-            self.pp_controller.m_l1 = self.get_parameter('m_l1').value
-            self.pp_controller.q_l1 = self.get_parameter('q_l1').value
-            self.pp_controller.speed_lookahead = self.get_parameter('speed_lookahead').value
-            self.pp_controller.lat_err_coeff = self.get_parameter('lat_err_coeff').value
-            self.pp_controller.acc_scaler_for_steer = self.get_parameter('acc_scaler_for_steer').value
-            self.pp_controller.dec_scaler_for_steer = self.get_parameter('dec_scaler_for_steer').value
-            self.pp_controller.start_scale_speed = self.get_parameter('start_scale_speed').value
-            self.pp_controller.end_scale_speed = self.get_parameter('end_scale_speed').value
-            self.pp_controller.downscale_factor = self.get_parameter('downscale_factor').value
-            self.pp_controller.speed_lookahead_for_steer = self.get_parameter('speed_lookahead_for_steer').value
-            self.pp_controller.prioritize_dyn = self.get_parameter('prioritize_dyn').value
-            self.pp_controller.trailing_gap = self.get_parameter('trailing_gap').value
-            self.pp_controller.trailing_p_gain = self.get_parameter('trailing_p_gain').value
-            self.pp_controller.trailing_i_gain = self.get_parameter('trailing_i_gain').value
-            self.pp_controller.trailing_d_gain = self.get_parameter('trailing_d_gain').value
-            self.pp_controller.blind_trailing_speed = self.get_parameter('blind_trailing_speed').value
-        self.get_logger().info("Updated parameters")
+        for param in params:
+            if param.name in getattr(self, 'mpc_dyn_keys', ()):
+                # the MPCs read their config every cycle
+                setattr(self.mpc_config, param.name, param.value)
+                continue
+            # MAP is also the MPCs' fallback; the L1 parameter names match the controllers' attributes
+            for ctrl in (getattr(self, 'map_controller', None), getattr(self, 'pp_controller', None)):
+                if ctrl is not None and hasattr(ctrl, param.name):
+                    setattr(ctrl, param.name, param.value)
+        return SetParametersResult(successful=True)
 
     def scan_cb(self, data: LaserScan):
         self.scan = data
@@ -372,6 +400,11 @@ class Controller(Node):
     def track_length_cb(self, data: WpntArray):
         self.track_length = data.wpnts[-1].s_m
         self.waypoints = np.array([[wpnt.x_m, wpnt.y_m, wpnt.psi_rad] for wpnt in data.wpnts])
+        self.waypoints_s = np.array([wpnt.s_m for wpnt in data.wpnts])
+        self.waypoints_psi_unwrapped = np.unwrap(self.waypoints[:, 2])
+        # the MPCs' track: x, y, vx, kappa, s, d_left, d_right
+        self.waypoints_data = np.array([[wpnt.x_m, wpnt.y_m, wpnt.vx_mps, wpnt.kappa_radpm, wpnt.s_m,
+                                         wpnt.d_left, wpnt.d_right] for wpnt in data.wpnts])
 
     def obstacle_cb(self, data: ObstacleArray):
         if len(data.obstacles) > 0 and \
@@ -399,46 +432,33 @@ class Controller(Node):
             self.opponent = None
 
     def odom_cb(self, data: Odometry):
+        # the controllers work in the odom frame, like the local waypoints
         self.speed_now = data.twist.twist.linear.x
+        self.vel_y = data.twist.twist.linear.y
+        self.yaw_rate = data.twist.twist.angular.z
         x = data.pose.pose.position.x
         y = data.pose.pose.position.y
         rot = Rotation.from_quat([data.pose.pose.orientation.x, data.pose.pose.orientation.y,
                                     data.pose.pose.orientation.z, data.pose.pose.orientation.w])
         rot_euler = rot.as_euler('xyz', degrees=False)
         theta = rot_euler[2]
-        self.position_in_map = np.array([x, y, theta])[np.newaxis]
+        self.position_in_odom = np.array([x, y, theta])[np.newaxis]
+        try:
+            q = self.tf_buffer.lookup_transform('map', data.header.frame_id, rclpy.time.Time()).transform.rotation
+            self.map_to_odom_yaw = Rotation.from_quat([q.x, q.y, q.z, q.w]).as_euler('xyz', degrees=False)[2]
+        except Exception as e:
+            self.get_logger().warn(f"map->{data.header.frame_id} lookup failed: {e}", throttle_duration_sec=1.0)
 
     def local_waypoint_cb(self, data: WpntArray):
-        self.waypoint_list_in_map = []
-        for waypoint in data.wpnts:
-            waypoint_in_map = [waypoint.x_m, waypoint.y_m]
-            speed = waypoint.vx_mps
-            if waypoint.d_right + waypoint.d_left != 0:
-                self.waypoint_list_in_map.append([waypoint_in_map[0],
-                                                  waypoint_in_map[1],
-                                                  speed,
-                                                  min(waypoint.d_left,
-                                                      waypoint.d_right) / (waypoint.d_right + waypoint.d_left),
-                                                  waypoint.s_m,
-                                                  waypoint.kappa_radpm,
-                                                  waypoint.psi_rad,
-                                                  waypoint.ax_mps2])
-            else:
-                self.waypoint_list_in_map.append([waypoint_in_map[0],
-                                                  waypoint_in_map[1],
-                                                  speed,
-                                                  0,
-                                                  waypoint.s_m,
-                                                  waypoint.kappa_radpm,
-                                                  waypoint.psi_rad,
-                                                  waypoint.ax_mps2])
-        self.waypoint_array_in_map = np.array(self.waypoint_list_in_map)
+        # x, y, vx, d (the MPCs' overtake offset), s, kappa, psi, ax
+        self.waypoint_array_in_map = np.array([[wpnt.x_m, wpnt.y_m, wpnt.vx_mps, wpnt.d_m, wpnt.s_m, wpnt.kappa_radpm,
+                                                wpnt.psi_rad, wpnt.ax_mps2] for wpnt in data.wpnts])
         self.waypoint_safety_counter = 0
 
     def imu_cb(self, data):
         # save acceleration in a rolling buffer
         self.acc_now[1:] = self.acc_now[:-1]
-        self.acc_now[0] = -data.linear_acceleration.y  # vesc is rotated 90 deg, so (-acc_y) == (long_acc)
+        self.acc_now[0] = data.linear_acceleration.x
 
     def car_state_frenet_cb(self, data: Odometry):
         s = data.pose.pose.position.x
@@ -447,15 +467,12 @@ class Controller(Node):
         vd = data.twist.twist.linear.y
         self.position_in_map_frenet = np.array([s, d, vs, vd])
 
-    def l1_params_cb(self):
-        pass
-
     def state_cb(self, data):
         self.state = data.data
 
     def map_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.map_controller.main_loop(self.state,
-                                                                                                                               self.position_in_map,
+                                                                                                                               self.position_in_odom,
                                                                                                                                self.waypoint_array_in_map,
                                                                                                                                self.speed_now,
                                                                                                                                self.opponent,
@@ -468,7 +485,6 @@ class Controller(Node):
         self.l1_pub.publish(Point(x=float(idx_nearest_waypoint), y=L1_distance))
 
         self.waypoint_safety_counter += 1
-        print(self.waypoint_safety_counter, self.rate, self.state_machine_rate)
         if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
             self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
             speed = 0
@@ -489,7 +505,7 @@ class Controller(Node):
 
     def pp_cycle(self):
         speed, acceleration, jerk, steering_angle, L1_point, L1_distance, idx_nearest_waypoint = self.pp_controller.main_loop(self.state,
-                                                                                                                              self.position_in_map,
+                                                                                                                              self.position_in_odom,
                                                                                                                               self.waypoint_array_in_map,
                                                                                                                               self.speed_now,
                                                                                                                               self.opponent,
@@ -524,6 +540,36 @@ class Controller(Node):
         self.get_logger().warning("[STATE MACHINE] FTGONLY!!!")
         return speed, steer
 
+    def mpc_cycle(self):
+        start = time.perf_counter()
+        if self.mode == "STMPC":
+            speed, acceleration, jerk, steering_angle, states, status = self.mpc_controller.main_loop(
+                self.state, self.position_in_odom, self.waypoint_array_in_map, self.speed_now, self.opponent,
+                self.position_in_map_frenet, self.heading_to_track(), np.array([self.vel_y, self.yaw_rate]),
+                self.track_length, self.compute_time, False)
+            if status not in (0, 2):
+                self.get_logger().warning(f"STMPC solver status {status}, falling back to MAP", throttle_duration_sec=1.0)
+                speed, steering_angle = self.map_cycle()
+                self.waypoint_safety_counter -= 1  # map_cycle() already counted this cycle
+                acceleration, jerk = 0.0, 0.0
+            else:
+                self.mpc_cost_pub.publish(Float32(data=float(self.mpc_controller.acados_solver.get_cost())))
+        else:
+            speed, acceleration, jerk, steering_angle, states = self.mpc_controller.main_loop(
+                self.state, self.position_in_odom, self.waypoint_array_in_map, self.speed_now, self.opponent,
+                self.position_in_map_frenet, self.heading_to_track(), self.acc_now, self.track_length,
+                self.compute_time)
+        if states is not None:
+            self.mpc_states_pub.publish(Float32MultiArray(data=np.asarray(states, dtype=np.float32).ravel().tolist()))
+        self.visualize_steering(steering_angle)
+
+        self.waypoint_safety_counter += 1
+        if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:
+            self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
+            speed, acceleration, jerk, steering_angle = 0.0, 0.0, 0.0, 0.0
+        self.compute_time = time.perf_counter() - start
+        return speed, acceleration, jerk, steering_angle
+
     def create_pid_msg(self, should, actual, error, d_value, i_value, input):
         pid_msg = PidData()
         pid_msg.header.stamp = self.get_clock().now().to_msg()
@@ -539,18 +585,23 @@ class Controller(Node):
     # MAIN LOOP #
     #############
     def control_loop(self):
+        acceleration, jerk = 0.0, 0.0
         if self.mode == "MAP":
             speed, steer = self.map_cycle()
         elif self.mode == "PP":
             speed, steer = self.pp_cycle()
         elif self.mode == "FTG":
             speed, steer = self.ftg_cycle()
+        elif self.mode in ("STMPC", "KMPC"):
+            speed, acceleration, jerk, steer = self.mpc_cycle()
 
         ack_msg = AckermannDriveStamped()
         ack_msg.header.stamp = self.get_clock().now().to_msg()
         ack_msg.header.frame_id = 'base_link'
-        ack_msg.drive.steering_angle = steer
-        ack_msg.drive.speed = speed
+        ack_msg.drive.steering_angle = float(steer)
+        ack_msg.drive.speed = float(speed)
+        ack_msg.drive.acceleration = float(acceleration)
+        ack_msg.drive.jerk = float(jerk)
         self.drive_pub.publish(ack_msg)
 
     ############################################ MSG CREATION############################################

@@ -23,4 +23,3 @@ tau_steer: 0.15779476
 max_steering_angle: 0.4189
 min_radius_curv_m: 0.56 # this is technically not a free parameter, it should be wheelbase / tan(max_steering_angle)
 max_steering_velocity: 3.2
-racecar_version: NUC10

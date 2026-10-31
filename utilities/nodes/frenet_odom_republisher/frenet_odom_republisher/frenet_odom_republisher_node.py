@@ -13,7 +13,7 @@ from tf2_ros import Buffer, TransformListener
 class FrenetOdomRepublisher(Node):
     """Publishes the car state in Frenet coordinates.
 
-    Pose comes from TF (map -> car_state/base_link), velocity from /state_estimation/odom.
+    Pose and velocity come from /state_estimation/odom; the pose is moved into map with the latest map->odom TF.
     """
 
     def __init__(self):
@@ -36,24 +36,30 @@ class FrenetOdomRepublisher(Node):
     def odom_callback(self, msg):
         if self.converter is None:
             return
+        # only map->odom from TF: the whole map->base_link chain lags behind by the localization latency
         try:
-            tf = self.tf_buffer.lookup_transform('map', 'car_state/base_link', rclpy.time.Time())
+            tf = self.tf_buffer.lookup_transform('map', msg.header.frame_id, rclpy.time.Time())
         except Exception as e:
-            self.get_logger().warn(f"map->car_state/base_link lookup failed: {e}", throttle_duration_sec=1.0)
+            self.get_logger().warn(f"map->{msg.header.frame_id} lookup failed: {e}", throttle_duration_sec=1.0)
             return
 
         t = tf.transform.translation
         q = tf.transform.rotation
-        theta = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        yaw0 = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        p = msg.pose.pose.position
+        q = msg.pose.pose.orientation
+        x = t.x + np.cos(yaw0) * p.x - np.sin(yaw0) * p.y
+        y = t.y + np.sin(yaw0) * p.x + np.cos(yaw0) * p.y
+        theta = yaw0 + euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
         vel = msg.twist.twist.linear
 
-        frenet_pos = self.converter.get_frenet([t.x], [t.y])
+        frenet_pos = self.converter.get_frenet([x], [y])
         frenet_vel = self.converter.get_frenet_velocities(vel.x, vel.y, theta)
 
         odom_msg = Odometry()
         odom_msg.header.stamp = msg.header.stamp
         odom_msg.header.frame_id = 'frenet'
-        odom_msg.child_frame_id = str(self.converter.get_closest_index([t.x], [t.y])[0])
+        odom_msg.child_frame_id = str(self.converter.get_closest_index([x], [y])[0])
         odom_msg.pose.pose.position.x = frenet_pos[0, 0]
         odom_msg.pose.pose.position.y = frenet_pos[1, 0]
         odom_msg.twist.twist.linear.x = frenet_vel[0][0]

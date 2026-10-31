@@ -5,11 +5,11 @@
 [submodule "base_system/f110_simulator/f1tenth_gym"]
 	path = base_system/f110_simulator/f1tenth_gym
 	url = https://github.com/ForzaETH/f1tenth_gym.git
-	branch = main
+	branch = humble
 [submodule "base_system/f110_simulator/f1tenth_gym_ros"]
 	path = base_system/f110_simulator/f1tenth_gym_ros
 	url = https://github.com/ForzaETH/f1tenth_gym_ros.git
-	branch = main
+	branch = humble
 [submodule "planner/global_planner/global_planner/global_racetrajectory_optimization"]
 	path = planner/global_planner/global_planner/global_racetrajectory_optimization
 	url = https://github.com/ForzaETH/global_racetrajectory_optimization.git
@@ -24,4 +24,8 @@
 [submodule "utilities/libraries/forza_config"]
 	path = utilities/libraries/forza_config
 	url = https://github.com/ForzaETH/forza_config.git
+	branch = main
+[submodule "controller/forzaeth_mpc"]
+	path = controller/forzaeth_mpc
+	url = https://github.com/ForzaETH/forzaeth_mpc.git
 	branch = main

@@ -25,4 +25,3 @@ tau_steer: 0.0502
 max_steering_angle: 0.4189
 min_radius_curv_m: 0.742 # wheelbase / tan(max_steering_angle)
 max_steering_velocity: 3.2
-racecar_version: SIM

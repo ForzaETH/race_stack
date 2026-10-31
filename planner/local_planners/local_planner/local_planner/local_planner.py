@@ -10,6 +10,7 @@ import tf2_ros
 from tf_transformations import concatenate_matrices, translation_matrix, quaternion_matrix, euler_from_quaternion
 
 from f110_msgs.msg import OTWpntArray, Wpnt, WpntArray
+from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray, String
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -53,6 +54,7 @@ class LocalPlanner(Node):
         self.cur_id_ot = 1
         self.max_s = 0.0
         self.current_position = None
+        self.odom = None
         self.glb_wpnts = None
         self.gb_wpnts_arr = None
         self.gb_max_idx = None
@@ -84,6 +86,7 @@ class LocalPlanner(Node):
         self.create_subscription(WpntArray, "/global_waypoints", self.glb_wpnts_og_cb, LATCHED_QOS)  # from og wpnts
         self.create_subscription(WpntArray, "/global_waypoints/overtaking", self.overtake_cb, LATCHED_QOS)
         self.create_subscription(String, "/state", self.state_cb, 1)
+        self.create_subscription(Odometry, "/state_estimation/odom", self.odom_cb, 10)
         self.get_logger().info("[Local Planner] Waiting for state machine state message...")
         while self.cur_state is None:
             rclpy.spin_once(self)
@@ -140,6 +143,9 @@ class LocalPlanner(Node):
     #################
     #   Callbacks   #
     #################
+    def odom_cb(self, msg: Odometry):
+        self.odom = msg
+
     def state_cb(self, msg: String):
         self.cur_state = msg.data
 
@@ -379,6 +385,7 @@ class LocalPlanner(Node):
             return
         trans, rot = map_to_odom
         T = concatenate_matrices(translation_matrix(trans), quaternion_matrix(rot))
+        yaw = euler_from_quaternion(rot)[2]
 
         loc_wpnts.wpnts = [copy.copy(w) for w in loc_wpnts.wpnts]
         for i, wpnt in enumerate(loc_wpnts.wpnts):
@@ -388,6 +395,7 @@ class LocalPlanner(Node):
 
             wpnt.x_m = float(p_odom[0])
             wpnt.y_m = float(p_odom[1])
+            wpnt.psi_rad = float((wpnt.psi_rad + yaw + np.pi) % (2 * np.pi) - np.pi)
 
             mrk = Marker()
             mrk.header.frame_id = "odom"
@@ -419,17 +427,25 @@ class LocalPlanner(Node):
         mrk.markers[0].action = Marker.DELETEALL
         self.del_marker_pub.publish(mrk)
 
-    def update_pose_from_tf(self) -> bool:
-        """Updates current_position from TF. Returns False if the transform is unavailable."""
-        try:
-            tf = self.tf_buffer.lookup_transform("map", "car_state/base_link", Time())
-        except tf2_ros.TransformException as e:
-            self.get_logger().warn(f"[Local Planner] map->base_link lookup failed: {e}", throttle_duration_sec=1.0)
+    def update_pose(self) -> bool:
+        """Updates current_position from the odometry, moved into map. Returns False if unavailable."""
+        if self.odom is None:
             return False
-        x = tf.transform.translation.x
-        y = tf.transform.translation.y
+        # only map->odom from TF: the whole map->base_link chain lags behind by the localization latency
+        try:
+            tf = self.tf_buffer.lookup_transform("map", self.odom.header.frame_id, Time())
+        except tf2_ros.TransformException as e:
+            self.get_logger().warn(f"[Local Planner] map->{self.odom.header.frame_id} lookup failed: {e}",
+                                   throttle_duration_sec=1.0)
+            return False
+        t = tf.transform.translation
         q = tf.transform.rotation
-        theta = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        yaw0 = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        p = self.odom.pose.pose.position
+        q = self.odom.pose.pose.orientation
+        x = t.x + np.cos(yaw0) * p.x - np.sin(yaw0) * p.y
+        y = t.y + np.sin(yaw0) * p.x + np.cos(yaw0) * p.y
+        theta = yaw0 + euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
 
         self.current_position = [x, y, theta]
         return True
@@ -509,8 +525,8 @@ class LocalPlanner(Node):
         """
         Main loop of the local planner.
         """
-        # update position, skip this iteration if TF is not available yet
-        if not self.update_pose_from_tf():
+        # update position, skip this iteration if odometry or TF is not available yet
+        if not self.update_pose():
             return
         self.update_frenet_from_pose()
 

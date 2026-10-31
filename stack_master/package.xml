@@ -11,6 +11,8 @@
   <depend>rclpy</depend>
 
   <test_depend>python3-pytest</test_depend>
+  <test_depend>forza_config</test_depend>
+  <test_depend>forzaeth_mpc</test_depend>
 
   <export>
     <build_type>ament_python</build_type>

@@ -1,0 +1,19 @@
+# Pinned union of basalt_ros.repos and basalt_wrapper.repos, so the Docker layer
+# cache never serves a stale basalt. Bump the SHAs here to update basalt.
+repositories:
+  src/basalt_ros:
+    type: git
+    url: https://github.com/ForzaETH/basalt_ros.git
+    version: 0577bd5c0d6b7d3b954b5c6fa94b98fd3e8ce462
+  src/basalt_wrapper:
+    type: git
+    url: https://github.com/berndpfrommer/basalt_wrapper.git
+    version: 5b261f65904de18e10c2bb2a858a82d88ae87cf9
+  src/basalt_vio_msgs:
+    type: git
+    url: https://github.com/berndpfrommer/basalt_vio_msgs.git
+    version: 8ed58cfb9da18df3fcea8609208375340d0ee1d9
+  src/basalt_wrapper/basalt:
+    type: git
+    url: https://github.com/berndpfrommer/basalt.git
+    version: f46865566c2f5fd2f4ccc1f885495caa69e1b446

@@ -28,6 +28,9 @@ setup(
             'steady_state_from_bag = lateral_sysid_ros.steady_state_from_bag:main',
             'generate_lut = lateral_sysid_ros.generate_lut:main',
             'steering_ramp_node = lateral_sysid_ros.steering_ramp_node:main',
+            'pacejka_visualizer = lateral_sysid_ros.pacejka_visualizer:main',
+            'max_steering_from_bag = lateral_sysid_ros.max_steering_from_bag:main',
+            'speed_to_erpm_from_bag = lateral_sysid_ros.speed_to_erpm_from_bag:main',
         ],
     },
 )

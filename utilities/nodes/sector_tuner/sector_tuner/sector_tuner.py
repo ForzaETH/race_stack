@@ -1,5 +1,8 @@
 import copy
+import os
+import yaml
 import rclpy
+from forza_config_ros import get_remote_parameter
 from stack_master.qos import LATCHED_QOS
 from rcl_interfaces.msg import ParameterType, ParameterDescriptor, FloatingPointRange
 from rclpy.node import Node
@@ -18,9 +21,9 @@ class SectorTuner(Node):
         super().__init__('sector_tuner',
                          allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
-        
+
         self.vis_timer = self.create_timer(1.0, self.marker_callback)
-        
+
         # sectors params
         self.glb_wpnts_og = None
         self.glb_wpnts_scaled = None
@@ -28,6 +31,8 @@ class SectorTuner(Node):
         self.glb_wpnts_sp_scaled = None
 
         # get initial scaling
+        if not self.has_parameter('n_sectors'):
+            self.load_map_sectors()
         self.sectors_params=self.parameters_to_dict()
         self.n_sectors = self.sectors_params['n_sectors']
         
@@ -62,6 +67,24 @@ class SectorTuner(Node):
         
         self.get_logger().info("Waiting for global waypoints...")
         
+    def load_map_sectors(self):
+        """
+        No speed_scaling.yaml was passed (e.g. sim opponent): load the one of the map the base system runs
+        """
+        map_path = get_remote_parameter(self, '/global_parameters', 'map_path')
+        path = os.path.join(map_path, 'speed_scaling.yaml')
+        self.get_logger().info(f"No sector parameters given, loading {path}")
+        with open(path) as f:
+            params = next(iter(yaml.safe_load(f).values()))['ros__parameters']
+
+        def declare(prefix, d):
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    declare(f'{prefix}{key}.', value)
+                elif not self.has_parameter(prefix + key):
+                    self.declare_parameter(prefix + key, value)
+        declare('', params)
+
     def parameters_to_dict(self):
         params = {}
         for key in self._parameters:
@@ -90,7 +113,7 @@ class SectorTuner(Node):
         """
         Notices the change in the parameters and scales the global waypoints
         """
-        if(parameter_event.node != '/sector_tuner'):
+        if(parameter_event.node != self.get_fully_qualified_name()):
             return
         self.sectors_params = self.parameters_to_dict()
         # update params 
