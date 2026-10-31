@@ -29,6 +29,7 @@ RUN apt-get update \
     && groupadd -fg ${GID} ${USER} \
     && useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev ${USER} \
     && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
+    && echo 'Defaults env_keep += "DEBIAN_FRONTEND"' >> /etc/sudoers.d/${USER} \
     && chmod 0440 /etc/sudoers.d/${USER}
 
 # Install system (apt) dependencies
