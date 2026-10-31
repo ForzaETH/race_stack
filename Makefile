@@ -20,6 +20,7 @@ setup:
 	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env
 	@printf "Enter RACECAR_VERSION (SIM for laptops, NUCx for cars) [SIM]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-SIM}" >> .env
+	@printf "Does this machine run VIO with a RealSense camera? (true/false) [false]: " && read use_vio && echo "USE_VIO=$${use_vio:-false}" >> .env
 	@echo "HOST_UID=$$(id -u)" >> .env
 	@echo "HOST_GID=$$(id -g)" >> .env
 	@echo "COMPOSE_BAKE=false" >> .env
@@ -37,10 +38,15 @@ setup:
 	@echo "Configuring Display for X11 GUI Forwarding..."
 	@if [ "$$(uname -s)" = "Darwin" ]; then \
 		echo "DISPLAY=:501" >> .env; \
-		echo "COMPOSE_PROFILES=novnc" >> .env; \
 	else \
 		echo "DISPLAY=$$DISPLAY" >> .env; \
 	fi
+
+	@echo "Selecting optional containers..."
+	@profiles=""; \
+	[ "$$(uname -s)" = "Darwin" ] && profiles="novnc"; \
+	grep -q '^USE_VIO=true$$' .env && profiles="$${profiles:+$$profiles,}vio"; \
+	echo "COMPOSE_PROFILES=$$profiles" >> .env
 
 	@echo "========================================"
 	@echo "Setup complete! Open VS Code, type CTRL + SHIFT + P and select 'Reopen in Container'."

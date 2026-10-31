@@ -4,8 +4,7 @@
     <arg name="map_name" default="hangar" />
     <arg name="skip_early_fusion" default="False" />
     <arg name="use_sim_time" default="False" />
-    <arg name="use_vio" default="$(env USE_VIO false)" description="Run Basalt VIO (set via USE_VIO in .env)" />
-    <arg name="viz_flow" default="False" />
+    <arg name="use_vio" default="$(env USE_VIO false)" description="Bridge Basalt VIO from the VIO container into the EKF (set via USE_VIO in .env)" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
     <arg name="slam_config_path"
         default="$(find-pkg-share stack_master)/config/$(var racecar_version)/slam" />
@@ -69,11 +68,15 @@
             </node>
         </group>
 
-        <include if="$(var use_vio)"
-            file="$(find-pkg-share state_estimation)/launch/vio_composed.launch.py">
-            <arg name="racecar_version" value="$(var racecar_version)" />
-            <arg name="viz_flow" value="$(var viz_flow)" />
-        </include>
+        <!-- Basalt -> EKF bridge. Camera + Basalt run in the VIO container
+             (docker-compose.yaml, service `vio`, launches vio_composed.launch.py) -->
+        <node if="$(var use_vio)" name="basalt_to_ekf" pkg="state_estimation"
+            exec="basalt_to_ekf_node" output="screen">
+            <param name="input_topic" value="/basalt/odomimu" />
+            <param name="output_topic" value="/basalt/odom" />
+            <param name="imu_topic" value="/camera/camera/imu" />
+            <param name="tf_timeout" value="30.0" />
+        </node>
 
         <!-- Carstate Node: /car_state/pose from TF -->
         <node name="carstate_node" pkg="state_estimation" exec="carstate_node" output="screen" />

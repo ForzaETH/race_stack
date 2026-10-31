@@ -3,7 +3,7 @@
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
     <arg name="floor" default="dubi" />
     <arg name="map_name" description="Name of the map to be created" default="latest"/>
-    <arg name="use_vio" default="$(env USE_VIO false)" description="Run RealSense camera + Basalt VIO (set via USE_VIO in .env)" />
+    <arg name="use_vio" default="$(env USE_VIO false)" description="Use Basalt VIO from the VIO container (set via USE_VIO in .env)" />
 
     <!-- Crawl backwards to find the maps in the src folder. -->
     <let name="map_src_path" value="$(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/maps/$(var map_name)" />

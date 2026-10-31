@@ -1,4 +1,4 @@
-# Sources for the basalt VIO workspace built by basalt_ros_setup.sh.
+# Sources for the basalt VIO workspace built in .devcontainer/Dockerfile.vio.
 # Pinned to exact commits so image builds are reproducible; bump a hash to update.
 # basalt must come after basalt_wrapper, since it is cloned into its folder.
 repositories:

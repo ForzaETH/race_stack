@@ -88,6 +88,41 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
+  # RealSense camera + Basalt VIO (cars with a camera only), publishes /basalt/odomimu
+  vio:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.vio
+      args:
+        RACE_STACK_IMAGE: race_stack:humble_${HOST_UID:-1000}
+    image: race_stack_vio:humble_${HOST_UID:-1000}
+    container_name: forzaeth_vio_${HOST_UID:-1000}
+    profiles: ["vio"] # Only start if this profile is enabled (USE_VIO=true)
+    depends_on:
+      - race_stack
+      - zenoh_router
+    env_file:
+      - .env
+    runtime: ${DOCKER_RUNTIME:-runc}
+    network_mode: host
+    ipc: host
+    privileged: true # USB access to the RealSense
+    restart: unless-stopped
+    volumes:
+      - /dev:/dev:rw
+      - ./:/ws/src/race_stack:ro
+    command: >
+      bash -c "source /opt/ros/humble/setup.bash
+      && source /opt/basalt_ws/install/setup.bash
+      && exec ros2 launch /ws/src/race_stack/state_estimation/launch/vio_composed.launch.py
+      camera_model:=${VIO_CAMERA_MODEL:-d435} viz_flow:=${VIO_VIZ_FLOW:-false}"
+    environment:
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - ROS_LOCALHOST_ONLY=0
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - RACECAR_VERSION=${RACECAR_VERSION:-SIM}
+      - RCUTILS_COLORIZED_OUTPUT=1
+
   # Virtual desktop for visualisations (RVIZ), required for MacOS
   novnc:
     build: https://github.com/ForzaETH/remote-novnc.git#main

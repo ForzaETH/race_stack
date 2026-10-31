@@ -1,0 +1,49 @@
+# VIO image: RealSense driver + Basalt VIO on top of the race_stack image
+ARG RACE_STACK_IMAGE=race_stack:humble_1000
+FROM ${RACE_STACK_IMAGE}
+
+SHELL [ "/bin/bash", "-c" ]
+ARG DEBIAN_FRONTEND=noninteractive
+USER root
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Realsense: librealsense + realsense2_camera ROS wrapper
+RUN mkdir -p /etc/apt/keyrings \
+    && curl -sSf https://librealsense.realsenseai.com/Debian/librealsenseai.asc \
+       | gpg --dearmor > /etc/apt/keyrings/librealsenseai.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/librealsenseai.gpg] https://librealsense.realsenseai.com/Debian/apt-repo $(lsb_release -cs) main" \
+       > /etc/apt/sources.list.d/librealsense.list \
+    && apt-get update \
+    && apt-get install -y librealsense2-utils librealsense2-dev librealsense2-dbg "ros-humble-realsense2-*" \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Basalt: build basalt_ros into /opt/basalt_ws (symlink install: keep build/)
+# Skip apt OpenCV if one is pre-installed (e.g. CUDA OpenCV on Jetson images)
+COPY .install_utils/basalt.repos /tmp/basalt.repos
+RUN if pkg-config --exists opencv4; then OPENCV_PKGS=""; \
+    else OPENCV_PKGS="libopencv-dev ros-humble-cv-bridge ros-humble-image-transport"; fi \
+    && apt-get update \
+    && apt-get install -y python3-vcstool libtbb-dev libfmt-dev ros-humble-ament-cmake-clang-format $OPENCV_PKGS \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /opt/basalt_ws/src && cd /opt/basalt_ws \
+    && vcs import --shallow --workers 1 < /tmp/basalt.repos \
+    && BASALT_SRC=/opt/basalt_ws/src/basalt_wrapper/basalt \
+    && git -C $BASALT_SRC submodule update --init --depth 1 thirdparty/basalt-headers thirdparty/magic_enum \
+    # basalt-headers pins Eigen on gitlab.com, which often rejects requests; use the GitHub mirror
+    && git -c url."https://github.com/eigen-mirror/eigen.git".insteadOf="https://gitlab.com/libeigen/eigen.git" \
+       -C $BASALT_SRC/thirdparty/basalt-headers submodule update --init --depth 1 \
+       thirdparty/eigen thirdparty/Sophus thirdparty/cereal \
+    && source /opt/ros/${ROS_DISTRO}/setup.bash \
+    && colcon build --merge-install --symlink-install \
+       --cmake-args -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+       -DCMAKE_DISABLE_FIND_PACKAGE_realsense2=ON -DJUST_INSTALL_CEREAL=ON \
+    && rm -rf /tmp/basalt.repos /opt/basalt_ws/log
+
+RUN echo '[ -f /opt/basalt_ws/install/setup.bash ] && source /opt/basalt_ws/install/setup.bash' \
+    >> /home/race_crew/.bashrc
+
+USER race_crew
+WORKDIR /ws
