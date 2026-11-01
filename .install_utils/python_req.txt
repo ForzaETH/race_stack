@@ -25,3 +25,4 @@ pyopengl
 trajectory-planning-helpers~=0.79 # TODO: update to 0.80 as soon as it is released, solves quadprog problems; https://github.com/TUMFTM/trajectory_planning_helpers/issues/5
 # Manually install quadprog: pip install quadprog~=0.1.11 
 # this will throw dependency error because of the trajectory planning helpers but it is not a problem, just can't be done in the requirements file
+cvxpy

@@ -269,6 +269,21 @@ def warm_start(track, p0, prm, frac=0.8, blend=5):
     return p
 
 
+def clip_steps(p, umax):
+    """Pull a plan back inside ||p^k - p^{k-1}|| <= umax, walking forward from p[0].
+
+    A car lagging its last plan leaves p[1] too far from the measured p[0]. If that gap
+    exceeds umax + trust radius, the step bound and trust region cannot both hold."""
+    p = p.copy()
+    for k in range(1, len(p)):
+        step = p[k] - p[k - 1]
+        p[k] = p[k - 1] + step * min(1.0, umax / max(np.linalg.norm(step), 1e-9))
+    return p
+
+
+
+
+
 def shift_plan(plan, track, prm, p0=None):
     """Receding-horizon warm start: drop the first point of the previous plan and extend it
     by one step along the centerline. Better than `warm_start` once the loop is running."""
@@ -279,7 +294,7 @@ def shift_plan(plan, track, prm, p0=None):
     nxt = track.pos(s_new) + lat * track.normal(s_new)
     out = np.vstack([plan[1:], nxt])
     out[0] = plan[1] if p0 is None else np.asarray(p0, float).ravel()
-    return out
+    return clip_steps(out, prm.umax)
 
 
 def true_violations(track, p, q, prm, s_hint=None, window=None):

@@ -23,6 +23,7 @@ x-common-settings: &common-settings
     - ../race_stack_cache/humble/build:/home/${USER}/ws/build:rw
     - ../race_stack_cache/humble/install:/home/${USER}/ws/install:rw
     - ../race_stack_cache/humble/logs:/home/${USER}/ws/logs:rw
+    - ../race_stack_cache/humble/data:/home/${USER}/ws/data:rw
     - .vscode:/home/${USER}/ws/.vscode:rw
   environment:
     - DISPLAY=${DISPLAY}
@@ -55,7 +56,7 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 
   x86:
     build:

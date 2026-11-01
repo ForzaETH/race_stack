@@ -7,6 +7,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 from tf_transformations import quaternion_from_euler
 
 from stack_master.parameter_event_handler import ParameterEventHandler
+import copy
 
 class SectorTuner(Node):
     """
@@ -168,8 +169,8 @@ class SectorTuner(Node):
         Scales the global waypoints' velocities
         """
         if self.glb_wpnts_scaled is None:
-            self.glb_wpnts_scaled = self.glb_wpnts_og
-            self.glb_wpnts_sp_scaled = self.glb_wpnts_sp_og
+            self.glb_wpnts_scaled = copy.deepcopy(self.glb_wpnts_og)
+            self.glb_wpnts_sp_scaled = copy.deepcopy(self.glb_wpnts_sp_og)
 
         for i, wpnt  in enumerate(self.glb_wpnts_og.wpnts):
             vel_scaling = self.get_vel_scaling(i)

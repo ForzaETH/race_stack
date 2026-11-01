@@ -11,6 +11,7 @@
   <arg name="ego_d" default="0.0" description="ego offset from the raceline, left is positive [m]" />
   <arg name="opp_s" default="2.0" description="opp start along the raceline [m]" />
   <arg name="opp_d" default="0.0" description="opp offset from the raceline, left is positive [m]" />
+  <arg name="opp_record_path" default="" />
 
   <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
 
@@ -57,5 +58,6 @@
     <arg name="opponent_source" value="$(var opponent_source)" />
     <arg name="opp_ns" value="ego" />
     <arg name="rival_speed_scale" value="$(var ego_speed_scale)" />
+    <arg name="record_path" value="$(var opp_record_path)" />
   </include>
 </launch>

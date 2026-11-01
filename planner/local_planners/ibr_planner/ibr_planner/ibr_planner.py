@@ -49,6 +49,7 @@ Parameters (ros2 param):
     opp_timeout         after this long without opponent odometry, plan solo [s]
 """
 import numpy as np
+import json
 import rclpy
 from geometry_msgs.msg import Point
 from nav_msgs.msg import Odometry
@@ -74,7 +75,7 @@ class IBRPlanner(Node):
         self.dt = float(p("dt", 0.1).value)
         self.n_steps = int(p("n_steps", 15).value)
         self.opp_ns = str(p("opp_ns", "opp").value)
-        self.speed_scale = float(p("speed_scale", 0.5, ParameterDescriptor(
+        self.speed_scale = float(p("speed_scale", 1.0, ParameterDescriptor(
             type=ParameterType.PARAMETER_DOUBLE,
             floating_point_range=[FloatingPointRange(from_value=0.1, to_value=1.0, step=0.01)]
         )).value)
@@ -108,6 +109,14 @@ class IBRPlanner(Node):
         self.prm_opp = Params(vmax=0.0, **common)
         self.viol_tol = float(p("viol_tolerance", 0.05).value)
 
+        record_path = str(p("record_path", "").value)
+        self.rec = open(record_path, "w") if record_path else None
+        if self.rec:
+            self.write_rec(dict(N=self.n_steps, dt=self.dt, d_min=self.prm.d_min,
+                                margin=self.prm.track_margin,
+                                proj_window=self.prm.proj_window, alpha=list(self.alpha)))
+
+
         if self.rate_hz <= 0 or self.dt <= 0 or self.n_steps < 2 or self.n_ibr < 1:
             raise ValueError("Invalid rate, horizon or iteration count")
         if min(self.alpha) < 0:
@@ -115,6 +124,8 @@ class IBRPlanner(Node):
 
         self.state = np.zeros((2, 2))
         self.stamp = [None, None]
+        self.t_meas = [0.0, 0.0]                        # odometry stamps of self.state [s]
+        self.v_meas = [0.0, 0.0]                        # odometry speeds [m/s]
         self.track = None
         self.planner = None
         self.n_track_wpnts = 0
@@ -174,10 +185,16 @@ class IBRPlanner(Node):
     def ego_cb(self, msg: Odometry):
         self.state[0] = (msg.pose.pose.position.x, msg.pose.pose.position.y)
         self.stamp[0] = self.get_clock().now()
+        self.t_meas[0] = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        self.v_meas[0] = msg.twist.twist.linear.x
+
 
     def opp_cb(self, msg: Odometry):
         self.state[1] = (msg.pose.pose.position.x, msg.pose.pose.position.y)
         self.stamp[1] = self.get_clock().now()
+        self.t_meas[1] = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
+        self.v_meas[1] = msg.twist.twist.linear.x
+
 
     def param_cb(self, params):
         for param in params:
@@ -195,6 +212,11 @@ class IBRPlanner(Node):
         age = (self.get_clock().now() - self.stamp[1]).nanoseconds * 1e-9
         return age <= self.opp_timeout
 
+    def write_rec(self, row):
+        self.rec.write(json.dumps(row) + "\n")
+        self.rec.flush()
+
+
     def loop(self):
         if self.track is None or self.stamp[0] is None or self.prm.vmax <= 0.0 or self.gb_track is None:
             return
@@ -205,7 +227,8 @@ class IBRPlanner(Node):
                 gb=self.gb_track)
 
         state = self.state.copy()
-        if self._opp_is_fresh():
+        game = self._opp_is_fresh()
+        if game:
             out = self.planner.step(state[0], state[1])
             plan_opp = out["plan_opp"]
         else:
@@ -221,6 +244,15 @@ class IBRPlanner(Node):
 
         res = out["res"][0]
         R = out["ibr"]
+        if self.rec:
+            self.write_rec(dict(tick=self.planner.ticks, game=game, ok=bool(out["ok"]),
+                                converged=bool(R.converged),
+                                vmax=[self.prm.vmax, self.prm_opp.vmax],
+                                theta=[p.tolist() for p in R.p],
+                                mu=[m.tolist() for m in R.mu],
+                                s0g=[r.s0g for r in R.res],
+                                t=list(self.t_meas), v=list(self.v_meas)))
+
         self.get_logger().info(
             f"IBR {out['time'] * 1e3:.1f} ms, {res.iters} SCP it, status={res.status}, "
             f"progress={out['progress']:.2f} m, viol track={res.max_track_viol:+.3f} "
