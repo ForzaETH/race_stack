@@ -40,7 +40,7 @@ services:
       - ws-install:/ws/install
       - ws-log:/ws/log
     environment:
-      - DISPLAY=${CONTAINER_DISPLAY:-${DISPLAY:-}}
+      - DISPLAY=${DISPLAY:-:501}
       - XAUTHORITY=/tmp/.docker_xauth/xauth
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - ROS_LOCALHOST_ONLY=0
@@ -95,12 +95,11 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
-  # Virtual desktop for visualisations (RVIZ), required for MacOS
+  # Virtual desktop for visualisations (RVIZ), used by sessions without a display
   novnc:
     build: https://github.com/ForzaETH/remote-novnc.git#main
     image: forzaeth_novnc:latest
     container_name: forzaeth_novnc
-    profiles: ["novnc"] # Only start if this profile is enabled (only MacOS)
     restart: unless-stopped
     tmpfs:
       - /tmp

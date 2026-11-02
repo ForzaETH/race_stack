@@ -39,12 +39,6 @@ setup:
 		echo "BASE_IMAGE=ros:humble-ros-base" >> .env; \
 	fi
 
-	@echo "Configuring Display for X11 GUI Forwarding..."
-	@if [ "$$(uname -s)" = "Darwin" ]; then \
-		echo "CONTAINER_DISPLAY=:501" >> .env; \
-		echo "COMPOSE_PROFILES=novnc" >> .env; \
-	fi
-
 	@echo "========================================"
 	@echo "Setup complete! Open VS Code, type CTRL + SHIFT + P and select 'Reopen in Container'."
 	@echo "========================================"
@@ -73,4 +67,5 @@ x11-refresh:
 	@if [ -n "$$DISPLAY" ] && command -v xauth >/dev/null; then \
 		xauth nlist $$DISPLAY 2>/dev/null | sed -e 's/^..../ffff/' | xauth -f $(XAUTH_DIR)/xauth nmerge - 2>/dev/null || true; \
 	fi
-	@if [ "$$(uname -s)" = Linux ] && [ -n "$$DISPLAY" ]; then echo "$$DISPLAY" > $(XAUTH_DIR)/display; fi
+	@# Sessions without a display (MacOS, ssh without X forwarding) use the noVNC display
+	@if [ "$$(uname -s)" = Linux ] && [ -n "$$DISPLAY" ]; then echo "$$DISPLAY"; else echo ":501"; fi > $(XAUTH_DIR)/display

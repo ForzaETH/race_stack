@@ -5,7 +5,7 @@ source /opt/ros/$ROS_DISTRO/setup.bash
 [ -f /ws/install/setup.bash ] && source /ws/install/setup.bash
 [ -f /opt/basalt_ws/install/setup.bash ] && source /opt/basalt_ws/install/setup.bash
 
-# Display forwarded over ssh, written by `make x11-refresh` on the host
+# Display of the current session (local, forwarded over ssh or noVNC), written by `make x11-refresh` on the host
 [ -s /tmp/.docker_xauth/display ] && export DISPLAY=$(cat /tmp/.docker_xauth/display)
 export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u) && mkdir -p -m 0700 $XDG_RUNTIME_DIR
 

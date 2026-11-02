@@ -72,29 +72,35 @@ make launch
 ```
 
 ## Structure
-The structure of the deployed containers is defined in the [docker-compose.yaml](../docker-compose.yaml). Four containers are deployed conditionally:
+The structure of the deployed containers is defined in the [docker-compose.yaml](../docker-compose.yaml). Four containers are deployed:
 
 - The main race stack container;
 - The Zenoh router allowing node communication;
 - The Foxglove bridge to enable visualization over websockets with Foxglove / Lichtblick;
-- The noVNC container if on MacOS, for RViz and RQT visualizations, as MacOS does not support X11 forwarding.
+- The noVNC container, for RViz and RQT visualizations in sessions without a display, such as on MacOS or over SSH without X forwarding.
 
 VIO (visual-inertial odometry) is built into the main race stack container only if `USE_VIO=true` is set in the `.env` file during setup. It is recommended to leave this set to false unless VIO is needed, as the install process can be long.
 
 ## GUI Forwarding
 The race stack requires GUI forwarding for some functionalities. This is being deprecated as it can be fragile, in favour of Foxglove / Lichtblick connecting to `ws://<host>:8765`.
 
-On Linux, GUI applications open on the host display. When connected to a car over SSH, use X forwarding and update the display access of the container:
+The display is selected each time the container is opened, based on the session opening it:
+
+| Session | GUI applications open on |
+|---|---|
+| Linux, locally | The host display |
+| SSH with X forwarding | The display of the connecting machine |
+| SSH without X forwarding, from any OS | noVNC |
+| MacOS, locally | noVNC |
+
+The selection is shared by all sessions of a user on that machine and the last one opened applies to new container terminals. Terminals that are already open keep their display.
+
+When connected to a car from Linux, use X forwarding and update the display access of the container:
 ```bash
 ssh -X <username>@<car_ip>
 cd <race_stack folder>
 make x11
 ```
-New container terminals then use the forwarded display. When using Visual Studio Code, set `ForwardX11 yes` for the car in `~/.ssh/config` so the display is forwarded when opening the container; if it is not picked up, run `make x11` as above.
+When using Visual Studio Code, set `ForwardX11 yes` for the car in `~/.ssh/config` so the display is forwarded when opening the container; if it is not picked up, run `make x11` as above.
 
-On MacOS, X11 forwarding is not supported and GUI applications open in the noVNC container, at [http://localhost:20501](http://localhost:20501). To show the GUI applications of a car, set in the `.env` file of the car:
-```bash
-CONTAINER_DISPLAY=:501
-COMPOSE_PROFILES=novnc
-```
-and rebuild the container. Visual Studio Code forwards port 20501 when connected to the car, so the applications are shown at the same address.
+noVNC is available at [http://localhost:20501](http://localhost:20501). Visual Studio Code forwards port 20501 when connected to a car, so its applications are shown at the same address. Without Visual Studio Code, forward the port with `ssh -L 20501:localhost:20501 <username>@<car_ip>`.
