@@ -1,3 +1,6 @@
+# per-user project, otherwise compose matches containers of other users by service name and recreates them
+name: race_stack_${USER}
+
 x-common-settings: &common-settings
   network_mode: host
   ipc: host
