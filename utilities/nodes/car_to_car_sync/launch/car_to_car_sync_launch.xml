@@ -1,10 +1,13 @@
 <launch>
   <arg name="opp_domain" description="ROS_DOMAIN_ID of the opponent car (40 + NUC number)" />
+  <arg name="opp_ip" description="IP or hostname of the opponent car, whose zenoh router the bridge connects to" />
   <arg name="gt" default="True" description="publish the opponent as ground-truth /perception/obstacles" />
   <arg name="size" default="0.5" description="opponent obstacle size [m]" />
   <arg name="obstacles_topic" default="/perception/obstacles" description="set to /perception/ground_truth to run alongside perception" />
 
+  <!-- Only the bridge connects to the opponent: its session peers with both the local and the opponent router -->
   <node pkg="car_to_car_sync" exec="domain_bridge" name="domain_bridge" output="screen">
+    <env name="ZENOH_CONFIG_OVERRIDE" value='connect/endpoints=["tcp/localhost:7447","tcp/$(var opp_ip):7447"]' />
     <param from="$(find-pkg-share car_to_car_sync)/config/topics.yaml" />
     <param name="opp_domain" value="$(var opp_domain)" />
   </node>

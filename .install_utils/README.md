@@ -1,77 +1,100 @@
 # Docker Structure and Guidelines
-**Note:** Currently only installation via docker has been tested and is supported.
+**Note:** Only installation through Docker is currently supported and maintained.
 
-## Clone Repo
-Be aware to clone the ROS 2 branch!
+## Prerequisites
+If using [Visual Studio Code](https://code.visualstudio.com/), install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension (and the [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) extension on Windows).
+
+### Ubuntu
+Although the stack should be installable on most Linux distributions, the provided instructions are intended for Ubuntu.
+
+Download [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) and follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/).
+
+Install the required packages (git, wget, make):
 ```bash
-git clone -b ros2-humble --recurse-submodules git@github.com:ForzaETH/race_stack.git 
+sudo apt update
+sudo apt install git wget make
+```
+
+### MacOS
+Download [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/) and the MacOS package manager [Homebrew](https://brew.sh/):
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+Homebrew installs the Xcode Command Line Tools, which include the required packages (git, make).
+
+### Windows
+Install Ubuntu through the [Windows Subsystem for Linux](https://apps.microsoft.com/detail/9pdxgncfsczv?ocid=webpdpshare) (WSL2).
+
+Download and set up Docker Desktop for [Windows](https://docs.docker.com/desktop/setup/install/windows-install/). Enable WSL integration by accessing the Docker dashboard and navigating to **Settings > Resources > WSL Integration** and selecting Ubuntu, and then clicking on **Apply & Restart**.
+
+Using a WSL terminal instance, install the required packages (git, make):
+```bash
+sudo apt update
+sudo apt install git make
+```
+Clone the repository inside the WSL home directory (`~/`), not under `/mnt/c/`, as mounts from the Windows drive are slow and break file permissions.
+
+### Jetson
+Install [Docker Engine](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/setup_docker.html) following the Nvidia documentation and follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/). Check that the Nvidia runtime is available:
+```bash
+docker info | grep -i runtime  # should list nvidia
+```
+
+Install the required packages (git, wget, make):
+```bash
+sudo apt update
+sudo apt install git wget make
+```
+
+## Installation steps
+
+Clone the repository on the ros2-humble branch, preferably inside a dedicated folder:
+```bash
+git clone -b ros2-humble https://github.com/ForzaETH/race_stack.git
 cd race_stack
 ```
 
-## Structure
-The docker image is defined with the [Dockerfile](../.devcontainer/Dockerfile).
-
-
-**NOTE**: it is suggested to set a static IP for the robot with the ROS_HOSTNAME environment variable, so that the IP of the robot is always the same, as from [networking structure](../stack_master/checklists/networking.md).
-Setting up a static ip at this moment will allow you to set extra computers (that can ping such IP) to listen to the ROS messags on the robot, enabling fast and quick development. 
-
-
-## Build
-**Note**: docker is assumed to be installed and runnable without sudo (e.g. on Linux see [Post-Installation steps](https://docs.docker.com/engine/install/linux-postinstall/)).
-The build process is managed by the Makefile. The command `default_setup` creates a cache folder (`setup_cache`) and a .env file (`export_env`) before it builds the container (`build`). It also detects if you are on a x86 or arm machine and builds the correct image. 
-
-`make setup` asks whether the machine uses VIO (`USE_VIO`, default `false`). With `USE_VIO=true` the `vio` compose profile is enabled, which builds and starts a separate VIO container (`.devcontainer/Dockerfile.vio`, on top of the race_stack image) running the RealSense driver and Basalt VIO (`state_estimation/launch/vio_composed.launch.py`). It publishes `/basalt/odomimu`, which the `basalt_to_ekf` bridge in `state_estimation_launch.xml` feeds into the EKF. Set `VIO_CAMERA_MODEL=d455` in `.env` for a D455 (default `d435`), and `VIO_VIZ_FLOW=true` to publish `/basalt/flow_image`. Build the race_stack image before the VIO image (`docker compose build race_stack && docker compose build vio`).
-
+Run the setup:
 ```bash
-make default_setup
+make setup
+```
+This creates the `race_stack_deps`, `race_stack_maps` and `race_stack_bags` folders next to the repository, holding the external repositories, maps and bags.
+
+If using Visual Studio Code with Dev Containers, open the folder in the application and type `CTRL + SHIFT + P` and select `Dev Containers: Rebuild and Reopen in Container`. On newer versions of Docker and Docker Compose you might need to disable the Docker Buildx bake filesystem entitlement check. Make sure to restart Visual Studio Code so it picks up the new environment variable:
+```bash
+echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.profile
+echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.bashrc
 ```
 
-## How to use (VSCode devcontainer)
-
-**Open the devcontainer**
-**Note** this step must be done strictly after the completion of build step, as otherwise the permission file mounted in the devcontainer might be wrong.
-Open the devcontainer on the car, first by opening up VSCode, then connecting to the car with the remote connection button to the bottom left (Connect to Host...), then open the race stack folder, and reopen in the devcontainer. On your laptop you can directly click reopen in devcontainer.
-
-
-Once in the devcontainer, open a terminal and export the `DISPLAY` variable number. For example:
+If not using Visual Studio Code, the containers can be built with:
 ```bash
-export DISPLAY=localhost:10.0
-```
-
-You can now enjoy a terminal with GUI forwarding! If you need multiple GUI applications, make sure to export the `DISPLAY` variable in each terminal you want to use GUI applications in.
-
-## How to use (docker container)
-**Set up X forwarding and launch the container**
-To get GUI application properly forwarded, run the additional setup script that sets up the xauth file for the container. The launch command does this automatically. If you are on an arm machine (such as a macbook) this step is omitted. It is recommended to use [this](https://github.com/ETH-PBL/remote-novnc) for display support. To launch the container you can then run:
-
-```bash
-cd <race_stack folder>
 make launch
 ```
-This spins up the container and runs some post installation steps. This is only done the first time and the next time the script will detect the correct container and restarts it. After the post installation finished you can run `make launch` again to attach a terminal to the container.
 
+## Structure
+The structure of the deployed containers is defined in the [docker-compose.yaml](../docker-compose.yaml). Four containers are deployed conditionally:
 
+- The main race stack container;
+- The Zenoh router allowing node communication;
+- The Foxglove bridge to enable visualization over websockets with Foxglove / Lichtblick;
+- The noVNC container if on MacOS, for RViz and RQT visualizations, as MacOS does not support X11 forwarding.
 
-## How to use GUI applications with the container
-To have more information on how to use GUI applications with remote containers, please refer to the [GUI applications documentation](./README_GUI.md).
+VIO (visual-inertial odometry) is built into the main race stack container only if `USE_VIO=true` is set in the `.env` file during setup. It is recommended to leave this set to false unless VIO is needed, as the install process can be long.
 
----
-[Go back to the main README](../README.md)
+## GUI Forwarding
+The race stack requires GUI forwarding for some functionalities. This is being deprecated as it can be fragile, in favour of Foxglove / Lichtblick connecting to `ws://<host>:8765`.
 
-### To manually install dependencies (should not be necessary if you build in docker):
+On Linux, GUI applications open on the host display. When connected to a car over SSH, use X forwarding and update the display access of the container:
 ```bash
-# general ubuntu packages dependencies
-xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req.txt
-
-# ubuntu packages dependencies for sim
-xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req_sim.txt
-
-# ubuntu packages dependencies for car
-xargs sudo apt-get install -y < ~/ws/src/race_stack/.install_utils/linux_req/linux_req_car.txt
-
-# python dependencies
-pip install -r ~/ws/src/race_stack/.install_utils/python_req.txt
-
-# setup f1tenth_gym
-source ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh
+ssh -X <username>@<car_ip>
+cd <race_stack folder>
+make x11
 ```
+New container terminals then use the forwarded display. When using Visual Studio Code, set `ForwardX11 yes` for the car in `~/.ssh/config` so the display is forwarded when opening the container; if it is not picked up, run `make x11` as above.
+
+On MacOS, X11 forwarding is not supported and GUI applications open in the noVNC container, at [http://localhost:20501](http://localhost:20501). To show the GUI applications of a car, set in the `.env` file of the car:
+```bash
+CONTAINER_DISPLAY=:501
+COMPOSE_PROFILES=novnc
+```
+and rebuild the container. Visual Studio Code forwards port 20501 when connected to the car, so the applications are shown at the same address.

@@ -1,32 +1,31 @@
 # -----------------------------------------------------------------------------
-# RealSense D435 driver + Basalt VIO, run inside the VIO container
-# (docker-compose.yaml, service `vio`). Camera and both Basalt stages share one
-# component container so images move intra-process, not over the network.
-# The Basalt -> EKF bridge runs in the main container (state_estimation_launch.xml).
-# Configs are resolved relative to this file, since the VIO container has the
-# race_stack sources mounted but not the colcon workspace.
+# RealSense D435 driver + Basalt VIO + Basalt -> EKF bridge. Included by
+# state_estimation_launch.xml when USE_VIO=true.
+# Camera and both Basalt stages share one component container so images move
+# intra-process. basalt_ros comes from its own workspace (/opt/basalt_ws, built
+# in the Dockerfile and sourced in the bashrc).
 # Component layout based on Bernd Pfrommer <bernd.pfrommer@gmail.com>
 # -----------------------------------------------------------------------------
 import os
 
 import launch
 from launch.substitutions import LaunchConfiguration as LaunchConfig
-from launch.substitutions import TextSubstitution
+from launch.substitutions import PathJoinSubstitution, TextSubstitution
 from launch.actions import DeclareLaunchArgument as LaunchArg
 from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
+from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 
-RACE_STACK_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-
-
 def state_estimation_file(fname):
-    return os.path.join(RACE_STACK_DIR, 'state_estimation', 'config', fname)
+    return PathJoinSubstitution(
+        [FindPackageShare('state_estimation'), 'config', fname])
 
 
 def camera_file(fname):
-    return os.path.join(RACE_STACK_DIR, 'stack_master', 'config', 'camera', fname)
+    return PathJoinSubstitution(
+        [FindPackageShare('stack_master'), 'config', 'camera', fname])
 
 
 def camera_topic(*parts):
@@ -103,7 +102,23 @@ def launch_setup(context, *args, **kwargs):
                 extra_arguments=[{'use_intra_process_comms': True}],
             ),
         ],
+        # Silence the container: 'log' alone would still mirror stderr (where ROS
+        # console logging goes) to the screen, so route both streams to the file.
+        output={'stdout': 'log', 'stderr': 'log'},
+    )
+
+    # --- Basalt -> EKF bridge ---
+    basalt_to_ekf_node = Node(
+        package='state_estimation',
+        executable='basalt_to_ekf_node',
+        name='basalt_to_ekf',
         output='screen',
+        parameters=[{
+            'input_topic': '/basalt/odomimu',
+            'output_topic': LaunchConfig('odom_topic'),
+            'imu_topic': LaunchConfig('imu_topic'),
+            'tf_timeout': LaunchConfig('tf_timeout')
+        }]
     )
 
     # --- Optional feature-track visualization (/basalt/flow_image) ---
@@ -121,7 +136,7 @@ def launch_setup(context, *args, **kwargs):
         condition=IfCondition(LaunchConfig('viz_flow')),
     )
 
-    return [vio_container, viz_flow_node]
+    return [vio_container, basalt_to_ekf_node, viz_flow_node]
 
 
 def generate_launch_description():
@@ -134,11 +149,13 @@ def generate_launch_description():
                   default_value='camera',
                   description='Name/namespace of the RealSense node'),
         LaunchArg('camera_model',
-                  default_value='d435',
+                  default_value=os.environ.get('VIO_CAMERA_MODEL', 'd435'),
                   description="'d435' / 'd455': selects stack_master/config/camera/<model>_config.yaml "
                               "and state_estimation/config/<model>_calib_<racecar_version>.json"),
+
+        # --- Basalt / EKF bridge args ---
         LaunchArg('racecar_version',
-                  default_value=os.environ.get('RACECAR_VERSION', 'NUC6'),
+                  default_value='NUC6',
                   description='Selects the calibration file'),
         LaunchArg('left_image_topic',
                   default_value=camera_topic('infra1', 'image_rect_raw'),
@@ -149,6 +166,12 @@ def generate_launch_description():
         LaunchArg('imu_topic',
                   default_value=camera_topic('imu'),
                   description='Combined RealSense IMU data topic'),
+        LaunchArg('odom_topic',
+                  default_value='/basalt/odom',
+                  description='EKF-ready target destination odometry topic'),
+        LaunchArg('tf_timeout',
+                  default_value='30.0',
+                  description='Seconds the bridge node yields for driver transforms to wake up'),
         LaunchArg('viz_flow',
                   default_value='false',
                   description='Publish /basalt/flow_image with tracked features drawn on the left image'),

@@ -1,6 +1,6 @@
 """Republish topics from another ROS_DOMAIN_ID into this one.
 
-Both domains must be reachable through the local zenoh router (see run_zenoh.sh <OPP_IP>).
+The node connects to both the local and the opponent zenoh router (opp_ip in car_to_car_sync_launch.xml).
 Message types are discovered from the remote publishers, so any type works.
 """
 import threading

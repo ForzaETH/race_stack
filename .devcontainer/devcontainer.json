@@ -2,7 +2,7 @@
     "name": "ForzaETH Race Stack",
     "initializeCommand": {
         "local-compose": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
-        "x11-access": "if [ \"$(uname -s)\" = Linux ] && [ -n \"$DISPLAY\" ] && command -v xhost >/dev/null; then xhost +SI:localuser:$(id -un) >/dev/null || true; fi"
+        "x11": "make -s x11-refresh"
     },
     "dockerComposeFile": [
         "../docker-compose.yaml",
@@ -19,7 +19,7 @@
     },
     "otherPortsAttributes": {
         "onAutoForward": "ignore"
-    }, // ignore ports not explicitly listed
+    }, 
     "workspaceFolder": "/ws",
     "remoteUser": "race_crew",
     "customizations": {
@@ -32,7 +32,6 @@
             ],
             "settings": {
                 "ROS2.distro": "humble",
-                // Python setup
                 "python.defaultInterpreterPath": "/usr/bin/python3",
                 "python.envFile": "",
                 "python.analysis.extraPaths": [
@@ -40,7 +39,6 @@
                     "/opt/ros/humble/local/lib/python3.10/dist-packages"
                 ],
                 "C_Cpp.default.compileCommands": "/ws/build/compile_commands.json",
-                // Editor
                 "editor.rulers": [
                     120
                 ],

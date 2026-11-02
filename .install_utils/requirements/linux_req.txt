@@ -6,11 +6,13 @@ joystick
 x11-apps
 bash-completion
 python3-pip
+python3-tk
 python3-colcon-clean
 ros-humble-rmw-zenoh-cpp
 ros-humble-foxglove-bridge
 ros-humble-rviz2
 ros-humble-rqt-reconfigure
+ros-humble-rqt-common-plugins
 ros-humble-cartographer-ros
 ros-humble-robot-localization
 ros-humble-imu-transformer

@@ -7,6 +7,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
       args:
         BASE_IMAGE: ${BASE_IMAGE:-ros:humble-ros-base}
+        USE_VIO: ${USE_VIO:-false}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: race_stack:humble_${HOST_UID:-1000}
@@ -30,6 +31,7 @@ services:
     volumes:
       - /dev:/dev:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - $HOME/.docker_xauth:/tmp/.docker_xauth:ro
       - ../race_stack_deps:/ws/src:rw
       - ./:/ws/src/race_stack:rw
       - ../race_stack_maps:/ws/maps:rw
@@ -38,6 +40,8 @@ services:
       - ws-install:/ws/install
       - ws-log:/ws/log
     environment:
+      - DISPLAY=${CONTAINER_DISPLAY:-${DISPLAY:-}}
+      - XAUTHORITY=/tmp/.docker_xauth/xauth
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - ROS_LOCALHOST_ONLY=0
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
@@ -48,6 +52,7 @@ services:
       - TERM=xterm-256color
       - PYTHONPYCACHEPREFIX=/ws/build/.pycache
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - COLCON_DEFAULTS_FILE=/ws/src/race_stack/.install_utils/colcon_defaults.yaml
 
   zenoh_router:
     image: race_stack:humble_${HOST_UID:-1000}
@@ -55,9 +60,11 @@ services:
     depends_on:
       - race_stack
     container_name: forzaeth_zenoh_router
+    hostname: ${RACECAR_VERSION:-SIM}
     env_file:
       - .env
     network_mode: host
+    ipc: host
     restart: unless-stopped
     command: bash -c "source /opt/ros/humble/setup.bash && exec ros2 run rmw_zenoh_cpp rmw_zenohd"
     environment:
@@ -87,41 +94,6 @@ services:
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-
-  # RealSense camera + Basalt VIO (cars with a camera only), publishes /basalt/odomimu
-  vio:
-    build:
-      context: .
-      dockerfile: .devcontainer/Dockerfile.vio
-      args:
-        RACE_STACK_IMAGE: race_stack:humble_${HOST_UID:-1000}
-    image: race_stack_vio:humble_${HOST_UID:-1000}
-    container_name: forzaeth_vio_${HOST_UID:-1000}
-    profiles: ["vio"] # Only start if this profile is enabled (USE_VIO=true)
-    depends_on:
-      - race_stack
-      - zenoh_router
-    env_file:
-      - .env
-    runtime: ${DOCKER_RUNTIME:-runc}
-    network_mode: host
-    ipc: host
-    privileged: true # USB access to the RealSense
-    restart: unless-stopped
-    volumes:
-      - /dev:/dev:rw
-      - ./:/ws/src/race_stack:ro
-    command: >
-      bash -c "source /opt/ros/humble/setup.bash
-      && source /opt/basalt_ws/install/setup.bash
-      && exec ros2 launch /ws/src/race_stack/state_estimation/launch/vio_composed.launch.py
-      camera_model:=${VIO_CAMERA_MODEL:-d435} viz_flow:=${VIO_VIZ_FLOW:-false}"
-    environment:
-      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
-      - ROS_LOCALHOST_ONLY=0
-      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-      - RACECAR_VERSION=${RACECAR_VERSION:-SIM}
-      - RCUTILS_COLORIZED_OUTPUT=1
 
   # Virtual desktop for visualisations (RVIZ), required for MacOS
   novnc:
