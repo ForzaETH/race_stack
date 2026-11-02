@@ -2,7 +2,7 @@ repositories:
   f1tenth_gym_ros:
     type: git
     url: https://github.com/ForzaETH/f1tenth_gym_ros.git
-    version: 268f43d71be283ebc043bfedbef1e5c34bc14f03
+    version: c773ec206a8876fbd1592698d73646d720752214
   f1tenth_system:
     type: git
     url: https://github.com/ForzaETH/f1tenth_system.git
