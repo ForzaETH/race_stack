@@ -62,7 +62,7 @@ x11:
 x11-refresh:
 	@mkdir -p $(XAUTH_DIR) && touch $(XAUTH_DIR)/xauth
 	@if [ "$$(uname -s)" = Linux ] && [ -n "$$DISPLAY" ] && command -v xhost >/dev/null; then \
-		xhost +SI:localuser:$$(id -un) >/dev/null || true; \
+		xhost +SI:localuser:$$(id -un) >/dev/null 2>&1 || true; \
 	fi
 	@if [ -n "$$DISPLAY" ] && command -v xauth >/dev/null; then \
 		xauth nlist $$DISPLAY 2>/dev/null | sed -e 's/^..../ffff/' | xauth -f $(XAUTH_DIR)/xauth nmerge - 2>/dev/null || true; \
