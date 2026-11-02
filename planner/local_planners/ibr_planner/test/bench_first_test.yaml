@@ -1,0 +1,12 @@
+# The first test: 16 pairings x 4 maps x 24 spawns = 1,536 races.
+maps: [spa, baku, glc_ot_ez, GLC_smile_small]
+pilot_maps: [spa, baku, glc_ot_ez, GLC_smile_small]
+attackers: [ibr1, ibr4, mpc, spliner]   # spliner last: it mostly trails, so cut it first
+defenders: [gb, mpc, ibr1, ibr4]
+attacker_speed: 2.4     # [m/s]
+defender_speed: 2.0     # [m/s]
+n_positions: 33         # the full benchmark's evenly spaced start positions
+every: 4                # this test uses every 4th of them...
+use_positions: 8        # ...and the first 8 of those
+gaps_s: [1, 2, 3]       # starting gap in seconds of the defender's speed
+t_max: 30               # [s] race length limit

@@ -94,14 +94,14 @@ class IBRPlanner(Node):
         self.ibr_tol = float(p("ibr_tolerance", 2e-2).value)
         self.alpha = (float(p("alpha", 1.0).value), float(p("alpha_opp", 1.0).value))
         self.opp_timeout = float(p("opp_timeout", 0.5).value)
-        r_ego = float(p("r_col_ego", 0.475).value)
-        r_opp = float(p("r_col_opp", 0.475).value)
+        r_ego = float(p("r_col_ego", 0.525).value)
+        r_opp = float(p("r_col_opp", 0.525).value)
 
 
         common = dict(
             N=self.n_steps, dt=self.dt, d_min=r_ego + r_opp,
             track_margin=float(p("track_margin", 0.29).value),
-            d_lat=float(p("d_lat", 0.35).value),
+            d_lat=float(p("d_lat", 0.45).value),
             max_iter=int(p("n_sqp_iterations", 6).value),
             tol=float(p("inner_tolerance", 1e-3).value),
             trust=float(p("trust_radius", 1.0).value),
