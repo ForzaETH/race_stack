@@ -73,6 +73,7 @@ def best_response(track, gb, q, x, s0g, prm, w, theta, eps, multistart=True):
     problem, so it is the incumbent and the returned value can only match or beat it.
     """
     N, um2, d2 = prm.N, prm.umax ** 2, (prm.d_min - eps) ** 2
+    bend2 = (prm.kappa_max * prm.umax ** 2 + eps) ** 2
     s0 = track.project(x)
     win = max(prm.proj_window or 0.0, prm.umax * N + 1.0)
 
@@ -92,13 +93,15 @@ def best_response(track, gb, q, x, s0g, prm, w, theta, eps, multistart=True):
         p = unpack(z)
         step = np.sum(np.diff(p, axis=0) ** 2, axis=1)
         _, _, _, _, _, lat, wl, wr = track.frenet(p[1:], s0, win)
+        turn = p[2:] - 2 * p[1:-1] + p[:-2]
         return np.r_[um2 - step, wl + eps - lat, wr + eps + lat,
-                     np.sum((p[1:] - q[1:]) ** 2, axis=1) - d2]
+                     np.sum((p[1:] - q[1:]) ** 2, axis=1) - d2,
+                     bend2 - np.sum(turn ** 2, axis=1)]
 
     def dcons(z):
         p = unpack(z)
         _, _, _, n, _, _, _, _ = track.frenet(p[1:], s0, win)
-        J = np.zeros((4 * N, 2 * N))
+        J = np.zeros((5 * N - 1, 2 * N))
         du = p[1:] - p[:-1]
         dq = p[1:] - q[1:]
         for k in range(N):
@@ -108,6 +111,12 @@ def best_response(track, gb, q, x, s0g, prm, w, theta, eps, multistart=True):
             J[N + k, 2 * k:2 * k + 2] = -n[k]
             J[2 * N + k, 2 * k:2 * k + 2] = n[k]
             J[3 * N + k, 2 * k:2 * k + 2] = 2.0 * dq[k]
+        turn = p[2:] - 2 * p[1:-1] + p[:-2]
+        for k in range(N - 1):
+            J[4 * N + k, 2 * k:2 * k + 2] = 4.0 * turn[k]
+            J[4 * N + k, 2 * k + 2:2 * k + 4] = -2.0 * turn[k]
+            if k > 0:
+                J[4 * N + k, 2 * k - 2:2 * k] = -2.0 * turn[k]
         return J
 
     best, best_j = theta, cost(gb, theta, s0g, win, w)
@@ -152,7 +161,8 @@ def check_tick(track, gb, head, tick):
 
 
 def head_params(head):
-    return Params(N=head["N"], dt=head["dt"], d_min=head["d_min"], proj_window=head["proj_window"])
+    return Params(N=head["N"], dt=head["dt"], d_min=head["d_min"], proj_window=head["proj_window"],
+                  kappa_max=head.get("kappa_max", 1e3))
 
 
 def main():

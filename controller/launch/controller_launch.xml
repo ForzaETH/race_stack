@@ -2,11 +2,12 @@
 <launch>
   <arg name="LU_table" default="NUC5_hangar_pacejka"/>
   <arg name="mode" default="MAP" description="Mode of operation: MAP / PP / (FTG). methods in brackets have not been implemented"/> <!-- TODO implement PP and MAPPING -->
-
+  <arg name="speed_limit" default="0.0" description="top speed of this car [m/s], 0 = no limit"/>
   <!--  launch L1 controller -->
   <node pkg="controller" name="controller" exec="controller">
       <param name="mode" value="$(var mode)"/>
       <param name="LU_table" value="$(var LU_table)"/>
+      <param name="speed_limit" value="$(var speed_limit)"/>
   </node>
 
 </launch>

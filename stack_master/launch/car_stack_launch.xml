@@ -8,6 +8,11 @@
   <arg name="speed_scale" default="1.0" />
   <arg name="rival_speed_scale" default="1.0" />
   <arg name="record_path" default="" />
+  <arg name="n_game_iterations" default="4" />
+  <arg name="speed_limit" default="0.0" />
+  <arg name="rival_speed_limit" default="0.0" />
+
+
 
 
   
@@ -27,6 +32,7 @@
 
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
       <arg name="mode" value="$(var ctrl_algo)" />
+      <arg name="speed_limit" value="$(var speed_limit)" />
     </include>
 
     <group unless="$(eval '\'$(var planner)\' in [\'gb\', \'ibr\']')">
@@ -61,10 +67,14 @@
     <group if="$(eval '\'$(var planner)\' == \'ibr\'')">
       <node pkg="ibr_planner" exec="ibr_planner" name="state_machine" output="screen">
         <param name="record_path" value="$(var record_path)" />
+        <param name="n_game_iterations" value="$(var n_game_iterations)" />
         <param name="opp_ns" value="$(var opp_ns)" />
-        <param name="rate_hz" value="20.0" />
+        <param name="rate_hz" value="10.0" />
         <param name="speed_scale" value="$(var speed_scale)" />
         <param name="opp_speed_scale" value="$(var rival_speed_scale)" />
+        <param name="speed_limit" value="$(var speed_limit)" />
+        <param name="rival_speed_limit" value="$(var rival_speed_limit)" />
+
       </node>
     </group>
   </group>

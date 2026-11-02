@@ -12,6 +12,14 @@
   <arg name="opp_s" default="2.0" description="opp start along the raceline [m]" />
   <arg name="opp_d" default="0.0" description="opp offset from the raceline, left is positive [m]" />
   <arg name="opp_record_path" default="" />
+  <arg name="ego_record_path" default="" />
+  <arg name="ego_n_game_iterations" default="4" />
+  <arg name="opp_n_game_iterations" default="4" />
+  <arg name="headless" default="false" />
+  <arg name="ego_speed_limit" default="0.0" />
+  <arg name="opp_speed_limit" default="0.0" />
+  <arg name="flat_speed" default="0.0" />
+
 
   <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
 
@@ -22,6 +30,7 @@
     <arg name="ego_s" value="$(var ego_s)" />
     <arg name="ego_d" value="$(var ego_d)" />
     <arg name="opp_s" value="$(var opp_s)" />
+    <arg name="headless" value="$(var headless)" />
     <arg name="opp_d" value="$(var opp_d)" />
 
   </include>
@@ -36,6 +45,7 @@
   <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
     <param name="map_name" value="$(var map_name)" />
     <param from="$(var map_path)/speed_scaling.yaml" />
+    <param name="flat_speed" value="$(var flat_speed)" />
   </node>
 
   <!-- per car -->
@@ -48,6 +58,12 @@
     <arg name="opponent_source" value="$(var opponent_source)" />
     <arg name="opp_ns" value="opp" />
     <arg name="rival_speed_scale" value="$(var opp_speed_scale)" />
+    <arg name="record_path" value="$(var ego_record_path)" />
+    <arg name="n_game_iterations" value="$(var ego_n_game_iterations)" />
+    <arg name="speed_limit" value="$(var ego_speed_limit)" />
+    <arg name="rival_speed_limit" value="$(var opp_speed_limit)" />
+
+
   </include>
   <include file="$(find-pkg-share stack_master)/launch/car_stack_launch.xml">
     <arg name="ns" value="opp" />
@@ -59,5 +75,8 @@
     <arg name="opp_ns" value="ego" />
     <arg name="rival_speed_scale" value="$(var ego_speed_scale)" />
     <arg name="record_path" value="$(var opp_record_path)" />
+    <arg name="n_game_iterations" value="$(var opp_n_game_iterations)" />
+    <arg name="speed_limit" value="$(var opp_speed_limit)" />
+    <arg name="rival_speed_limit" value="$(var ego_speed_limit)" />
   </include>
 </launch>

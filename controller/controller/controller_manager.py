@@ -89,6 +89,8 @@ class Controller(Node):
         self.get_logger().info(f"Using {self.LUT_name}")
         self.mode = self.get_parameter('mode').value
         self.mapping = self.get_parameter('mapping').value
+        self.speed_limit = self.get_parameter('speed_limit').value or 0.0   # [m/s] 0 = no limit
+
 
         # Publishers
         self.publish_topic = 'drive' # TODO adapt car topic name here
@@ -467,6 +469,9 @@ class Controller(Node):
         for waypoint in data.wpnts:
             waypoint_in_map = [waypoint.x_m, waypoint.y_m]
             speed = waypoint.vx_mps
+            if self.speed_limit > 0.0:
+                speed = min(speed, self.speed_limit)
+
             if waypoint.d_right + waypoint.d_left != 0:
                 self.waypoint_list_in_map.append([waypoint_in_map[0],
                                                   waypoint_in_map[1],

@@ -31,7 +31,8 @@ class SectorTuner(Node):
         # get initial scaling
         self.sectors_params=self.parameters_to_dict()
         self.n_sectors = self.sectors_params['n_sectors']
-        
+        self.flat_speed = self.sectors_params.get('flat_speed', 0.0)   # [m/s] 0 = use the sectors
+
         desc = ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=1.0, step=0.01)])
         self.set_descriptor('global_limit',descriptor=desc)
         for i in range(self.n_sectors):
@@ -174,7 +175,7 @@ class SectorTuner(Node):
 
         for i, wpnt  in enumerate(self.glb_wpnts_og.wpnts):
             vel_scaling = self.get_vel_scaling(i)
-            new_vel = wpnt.vx_mps*vel_scaling
+            new_vel = self.flat_speed if self.flat_speed > 0.0 else wpnt.vx_mps*vel_scaling
             self.glb_wpnts_scaled.wpnts[i].vx_mps = new_vel
 
     def timer_callback(self):

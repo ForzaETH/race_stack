@@ -156,6 +156,7 @@ class Params:
     slack_w: float = 1e3         # L1 penalty on the QCLP slacks
     merit_w: float = 100.0       # penalty in the accept/reject merit (must exceed |sigma| ~ 1)
     mu_max: float = 2.0          # clip on the duals handed to the opponent (see ibr())
+    kappa_max: float = 1.2       # sharpest bend a plan may ask for at vmax [1/m]; car limit ~1.35
     proj_window: float = None    # arclength window for projections [m]; None = global
     solver: str = "CLARABEL"
     verbose: bool = False
@@ -197,6 +198,7 @@ class _QCLP:
 
         self.p0 = cp.Parameter(2)                      # measured start position
         self.umax = cp.Parameter(nonneg=True)          # vmax*dt
+        self.bend = cp.Parameter(nonneg=True)          # largest change of step, kappa_max*umax^2
         self.n = cp.Parameter((N, 2))                  # track normals at the iterate
         self.ntau = cp.Parameter(N)                    # n^T tau
         self.wl = cp.Parameter(N)
@@ -219,6 +221,8 @@ class _QCLP:
                 lat <= self.wl + self.st,
                 -lat <= self.wr + self.st,
                 self.coll,
+                cp.norm(P[1] - 2 * P[0] + self.p0, 2) <= self.bend + self.st[1],
+                cp.norm(P[2:] - 2 * P[1:-1] + P[:-2], 2, axis=1) <= self.bend + self.st[2:],
                 cp.norm(P - self.pm, 2, axis=1) <= self.r]
         obj = cp.Minimize(-self.sigma @ P[N - 1] - cp.sum(cp.multiply(self.wobj, P))
                           + self.sw * (cp.sum(self.st) + cp.sum(self.sc)))
@@ -352,6 +356,7 @@ def solve_inner_ocp(track, p_ego, q_traj, prm=Params(), theta0=None, alpha=0.0, 
 
     Q = get_qclp(N, prm.solver)
     Q.p0.value, Q.umax.value = p0, prm.umax
+    Q.bend.value = prm.kappa_max * prm.umax ** 2
     Q.wobj.value, Q.sw.value = w_obj, prm.slack_w
 
     cur, _ = _merit(track, p_m, q, prm, s0, w_merit, win, gb, s0g)

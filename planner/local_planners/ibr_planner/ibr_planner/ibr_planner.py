@@ -86,6 +86,9 @@ class IBRPlanner(Node):
 
 
 
+        self.speed_limit = float(p("speed_limit", 0.0).value)              # [m/s] 0 = use speed_scale
+        self.rival_speed_limit = float(p("rival_speed_limit", 0.0).value)  # [m/s] 0 = use opp_speed_scale
+
         self.n_ibr = int(p("n_game_iterations", 4).value)
         self.ibr_tol = float(p("ibr_tolerance", 2e-2).value)
         self.alpha = (float(p("alpha", 1.0).value), float(p("alpha_opp", 1.0).value))
@@ -104,6 +107,8 @@ class IBRPlanner(Node):
             merit_w=float(p("merit_weight", 100.0).value),
             mu_max=float(p("mu_max", 2.0).value),
             proj_window=float(p("proj_window", 6.0).value),
+            kappa_max=float(p("kappa_max", 1.2).value),
+
         )
         self.prm = Params(vmax=0.0, **common)          # vmax filled in from the global line
         self.prm_opp = Params(vmax=0.0, **common)
@@ -114,7 +119,8 @@ class IBRPlanner(Node):
         if self.rec:
             self.write_rec(dict(N=self.n_steps, dt=self.dt, d_min=self.prm.d_min,
                                 margin=self.prm.track_margin,
-                                proj_window=self.prm.proj_window, alpha=list(self.alpha)))
+                                proj_window=self.prm.proj_window, alpha=list(self.alpha),
+                                n_ibr=self.n_ibr, kappa_max=self.prm.kappa_max))
 
 
         if self.rate_hz <= 0 or self.dt <= 0 or self.n_steps < 2 or self.n_ibr < 1:
@@ -174,8 +180,9 @@ class IBRPlanner(Node):
         vmax_raw = max(float(w.vx_mps) for w in msg.wpnts)
         if vmax_raw <= 0.0:
             return
-        self.prm.vmax = vmax_raw * self.speed_scale     # ego drives the scaled line
-        self.prm_opp.vmax = vmax_raw * self.opp_speed_scale # opponent drives the full line
+        self.prm.vmax = self.speed_limit or vmax_raw * self.speed_scale
+        self.prm_opp.vmax = self.rival_speed_limit or vmax_raw * self.opp_speed_scale
+
         if len(msg.wpnts) != self.n_gb_wpnts:
             self.n_gb_wpnts = len(msg.wpnts)
             self.gb_track = Track.from_wpnts(msg.wpnts)   # only used for s, never for widths
@@ -247,6 +254,7 @@ class IBRPlanner(Node):
         if self.rec:
             self.write_rec(dict(tick=self.planner.ticks, game=game, ok=bool(out["ok"]),
                                 converged=bool(R.converged),
+                                sweeps=len(R.history), solve_ms=out["time"] * 1e3,
                                 vmax=[self.prm.vmax, self.prm_opp.vmax],
                                 theta=[p.tolist() for p in R.p],
                                 mu=[m.tolist() for m in R.mu],
