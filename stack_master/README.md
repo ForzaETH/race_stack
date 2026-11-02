@@ -2,11 +2,11 @@
 Here is the `stack_master`, it is intended to be the main interface between the user and the PBL ForzaETH F110 system.
 
 ## Zenoh
-We use [zenoh](https://github.com/ros2/rmw_zenoh) as ros2 middleware. The zenoh router is started as a vscode task when you open the container. You can also start it manually with: `ros2 run rmw_zenoh_cpp rmw_zenohd` or the `zenoh` alias.
+We use [zenoh](https://github.com/ros2/rmw_zenoh) as ros2 middleware. The zenoh router runs in its own container (`forzaeth_zenoh_router`), which starts with the race stack and restarts if it crashes. You can also restart it manually from the host with: `docker restart forzaeth_zenoh_router`.
 If you have problems you may need to first stop the ros2 daemon: `ros2 daemon stop`
 
 ### Connect to host
-If you now want to connect to this host (e.g. to stream topics to RViz on another computer) you can run the following command on the other computer: `export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/THE_CAR_IP:7447"]'`. You will need to run this command in each terminal with which you want to connect. You can also add the ips of the cars to `remote_car.sh` and run `scripz && source remote_car.sh YOUR_CAR`.
+If you now want to connect to this host (e.g. to stream topics to RViz on another computer) you can run the following command on the other computer: `export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/THE_CAR_IP:7447"]'`. You will need to run this command in each terminal with which you want to connect. You can also add the ips of the cars to `remote_car.sh` and run `source /ws/src/race_stack/stack_master/scripts/remote_car.sh YOUR_CAR`.
 
 
 
@@ -25,7 +25,7 @@ ros2 launch stack_master mapping_launch.xml map_name:=<map name of choice>
   - `<map name of choice>` can be any name with no white space. Conventionally we use the location name (eg, 'hangar', 'ETZ', 'icra') followed by the day of the month followed by an incremental version number. For instance, `hangar_12_v0`. You can also omit this argument. Then a map called `latest` is created. If there already is such a map it is copied to `backup`.
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). If you have exported a `.env` file during the build process this is read from the env variables and does not have to be set.
 
-If you have a display connected (we recommend [this tool](https://github.com/ETH-PBL/remote-novnc)) an image will pop up showing you the current map. In the image you can press a button to save it. If you have no display you can do that via the terminal by pressing `y`, once you are satisfied by the map.
+If you have a display connected (the noVNC container provides one, see [GUI Forwarding](../.install_utils/README.md#gui-forwarding)) an image will pop up showing you the current map. In the image you can press a button to save it. If you have no display you can do that via the terminal by pressing `y`, once you are satisfied by the map.
 
 
 

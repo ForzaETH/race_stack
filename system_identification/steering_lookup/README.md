@@ -3,7 +3,7 @@ This package provides an importable library to use the steering lookup obtained 
 
 ## How to import python lib 
 
-Build the library (catkin build steering_lookup) and source the workspace. Then you can import it in another ros package like so:
+Build the library (`colcon build --packages-select steering_lookup`) and source the workspace. Then you can import it in another ros package like so:
 
 ```python
 from steering_lookup.lookup_steer_angle import LookupSteerAngle
