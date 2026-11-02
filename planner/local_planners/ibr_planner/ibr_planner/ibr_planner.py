@@ -100,7 +100,7 @@ class IBRPlanner(Node):
 
         common = dict(
             N=self.n_steps, dt=self.dt, d_min=r_ego + r_opp,
-            track_margin=float(p("track_margin", 0.29).value),
+            track_margin=float(p("track_margin", 0.40).value),
             d_lat=float(p("d_lat", 0.45).value),
             max_iter=int(p("n_sqp_iterations", 6).value),
             tol=float(p("inner_tolerance", 1e-3).value),

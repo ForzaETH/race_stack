@@ -196,7 +196,7 @@ class _QCLP:
         P = self.P = cp.Variable((N, 2), name="p")
         self.st = cp.Variable(N, nonneg=True, name="track_slack")
         self.sc = cp.Variable(N, nonneg=True, name="collision_slack")
-
+        self.sb = cp.Variable(N, nonneg=True, name="bend_slack")
         self.p0 = cp.Parameter(2)                      # measured start position
         self.umax = cp.Parameter(nonneg=True)          # vmax*dt
         self.bend = cp.Parameter(nonneg=True)          # largest change of step, kappa_max*umax^2
@@ -222,11 +222,11 @@ class _QCLP:
                 lat <= self.wl + self.st,
                 -lat <= self.wr + self.st,
                 self.coll,
-                cp.norm(P[1] - 2 * P[0] + self.p0, 2) <= self.bend + self.st[1],
-                cp.norm(P[2:] - 2 * P[1:-1] + P[:-2], 2, axis=1) <= self.bend + self.st[2:],
+                cp.norm(P[1] - 2 * P[0] + self.p0, 2) <= self.bend + self.sb[1],
+                cp.norm(P[2:] - 2 * P[1:-1] + P[:-2], 2, axis=1) <= self.bend + self.sb[2:],
                 cp.norm(P - self.pm, 2, axis=1) <= self.r]
         obj = cp.Minimize(-self.sigma @ P[N - 1] - cp.sum(cp.multiply(self.wobj, P))
-                          + self.sw * (cp.sum(self.st) + cp.sum(self.sc)))
+                          + self.sw * (cp.sum(self.st) + cp.sum(self.sc) + cp.sum(self.sb)))
         self.prob = cp.Problem(obj, cons)
         if not self.prob.is_dpp():
             raise RuntimeError("QCLP is not DPP; it would be re-canonicalised every solve")
@@ -440,7 +440,7 @@ def solve_inner_ocp(track, p_ego, q_traj, prm=Params(), theta0=None, alpha=0.0, 
         if r is not None:
             r = min(2.0 * r, prm.trust)                # grow back after a good step
         log.append(dict(it=m, status=st_, ds=ds, step=step, trust=r, merit=new,
-                        slack=float(np.sum(Q.st.value) + np.sum(Q.sc.value))))
+                        slack=float(np.sum(Q.st.value) + np.sum(Q.sc.value) + np.sum(Q.sb.value))))
         if step < prm.tol or (m > 0 and abs(gain) < 1e-2):
             status = "converged"
             break
