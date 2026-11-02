@@ -35,7 +35,7 @@
       <arg name="speed_limit" value="$(var speed_limit)" />
     </include>
 
-    <group unless="$(eval '\'$(var planner)\' in [\'gb\', \'ibr\']')">
+    <group unless="$(eval '\'$(var planner)\' in [\'gb\', \'ibr\',  \'mpc\']')">
       <include file="$(find-pkg-share state_machine)/launch/state_machine_launch.xml">
         <arg name="mode" value="head_to_head" />
       </include>
@@ -64,7 +64,7 @@
     <group if="$(eval '\'$(var planner)\' == \'spliner\'')">
       <include file="$(find-pkg-share spline_planner)/launch/spline_planner_launch.xml" />
     </group>
-    <group if="$(eval '\'$(var planner)\' == \'ibr\'')">
+    <group if="$(eval '\'$(var planner)\' in [\'ibr\', \'mpc\']')">
       <node pkg="ibr_planner" exec="ibr_planner" name="state_machine" output="screen">
         <param name="record_path" value="$(var record_path)" />
         <param name="n_game_iterations" value="$(var n_game_iterations)" />
@@ -74,6 +74,8 @@
         <param name="opp_speed_scale" value="$(var rival_speed_scale)" />
         <param name="speed_limit" value="$(var speed_limit)" />
         <param name="rival_speed_limit" value="$(var rival_speed_limit)" />
+        <param name="naive_mpc" value="$(eval '\'$(var planner)\' == \'mpc\'')" />
+
 
       </node>
     </group>

@@ -21,7 +21,7 @@ from dataclasses import replace
 import numpy as np
 from scipy.optimize import minimize
 
-from ibr_planner.inner_ocp import Params, Track, true_violations
+from ibr_planner.inner_ocp import Params, Track, keep_out, true_violations
 
 LAT_FRACS = (-0.8, -0.4, 0.0, 0.4, 0.8)      # warm starts: fraction of the usable half-width
 SPEED_FRACS = (1.0, 0.6)                     # warm starts: fraction of vmax
@@ -72,7 +72,8 @@ def best_response(track, gb, q, x, s0g, prm, w, theta, eps, multistart=True):
     and the wall that no strictly feasible plan can use. theta is feasible for the relaxed
     problem, so it is the incumbent and the returned value can only match or beat it.
     """
-    N, um2, d2 = prm.N, prm.umax ** 2, (prm.d_min - eps) ** 2
+    N, um2, lim = prm.N, prm.umax ** 2, (1.0 - eps / prm.d_min) ** 2
+    A = keep_out(q, prm)
     bend2 = (prm.kappa_max * prm.umax ** 2 + eps) ** 2
     s0 = track.project(x)
     win = max(prm.proj_window or 0.0, prm.umax * N + 1.0)
@@ -94,8 +95,9 @@ def best_response(track, gb, q, x, s0g, prm, w, theta, eps, multistart=True):
         step = np.sum(np.diff(p, axis=0) ** 2, axis=1)
         _, _, _, _, _, lat, wl, wr = track.frenet(p[1:], s0, win)
         turn = p[2:] - 2 * p[1:-1] + p[:-2]
+        d = p[1:] - q[1:]
         return np.r_[um2 - step, wl + eps - lat, wr + eps + lat,
-                     np.sum((p[1:] - q[1:]) ** 2, axis=1) - d2,
+                     np.einsum('ki,kij,kj->k', d, A, d) - lim,
                      bend2 - np.sum(turn ** 2, axis=1)]
 
     def dcons(z):
@@ -110,7 +112,7 @@ def best_response(track, gb, q, x, s0g, prm, w, theta, eps, multistart=True):
                 J[k, 2 * k - 2:2 * k] = 2.0 * du[k]
             J[N + k, 2 * k:2 * k + 2] = -n[k]
             J[2 * N + k, 2 * k:2 * k + 2] = n[k]
-            J[3 * N + k, 2 * k:2 * k + 2] = 2.0 * dq[k]
+            J[3 * N + k, 2 * k:2 * k + 2] = 2.0 * A[k] @ dq[k]
         turn = p[2:] - 2 * p[1:-1] + p[:-2]
         for k in range(N - 1):
             J[4 * N + k, 2 * k:2 * k + 2] = 4.0 * turn[k]
@@ -137,7 +139,8 @@ def nash_gap(track, gb, tick, i, prm, alpha):
     th, q = np.array(tick["theta"][i]), np.array(tick["theta"][1 - i])
     mu_j = np.array(tick["mu"][1 - i])
     d = q[1:] - th[1:]
-    beta = d / np.maximum(np.linalg.norm(d, axis=1, keepdims=True), 1e-6)
+    Ad = np.einsum('kij,kj->ki', keep_out(q, prm), d)
+    beta = Ad / np.maximum(np.linalg.norm(Ad, axis=1, keepdims=True), 1e-9)   # ellipse normal
     w = alpha * mu_j[:, None] * beta
     x, s0g = th[0], tick["s0g"][i]
     win = max(prm.proj_window or 0.0, prm.umax * prm.N + 1.0)
@@ -162,7 +165,7 @@ def check_tick(track, gb, head, tick):
 
 def head_params(head):
     return Params(N=head["N"], dt=head["dt"], d_min=head["d_min"], proj_window=head["proj_window"],
-                  kappa_max=head.get("kappa_max", 1e3))
+                  kappa_max=head.get("kappa_max", 1e3), d_lat=head.get("d_lat"))
 
 
 def main():
@@ -179,6 +182,8 @@ def main():
     args = ap.parse_args()
 
     head, ticks = load_run(args.run)
+    if head.get("mode") == "mpc":
+        raise SystemExit("naive MPC plays no game, so there is no equilibrium to check")
     track = Track.from_json(args.map, margin=head["margin"])
     gb = Track.from_json(args.map, key="global_traj_wpnts_iqp")
 

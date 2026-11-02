@@ -89,16 +89,19 @@ class IBRPlanner(Node):
         self.speed_limit = float(p("speed_limit", 0.0).value)              # [m/s] 0 = use speed_scale
         self.rival_speed_limit = float(p("rival_speed_limit", 0.0).value)  # [m/s] 0 = use opp_speed_scale
 
+        self.naive_mpc = bool(p("naive_mpc", False).value)   # True: no game, one solve per tick
         self.n_ibr = int(p("n_game_iterations", 4).value)
         self.ibr_tol = float(p("ibr_tolerance", 2e-2).value)
         self.alpha = (float(p("alpha", 1.0).value), float(p("alpha_opp", 1.0).value))
         self.opp_timeout = float(p("opp_timeout", 0.5).value)
-        r_ego = float(p("r_col_ego", 0.29).value)
-        r_opp = float(p("r_col_opp", 0.29).value)
+        r_ego = float(p("r_col_ego", 0.475).value)
+        r_opp = float(p("r_col_opp", 0.475).value)
+
 
         common = dict(
             N=self.n_steps, dt=self.dt, d_min=r_ego + r_opp,
-            track_margin=float(p("track_margin", r_ego).value),
+            track_margin=float(p("track_margin", 0.29).value),
+            d_lat=float(p("d_lat", 0.35).value),
             max_iter=int(p("n_sqp_iterations", 6).value),
             tol=float(p("inner_tolerance", 1e-3).value),
             trust=float(p("trust_radius", 1.0).value),
@@ -117,10 +120,12 @@ class IBRPlanner(Node):
         record_path = str(p("record_path", "").value)
         self.rec = open(record_path, "w") if record_path else None
         if self.rec:
-            self.write_rec(dict(N=self.n_steps, dt=self.dt, d_min=self.prm.d_min,
-                                margin=self.prm.track_margin,
-                                proj_window=self.prm.proj_window, alpha=list(self.alpha),
-                                n_ibr=self.n_ibr, kappa_max=self.prm.kappa_max))
+                self.write_rec(dict(N=self.n_steps, dt=self.dt, d_min=self.prm.d_min,
+                        margin=self.prm.track_margin,
+                        proj_window=self.prm.proj_window, alpha=list(self.alpha),
+                        n_ibr=self.n_ibr, kappa_max=self.prm.kappa_max,
+                        d_lat=self.prm.d_lat, mode="mpc" if self.naive_mpc else "ibr"))
+
 
 
         if self.rate_hz <= 0 or self.dt <= 0 or self.n_steps < 2 or self.n_ibr < 1:
@@ -129,6 +134,7 @@ class IBRPlanner(Node):
             raise ValueError("alpha must be >= 0")
 
         self.state = np.zeros((2, 2))
+        self.s_opp = None                               # raceline s of the rival, naive MPC only
         self.stamp = [None, None]
         self.t_meas = [0.0, 0.0]                        # odometry stamps of self.state [s]
         self.v_meas = [0.0, 0.0]                        # odometry speeds [m/s]
@@ -235,9 +241,15 @@ class IBRPlanner(Node):
 
         state = self.state.copy()
         game = self._opp_is_fresh()
-        if game:
+        if game and self.naive_mpc:
+            # The paper's MPC baseline: the rival holds its speed along the track and never reacts.
+            plan_opp = predict_opponent(self.track, state[1], self.prm_opp)
+            out = self.planner.step(state[0], state[1], q_opp=plan_opp)
+            self.s_opp = self.gb_track.project(state[1], self.s_opp, 3.0)
+        elif game:
             out = self.planner.step(state[0], state[1])
             plan_opp = out["plan_opp"]
+
         else:
             # No opponent: plain OCP against a prediction parked far behind, which leaves
             # the collision constraint inactive. Keeps one code path for both cases.
@@ -258,8 +270,9 @@ class IBRPlanner(Node):
                                 vmax=[self.prm.vmax, self.prm_opp.vmax],
                                 theta=[p.tolist() for p in R.p],
                                 mu=[m.tolist() for m in R.mu],
-                                s0g=[r.s0g for r in R.res],
-                                t=list(self.t_meas), v=list(self.v_meas)))
+                                s0g=[R.res[0].s0g, self.s_opp if self.naive_mpc else R.res[1].s0g],
+                                t=list(self.t_meas), v=list(self.v_meas),
+                                ))
 
         self.get_logger().info(
             f"IBR {out['time'] * 1e3:.1f} ms, {res.iters} SCP it, status={res.status}, "

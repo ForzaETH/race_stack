@@ -147,7 +147,8 @@ class Params:
     dt: float = 0.1              # step [s]
     # vmax: float = 3.2            # max speed [m/s] -> step bound vmax*dt
     vmax: float = 1.6
-    d_min: float = 0.5           # min centre-to-centre distance [m] (sum of the two radii)
+    d_min: float = 0.5           # min centre-to-centre distance along the rival's travel [m]
+    d_lat: float = None          # same across its travel [m]; None = circle of radius d_min
     track_margin: float = 0.15   # car half-width, removed from d_left/d_right [m]
     max_iter: int = 8           # max SCP iterations per best response
     tol: float = 1e-3            # ||theta^{m+1} - theta^m|| stopping threshold
@@ -300,12 +301,32 @@ def shift_plan(plan, track, prm, p0=None):
     out[0] = plan[1] if p0 is None else np.asarray(p0, float).ravel()
     return clip_steps(out, prm.umax)
 
+def keep_out(q, prm):
+    """(N, 2, 2) matrices A with d^T A d = 1 on the ellipse around each rival point q^k.
+
+    A car is about three times longer than it is wide, so one circle either lets a car follow
+    close enough to touch or keeps it too far out to the side to ever pass. The ellipse has
+    half-axes d_min along the rival's direction of travel and d_lat across it."""
+    circle = np.eye(2) / prm.d_min ** 2
+    if prm.d_lat is None:
+        return np.broadcast_to(circle, (len(q) - 1, 2, 2))
+    step = np.diff(q, axis=0)
+    size = np.linalg.norm(step, axis=1, keepdims=True)
+    t = step / np.maximum(size, 1e-6)
+    n = np.c_[-t[:, 1], t[:, 0]]
+    A = (t[:, :, None] * t[:, None, :]) / prm.d_min ** 2 + (n[:, :, None] * n[:, None, :]) / prm.d_lat ** 2
+    return np.where(size[:, None] > 1e-6, A, circle)          # a parked rival has no direction
+
 
 def true_violations(track, p, q, prm, s_hint=None, window=None):
     """Violations of the ORIGINAL (non-linearised) constraints. Positive = violated [m]."""
     s, _, _, _, _, lat, wl, wr = track.frenet(p[1:], s_hint, window)
     tv = float(np.max(np.maximum(lat - wl, -lat - wr)))
-    cv = float(prm.d_min - np.min(np.linalg.norm(p[1:] - q[1:], axis=1)))
+    d = p[1:] - q[1:]
+    dist = np.linalg.norm(d, axis=1)
+    scale = np.sqrt(np.einsum('ki,kij,kj->k', d, keep_out(q, prm), d))
+    cv = float(np.max(dist / np.maximum(scale, 1e-6) - dist))
+
     return tv, cv, s
 
 
@@ -350,10 +371,13 @@ def solve_inner_ocp(track, p_ego, q_traj, prm=Params(), theta0=None, alpha=0.0, 
 
     mu_in = np.zeros(N) if mu is None else np.asarray(mu, float).ravel()
     d0 = q[1:] - p_m[1:]
-    beta_obj = d0 / np.maximum(np.linalg.norm(d0, axis=1, keepdims=True), 1e-6)
+    A = keep_out(q, prm)
+    Ad0 = np.einsum('kij,kj->ki', A, d0)
+    beta_obj = Ad0 / np.maximum(np.linalg.norm(Ad0, axis=1, keepdims=True), 1e-9)   # ellipse normal
     w_obj = alpha * mu_in[:, None] * beta_obj          # frozen objective gradient
     w_merit = w_obj if alpha != 0.0 else None
 
+    
     Q = get_qclp(N, prm.solver)
     Q.p0.value, Q.umax.value = p0, prm.umax
     Q.bend.value = prm.kappa_max * prm.umax ** 2
@@ -372,8 +396,13 @@ def solve_inner_ocp(track, p_ego, q_traj, prm=Params(), theta0=None, alpha=0.0, 
         # n·(p − τ) = n·p − n·τ
         Q.n.value, Q.ntau.value = nrm, np.sum(nrm * tau, axis=1)
         Q.wl.value, Q.wr.value = wl, wr
-        Q.beta.value = beta
-        Q.bq.value = prm.d_min - np.sum(beta * q[1:], axis=1)
+        # Half-plane tangent to the ellipse: stays outside it, so the plan is safe when sc = 0.
+        Ad = np.einsum('kij,kj->ki', A, diff)
+        normal = Ad / np.maximum(np.linalg.norm(Ad, axis=1, keepdims=True), 1e-9)
+        surface = diff / np.maximum(np.sqrt(np.sum(diff * Ad, axis=1, keepdims=True)), 1e-6)
+        Q.beta.value = normal
+        Q.bq.value = np.sum(normal * (surface - q[1:]), axis=1)
+
         Q.sigma.value = sigma
         Q.pm.value = p_m[1:]
         Q.r.value = r if r is not None else 1e4
