@@ -60,3 +60,6 @@ sysid_bags/
 .env
 
 bags/
+
+# state estimation eval results
+state_estimation/eval/results/

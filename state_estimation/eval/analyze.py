@@ -1,0 +1,594 @@
+#!/usr/bin/env python3
+"""Offline analysis of a state estimation replay bag.
+
+Reads the bag recorded by run_eval.py (or any bag with the topics below) with
+`rosbags`, no ROS needed. Produces plots/, data/ (TUM + CSV + metrics.json) and
+summary.md in the result folder.
+
+  global  : cartographer map->base_link (/tracked_pose, and map->odom from /tf)
+  local   : EKF /state_estimation/odom, RPE against cartographer (or ground truth)
+  inputs  : /odom (VESC), /imu, /basalt/odom
+  gt      : optional --gt-topic (PoseStamped / Odometry / TransformStamped /
+            PoseWithCovarianceStamped). APE/RPE are then computed against it.
+"""
+
+import argparse
+import json
+import math
+from pathlib import Path
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+from rosbags.rosbag2 import Reader
+from rosbags.typesys import Stores, get_typestore
+from scipy.signal import savgol_filter
+
+TOPICS = {
+    'carto': '/tracked_pose',
+    'ekf': '/state_estimation/odom',
+    'basalt': '/basalt/odom',
+    'vesc': '/odom',
+    'imu': '/imu',
+    'tf': '/tf',
+}
+RPE_DELTA_S = 1.0
+GT_MAX_DT = 0.02
+MOVE_SPEED = 0.5      # m/s, first time the car is faster than this = start of motion
+WARMUP_S = 3.0        # s after start of motion before the evaluation window begins (cartographer init)
+EXPECTED = ('carto', 'ekf', 'basalt', 'vesc', 'imu', 'tf')
+RED = '\033[1;91m'
+END = '\033[0m'
+
+
+def alert(msg):
+    bar = '!' * 78
+    print(f'{RED}{bar}\n{msg}\n{bar}{END}', flush=True)
+
+
+# ----------------------------------------------------------------------------
+# bag reading
+# ----------------------------------------------------------------------------
+def stamp(h):
+    return h.stamp.sec + h.stamp.nanosec * 1e-9
+
+
+def yaw_of(q):
+    return math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+
+
+def pose_of(msg):
+    """Position/orientation of PoseStamped, Odometry, PoseWithCovarianceStamped, TransformStamped."""
+    if hasattr(msg, 'transform'):
+        return msg.transform.translation, msg.transform.rotation
+    p = msg.pose
+    if hasattr(p, 'pose'):
+        p = p.pose
+    return p.position, p.orientation
+
+
+def read_bag(path, topics):
+    ts = get_typestore(Stores.ROS2_HUMBLE)
+    out = {t: [] for t in topics}
+    with Reader(path) as r:
+        conns = [c for c in r.connections if c.topic in topics]
+        for c, t_recv, raw in r.messages(connections=conns):
+            out[c.topic].append((t_recv * 1e-9, ts.deserialize_cdr(raw, c.msgtype)))
+    return out
+
+
+def poses(msgs):
+    """-> dict of arrays t, t_recv, x, y, yaw (+ twist for Odometry)."""
+    if not msgs:
+        return None
+    d = {'t': [], 't_recv': [], 'x': [], 'y': [], 'yaw': []}
+    has_twist = hasattr(msgs[0][1], 'twist')
+    if has_twist:
+        d.update(vx=[], vy=[], vyaw=[])
+    for t_recv, m in msgs:
+        p, q = pose_of(m)
+        d['t'].append(stamp(m.header)); d['t_recv'].append(t_recv)
+        d['x'].append(p.x); d['y'].append(p.y); d['yaw'].append(yaw_of(q))
+        if has_twist:
+            d['vx'].append(m.twist.twist.linear.x)
+            d['vy'].append(m.twist.twist.linear.y)
+            d['vyaw'].append(m.twist.twist.angular.z)
+    d = {k: np.array(v) for k, v in d.items()}
+    order = np.argsort(d['t'], kind='stable')
+    return {k: v[order] for k, v in d.items()}
+
+
+def imu(msgs):
+    if not msgs:
+        return None
+    d = {'t': [], 't_recv': [], 'gx': [], 'gy': [], 'gz': [], 'ax': [], 'ay': [], 'az': [], 'yaw': []}
+    for t_recv, m in msgs:
+        d['t'].append(stamp(m.header)); d['t_recv'].append(t_recv)
+        w, a = m.angular_velocity, m.linear_acceleration
+        d['gx'].append(w.x); d['gy'].append(w.y); d['gz'].append(w.z)
+        d['ax'].append(a.x); d['ay'].append(a.y); d['az'].append(a.z)
+        d['yaw'].append(yaw_of(m.orientation))
+    return {k: np.array(v) for k, v in d.items()}
+
+
+def tf_pairs(msgs, parent, child):
+    d = {'t': [], 't_recv': [], 'x': [], 'y': [], 'yaw': []}
+    for t_recv, m in msgs:
+        for tr in m.transforms:
+            if tr.header.frame_id == parent and tr.child_frame_id == child:
+                d['t'].append(stamp(tr.header)); d['t_recv'].append(t_recv)
+                d['x'].append(tr.transform.translation.x)
+                d['y'].append(tr.transform.translation.y)
+                d['yaw'].append(yaw_of(tr.transform.rotation))
+    d = {k: np.array(v) for k, v in d.items()}
+    if len(d['t']) == 0:
+        return None
+    order = np.argsort(d['t'], kind='stable')
+    return {k: v[order] for k, v in d.items()}
+
+
+def compose(a, b):
+    """SE2 chain a(parent->mid) * b(mid->child), a sampled at b's stamps (latest a <= t)."""
+    idx = np.clip(np.searchsorted(a['t'], b['t'], side='right') - 1, 0, len(a['t']) - 1)
+    c, s = np.cos(a['yaw'][idx]), np.sin(a['yaw'][idx])
+    return {
+        't': b['t'], 't_recv': b['t_recv'],
+        'x': a['x'][idx] + c * b['x'] - s * b['y'],
+        'y': a['y'][idx] + s * b['x'] + c * b['y'],
+        'yaw': wrap(a['yaw'][idx] + b['yaw']),
+    }
+
+
+# ----------------------------------------------------------------------------
+# helpers
+# ----------------------------------------------------------------------------
+def wrap(a):
+    return (a + np.pi) % (2 * np.pi) - np.pi
+
+
+def body_velocities(tr, hz=100.0, window_s=0.15):
+    """vx, vy, vyaw in body frame by differentiating a pose trajectory (resampled, Savitzky-Golay)."""
+    t = np.arange(tr['t'][0], tr['t'][-1], 1.0 / hz)
+    if len(t) < 10:
+        return None
+    x = np.interp(t, tr['t'], tr['x'])
+    y = np.interp(t, tr['t'], tr['y'])
+    yaw = np.interp(t, tr['t'], np.unwrap(tr['yaw']))
+    win = max(5, int(window_s * hz) | 1)
+    dx = savgol_filter(x, win, 3, deriv=1, delta=1.0 / hz)
+    dy = savgol_filter(y, win, 3, deriv=1, delta=1.0 / hz)
+    vyaw = savgol_filter(yaw, win, 3, deriv=1, delta=1.0 / hz)
+    c, s = np.cos(yaw), np.sin(yaw)
+    return {'t': t, 'vx': c * dx + s * dy, 'vy': -s * dx + c * dy, 'vyaw': vyaw, 'yaw': wrap(yaw)}
+
+
+def time_offset(ta, va, tb, vb, hz=200.0, max_lag=0.6):
+    """Seconds by which signal a leads signal b (cross-correlation peak). >0: a's stamps are early."""
+    t = np.arange(max(ta[0], tb[0]), min(ta[-1], tb[-1]), 1.0 / hz)
+    if len(t) < 4 * hz:
+        return None
+    a = np.interp(t, ta, va); b = np.interp(t, tb, vb)
+    a = a - a.mean(); b = b - b.mean()
+    if np.std(a) < 1e-6 or np.std(b) < 1e-6:
+        return None
+    n = int(max_lag * hz)
+    scores = [np.dot(a[k:], b[:len(b) - k]) if k >= 0 else np.dot(a[:k], b[-k:]) for k in range(-n, n + 1)]
+    return -float((np.argmax(scores) - n) / hz)
+
+
+def crop(d, t_start):
+    if d is None:
+        return None
+    keep = d['t'] >= t_start
+    return {k: v[keep] for k, v in d.items()}
+
+
+def stats(e):
+    e = np.asarray(e, dtype=float)
+    e = e[np.isfinite(e)]
+    if len(e) == 0:
+        return {}
+    return {'rmse': float(np.sqrt(np.mean(e ** 2))), 'mean': float(np.mean(e)),
+            'median': float(np.median(e)), 'std': float(np.std(e)),
+            'max': float(np.max(np.abs(e))), 'n': int(len(e))}
+
+
+def rate_stats(d):
+    dt = np.diff(d['t'])
+    lat = d['t_recv'] - d['t']
+    return {'rate_hz': float(1.0 / np.median(dt)) if len(dt) else 0.0,
+            'dt_max_s': float(dt.max()) if len(dt) else 0.0,
+            'non_monotonic': int((dt < 0).sum()),
+            'latency_median_s': float(np.median(lat)), 'latency_max_s': float(lat.max())}
+
+
+def interp_to(t, d, key, angular=False):
+    v = d[key]
+    if angular:
+        return wrap(np.interp(t, d['t'], np.unwrap(v)))
+    return np.interp(t, d['t'], v)
+
+
+def to_evo(tr):
+    from evo.core.trajectory import PoseTrajectory3D
+    n = len(tr['t'])
+    q = np.zeros((n, 4))
+    q[:, 0] = np.cos(tr['yaw'] / 2)
+    q[:, 3] = np.sin(tr['yaw'] / 2)
+    xyz = np.column_stack([tr['x'], tr['y'], np.zeros(n)])
+    return PoseTrajectory3D(positions_xyz=xyz, orientations_quat_wxyz=q, timestamps=tr['t'])
+
+
+def write_tum(path, tr):
+    q = np.column_stack([np.zeros(len(tr['t'])), np.zeros(len(tr['t'])),
+                         np.sin(tr['yaw'] / 2), np.cos(tr['yaw'] / 2)])
+    np.savetxt(path, np.column_stack([tr['t'], tr['x'], tr['y'], np.zeros(len(tr['t'])), q]),
+               fmt='%.6f', header='t x y z qx qy qz qw', comments='# ')
+
+
+def write_csv(path, d):
+    keys = list(d.keys())
+    np.savetxt(path, np.column_stack([d[k] for k in keys]), fmt='%.6f',
+               delimiter=',', header=','.join(keys), comments='')
+
+
+# ----------------------------------------------------------------------------
+# evo metrics
+# ----------------------------------------------------------------------------
+def resample(tr, t):
+    return {'t': t, 'x': np.interp(t, tr['t'], tr['x']), 'y': np.interp(t, tr['t'], tr['y']),
+            'yaw': interp_to(t, tr, 'yaw', angular=True)}
+
+
+def evo_rpe(ref, est, hz=50.0):
+    """Relative pose error est vs ref over RPE_DELTA_S. Frame-independent -> local accuracy.
+    evo has no time delta unit, so both are resampled to hz and delta is given in frames."""
+    from evo.core import metrics
+    try:
+        from evo.core.units import Unit
+    except ImportError:                 # evo < 1.20
+        from evo.core.metrics import Unit
+    t = np.arange(max(ref['t'][0], est['t'][0]), min(ref['t'][-1], est['t'][-1]), 1.0 / hz)
+    r, e = to_evo(resample(ref, t)), to_evo(resample(est, t))
+    out = {}
+    for name, rel in (('trans_m', metrics.PoseRelation.translation_part),
+                      ('rot_deg', metrics.PoseRelation.rotation_angle_deg)):
+        m = metrics.RPE(rel, int(round(RPE_DELTA_S * hz)), Unit.frames, all_pairs=False)
+        m.process_data((r, e))
+        out[name] = {'t': t[m.delta_ids], 'err': m.error, 'stats': stats(m.error)}
+    return out
+
+
+def evo_ape(ref, est, max_dt, align=True):
+    from evo.core import metrics, sync
+    r, e = sync.associate_trajectories(to_evo(ref), to_evo(est), max_diff=max_dt)
+    if align:
+        e.align(r, correct_scale=False)
+    out = {}
+    for name, rel in (('trans_m', metrics.PoseRelation.translation_part),
+                      ('rot_deg', metrics.PoseRelation.rotation_angle_deg)):
+        m = metrics.APE(rel)
+        m.process_data((r, e))
+        out[name] = {'t': e.timestamps, 'err': m.error, 'stats': stats(m.error)}
+    out['aligned'] = {'t': e.timestamps, 'x': e.positions_xyz[:, 0], 'y': e.positions_xyz[:, 1]}
+    return out
+
+
+# ----------------------------------------------------------------------------
+# plots
+# ----------------------------------------------------------------------------
+def plot_trajectories(P, carto, ekf, basalt, gt_ape):
+    fig, ax = plt.subplots(1, 3 if gt_ape else 2, figsize=(18, 6))
+    ax[0].plot(carto['x'], carto['y'], lw=0.8, label='cartographer map->base_link')
+    if gt_ape:
+        ax[0].plot(gt_ape['aligned']['x'], gt_ape['aligned']['y'], lw=0.8, label='cartographer aligned to GT')
+    ax[0].set_title('map frame'); ax[0].axis('equal'); ax[0].legend()
+    if ekf:
+        ax[1].plot(ekf['x'], ekf['y'], lw=0.8, label='EKF /state_estimation/odom')
+    if basalt:
+        ax[1].plot(basalt['x'], basalt['y'], lw=0.8, label='/basalt/odom')
+    ax[1].set_title('odom frame (drifting)'); ax[1].axis('equal'); ax[1].legend()
+    if gt_ape:
+        ax[2].plot(gt_ape['trans_m']['t'] - P['t0'], gt_ape['trans_m']['err'])
+        ax[2].set_title(f'cartographer APE vs GT [m], rmse {gt_ape["trans_m"]["stats"]["rmse"]:.3f}')
+        ax[2].set_xlabel('t [s]')
+    fig.tight_layout(); fig.savefig(P['plots'] / 'trajectories.png', dpi=120); plt.close(fig)
+
+
+def plot_global(P, map_odom, carto, carto_jump):
+    fig, ax = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
+    t = map_odom['t'] - P['t0']
+    ax[0].plot(t, map_odom['x'], label='x'); ax[0].plot(t, map_odom['y'], label='y')
+    ax[0].set_ylabel('map->odom [m]'); ax[0].legend()
+    ax[1].plot(t, np.degrees(np.unwrap(map_odom['yaw'])))
+    ax[1].set_ylabel('map->odom yaw [deg]')
+    dt = np.diff(map_odom['t'])
+    ok = dt > 1e-4
+    dyaw = np.degrees(np.abs(wrap(np.diff(np.unwrap(map_odom['yaw'])))))[ok] / dt[ok]
+    dp = np.hypot(np.diff(map_odom['x']), np.diff(map_odom['y']))[ok] / dt[ok]
+    ax[2].plot(t[1:][ok], dyaw, lw=0.6, label='|d yaw/dt| [deg/s]')
+    ax[2].plot(t[1:][ok], dp, lw=0.6, label='|d pos/dt| [m/s]')
+    ax[2].set_ylabel('map->odom correction rate'); ax[2].set_yscale('symlog'); ax[2].legend()
+    ax[3].plot(carto_jump['t'] - P['t0'], carto_jump['pos'], lw=0.6, label='position step - v*dt [m]')
+    ax[3].plot(carto_jump['t'] - P['t0'], np.degrees(carto_jump['yaw']), lw=0.6, label='yaw step - w*dt [deg]')
+    ax[3].set_ylabel('/tracked_pose discontinuity'); ax[3].legend(); ax[3].set_xlabel('t [s]')
+    fig.suptitle('Global consistency: how much cartographer has to correct the EKF, and how smooth its own output is')
+    fig.tight_layout(); fig.savefig(P['plots'] / 'global_consistency.png', dpi=120); plt.close(fig)
+
+
+def plot_rpe(P, rpe, title, fname):
+    fig, ax = plt.subplots(2, 1, figsize=(14, 7), sharex=True)
+    for a, k, lab in ((ax[0], 'trans_m', 'translation [m]'), (ax[1], 'rot_deg', 'rotation [deg]')):
+        a.plot(rpe[k]['t'] - P['t0'], rpe[k]['err'], lw=0.8)
+        s = rpe[k]['stats']
+        a.set_ylabel(lab); a.set_title(f'{lab}: rmse {s.get("rmse", 0):.4f}, max {s.get("max", 0):.4f}')
+    ax[1].set_xlabel('t [s]')
+    fig.suptitle(title); fig.tight_layout(); fig.savefig(P['plots'] / fname, dpi=120); plt.close(fig)
+
+
+def plot_velocities(P, ekf, vesc, basalt, imu_d, carto_v, gt_v):
+    fig, ax = plt.subplots(3, 1, figsize=(14, 11), sharex=True)
+    t0 = P['t0']
+
+    def line(a, d, key, label, **kw):
+        if d is not None and key in d:
+            a.plot(d['t'] - t0, d[key], lw=0.7, label=label, **kw)
+
+    line(ax[0], carto_v, 'vx', 'cartographer (diff.)', color='k', alpha=0.5)
+    line(ax[0], gt_v, 'vx', 'ground truth (diff.)', color='g')
+    line(ax[0], vesc, 'vx', '/odom (VESC)')
+    line(ax[0], basalt, 'vx', '/basalt/odom')
+    line(ax[0], ekf, 'vx', 'EKF')
+    ax[0].set_ylabel('vx [m/s]'); ax[0].legend(loc='upper right')
+    line(ax[1], carto_v, 'vy', 'cartographer (diff.)', color='k', alpha=0.5)
+    line(ax[1], gt_v, 'vy', 'ground truth (diff.)', color='g')
+    line(ax[1], basalt, 'vy', '/basalt/odom')
+    line(ax[1], ekf, 'vy', 'EKF')
+    ax[1].set_ylabel('vy [m/s]'); ax[1].legend(loc='upper right')
+    line(ax[2], carto_v, 'vyaw', 'cartographer (diff.)', color='k', alpha=0.5)
+    line(ax[2], gt_v, 'vyaw', 'ground truth (diff.)', color='g')
+    line(ax[2], imu_d, 'gz', '/imu gyro z')
+    line(ax[2], basalt, 'vyaw', '/basalt/odom')
+    line(ax[2], ekf, 'vyaw', 'EKF')
+    ax[2].set_ylabel('yaw rate [rad/s]'); ax[2].legend(loc='upper right'); ax[2].set_xlabel('t [s]')
+    fig.suptitle('Fused velocities: inputs vs EKF vs reference')
+    fig.tight_layout(); fig.savefig(P['plots'] / 'velocities.png', dpi=120); plt.close(fig)
+
+
+def plot_yaw(P, carto, ekf, basalt, imu_d, map_odom):
+    fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+    t0 = P['t0']
+    cy = np.unwrap(carto['yaw'])
+    ax[0].plot(carto['t'] - t0, np.degrees(carto['yaw']), lw=0.8, label='cartographer (map)', color='k')
+    for d, lab in ((ekf, 'EKF (odom)'), (basalt, '/basalt/odom'), (imu_d, '/imu orientation')):
+        if d is not None:
+            # odom-frame yaws start at the cartographer yaw so they are comparable; drift shows as divergence
+            y = np.unwrap(d['yaw'])
+            y = y - y[0] + np.interp(d['t'][0], carto['t'], cy)   # aligned at the start of the eval window
+            ax[0].plot(d['t'] - t0, np.degrees(wrap(y)), lw=0.8, label=lab + ' (offset removed)')
+    ax[0].set_ylabel('yaw [deg]'); ax[0].set_ylim(-185, 185); ax[0].legend(loc='upper right')
+    if ekf is not None:
+        ye = interp_to(carto['t'], ekf, 'yaw', angular=True)
+        ym = interp_to(carto['t'], map_odom, 'yaw', angular=True)
+        ax[1].plot(carto['t'] - t0, np.degrees(wrap(carto['yaw'] - ye - ym)), lw=0.8)
+        ax[1].set_ylabel('carto - (map->odom + EKF) yaw [deg]')
+        ax[1].set_title('yaw residual of the TF chain at /tracked_pose stamps (TF consistency / latency)')
+    ax[1].set_xlabel('t [s]')
+    fig.tight_layout(); fig.savefig(P['plots'] / 'yaw.png', dpi=120); plt.close(fig)
+
+
+def plot_imu(P, imu_d):
+    if imu_d is None:
+        return
+    fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+    t = imu_d['t'] - P['t0']
+    for k in ('gx', 'gy', 'gz'):
+        ax[0].plot(t, imu_d[k], lw=0.7, label=k)
+    for k in ('ax', 'ay', 'az'):
+        ax[1].plot(t, imu_d[k], lw=0.7, label=k)
+    ax[0].set_ylabel('gyro [rad/s]'); ax[0].legend()
+    ax[1].set_ylabel('accel [m/s2]'); ax[1].legend(); ax[1].set_xlabel('t [s]')
+    fig.suptitle('/imu (base_link)')
+    fig.tight_layout(); fig.savefig(P['plots'] / 'imu.png', dpi=120); plt.close(fig)
+
+
+def plot_timing(P, series):
+    fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+    t0 = P['t0']
+    for lab, d in series.items():
+        if d is None or len(d['t']) < 2:
+            continue
+        ax[0].plot(d['t'][1:] - t0, np.diff(d['t']) * 1e3, '.', ms=2, label=lab)
+        ax[1].plot(d['t'] - t0, (d['t_recv'] - d['t']) * 1e3, '.', ms=2, label=lab)
+    ax[0].set_ylabel('header stamp interval [ms]'); ax[0].set_yscale('log'); ax[0].legend(ncol=3, fontsize=8)
+    ax[1].set_ylabel('record time - header stamp [ms]'); ax[1].legend(ncol=3, fontsize=8); ax[1].set_xlabel('t [s]')
+    ax[1].set_title('latency as seen by the recorder (needs record --use-sim-time on replay)')
+    fig.tight_layout(); fig.savefig(P['plots'] / 'timing.png', dpi=120); plt.close(fig)
+
+
+# ----------------------------------------------------------------------------
+def analyze(out_dir, bag=None, gt_topic=None):
+    out_dir = Path(out_dir)
+    bag = Path(bag) if bag else out_dir / 'replay'
+    P = {'plots': out_dir / 'plots', 'data': out_dir / 'data'}
+    P['plots'].mkdir(parents=True, exist_ok=True)
+    P['data'].mkdir(parents=True, exist_ok=True)
+
+    topics = list(TOPICS.values()) + ([gt_topic] if gt_topic else [])
+    raw = read_bag(bag, topics)
+    carto = poses(raw[TOPICS['carto']])
+    ekf = poses(raw[TOPICS['ekf']])
+    basalt = poses(raw[TOPICS['basalt']])
+    vesc = poses(raw[TOPICS['vesc']])
+    imu_d = imu(raw[TOPICS['imu']])
+    map_odom = tf_pairs(raw[TOPICS['tf']], 'map', 'odom')
+    odom_base = tf_pairs(raw[TOPICS['tf']], 'odom', 'base_link')
+    gt = poses(raw[gt_topic]) if gt_topic else None
+    missing = [k for k in EXPECTED if not raw[TOPICS[k]]]
+    if missing:
+        alert('MISSING TOPICS in the replay bag: ' + ', '.join(f'{k} ({TOPICS[k]})' for k in missing)
+              + '\n-> the corresponding node did not run or did not publish, check logs/launch.log. Stopping.')
+        raise SystemExit(1)
+    P['t0'] = carto['t'][0]
+    M = {'bag': str(bag), 'duration_s': float(carto['t'][-1] - carto['t'][0]), 'rates': {}}
+
+    # timing plot on the whole bag, all numbers on the window after cartographer had time to settle
+    plot_timing(P, {'carto': carto, 'ekf': ekf, 'basalt': basalt, 'vesc': vesc, 'imu': imu_d,
+                    'tf map->odom': map_odom, 'tf odom->base': odom_base, 'gt': gt})
+
+    full_v = body_velocities(carto)
+    moving = np.hypot(full_v['vx'], full_v['vy']) > MOVE_SPEED
+    t_move = full_v['t'][np.argmax(moving)] if moving.any() else carto['t'][0]
+    t_start = t_move + WARMUP_S
+    M['window'] = {'t_first_motion_s': float(t_move - P['t0']), 'eval_start_s': float(t_start - P['t0']),
+                   'eval_end_s': float(carto['t'][-1] - P['t0'])}
+    carto, ekf, basalt, vesc, imu_d, map_odom, odom_base, gt = (
+        crop(d, t_start) for d in (carto, ekf, basalt, vesc, imu_d, map_odom, odom_base, gt))
+    if len(carto['t']) < 50:
+        raise SystemExit(f'cartographer trajectory too short after the {WARMUP_S:g} s warm-up window')
+
+    for name, d in (('carto', carto), ('ekf', ekf), ('basalt', basalt), ('vesc', vesc),
+                    ('imu', imu_d), ('tf_map_odom', map_odom), ('tf_odom_base', odom_base), ('gt', gt)):
+        if d is not None:
+            M['rates'][name] = rate_stats(d)
+            write_csv(P['data'] / f'{name}.csv', d)
+    for name, d in (('carto', carto), ('ekf', ekf), ('basalt', basalt), ('gt', gt)):
+        if d is not None:
+            write_tum(P['data'] / f'{name}.tum', d)
+
+    # --- global: cartographer ---------------------------------------------
+    carto_v = body_velocities(carto)
+    cv = {'t': carto['t'][1:]}
+    dt = np.diff(carto['t'])
+    v_at = np.interp(cv['t'], carto_v['t'], np.hypot(carto_v['vx'], carto_v['vy']))
+    w_at = np.interp(cv['t'], carto_v['t'], carto_v['vyaw'])
+    cv['pos'] = np.hypot(np.diff(carto['x']), np.diff(carto['y'])) - v_at * dt
+    cv['yaw'] = wrap(np.diff(np.unwrap(carto['yaw']))) - w_at * dt
+    M['carto_discontinuity'] = {'pos_m': stats(cv['pos']), 'yaw_rad': stats(cv['yaw']),
+                                'pos_jumps_gt_5cm': int((np.abs(cv['pos']) > 0.05).sum()),
+                                'yaw_jumps_gt_2deg': int((np.abs(cv['yaw']) > math.radians(2)).sum())}
+    if map_odom is not None:
+        dtm = np.diff(map_odom['t']); ok = dtm > 1e-4
+        M['map_odom_correction'] = {
+            'yaw_rate_deg_s': stats(np.abs(np.degrees(wrap(np.diff(np.unwrap(map_odom['yaw']))))[ok] / dtm[ok])),
+            'pos_rate_m_s': stats(np.hypot(np.diff(map_odom['x']), np.diff(map_odom['y']))[ok] / dtm[ok]),
+            'yaw_total_drift_deg': float(np.degrees(np.unwrap(map_odom['yaw'])[-1] - map_odom['yaw'][0])),
+        }
+        plot_global(P, map_odom, carto, cv)
+    gt_ape = gt_v = None
+    if gt is not None:
+        gt_ape = evo_ape(gt, carto, GT_MAX_DT, align=True)
+        M['carto_vs_gt_ape'] = {k: gt_ape[k]['stats'] for k in ('trans_m', 'rot_deg')}
+        plot_rpe(P, gt_ape, 'Cartographer APE vs ground truth (SE3 aligned)', 'carto_ape_gt.png')
+        gt_v = body_velocities(gt)
+    plot_trajectories(P, carto, ekf, basalt, gt_ape)
+
+    # --- local: EKF ---------------------------------------------------------
+    if ekf is not None:
+        ref_name, ref = ('gt', gt) if gt is not None else ('cartographer', carto)
+        rpe = evo_rpe(ref, ekf)
+        M[f'ekf_rpe_{RPE_DELTA_S:g}s_vs_{ref_name}'] = {k: rpe[k]['stats'] for k in ('trans_m', 'rot_deg')}
+        plot_rpe(P, rpe, f'EKF relative pose error over {RPE_DELTA_S:g} s vs {ref_name} (local accuracy)', 'ekf_rpe.png')
+        ref_v = gt_v if gt_v is not None else carto_v
+        ve = {}
+        for k in ('vx', 'vy', 'vyaw'):
+            ve[k] = stats(ekf[k] - np.interp(ekf['t'], ref_v['t'], ref_v[k]))
+        M[f'ekf_velocity_error_vs_{ref_name}'] = ve
+        if odom_base is not None and map_odom is not None:
+            chain = compose(map_odom, odom_base)
+            chain_at = {k: interp_to(carto['t'], chain, k, angular=(k == 'yaw')) for k in ('x', 'y', 'yaw')}
+            M['tf_chain_vs_tracked_pose'] = {
+                'pos_m': stats(np.hypot(chain_at['x'] - carto['x'], chain_at['y'] - carto['y'])),
+                'yaw_deg': stats(np.degrees(wrap(chain_at['yaw'] - carto['yaw'])))}
+        if gt is not None:
+            ape_gt_ekf = evo_ape(gt, ekf, GT_MAX_DT, align=True)
+            M['ekf_vs_gt_ape_aligned'] = {k: ape_gt_ekf[k]['stats'] for k in ('trans_m', 'rot_deg')}
+        plot_yaw(P, carto, ekf, basalt, imu_d, map_odom if map_odom is not None else {'t': carto['t'], 'yaw': np.zeros(len(carto['t']))})
+
+    # --- inputs -------------------------------------------------------------
+    inp = {}
+    for name, d, k in (('vesc_vx', vesc, 'vx'), ('basalt_vx', basalt, 'vx'), ('basalt_vy', basalt, 'vy'),
+                       ('basalt_vyaw', basalt, 'vyaw'), ('imu_gz', imu_d, 'gz')):
+        if d is not None:
+            inp[name + '_vs_carto'] = stats(d[k] - np.interp(d['t'], carto_v['t'], carto_v[k if k != 'gz' else 'vyaw']))
+    offs = {}
+    if imu_d is not None:
+        offs['gyro_vs_carto'] = time_offset(imu_d['t'], imu_d['gz'], carto_v['t'], carto_v['vyaw'])
+        if basalt is not None:
+            offs['basalt_vyaw_vs_gyro'] = time_offset(basalt['t'], basalt['vyaw'], imu_d['t'], imu_d['gz'])
+    if basalt is not None:
+        offs['basalt_vx_vs_carto'] = time_offset(basalt['t'], basalt['vx'], carto_v['t'], carto_v['vx'])
+    if vesc is not None:
+        offs['vesc_vx_vs_carto'] = time_offset(vesc['t'], vesc['vx'], carto_v['t'], carto_v['vx'])
+    if ekf is not None:
+        offs['ekf_vx_vs_carto'] = time_offset(ekf['t'], ekf['vx'], carto_v['t'], carto_v['vx'])
+        offs['ekf_vyaw_vs_carto'] = time_offset(ekf['t'], ekf['vyaw'], carto_v['t'], carto_v['vyaw'])
+    inp['time_offset_s'] = {k: v for k, v in offs.items() if v is not None}
+    if imu_d is not None:
+        still = np.hypot(np.interp(imu_d['t'], carto_v['t'], carto_v['vx']),
+                         np.interp(imu_d['t'], carto_v['t'], carto_v['vy'])) < 0.05
+        if still.sum() > 50:
+            inp['imu_standstill_mean'] = {k: float(imu_d[k][still].mean()) for k in ('gx', 'gy', 'gz', 'ax', 'ay', 'az')}
+    M['inputs'] = inp
+    plot_velocities(P, ekf, vesc, basalt, imu_d, carto_v, gt_v)
+    plot_imu(P, imu_d)
+
+    (P['data'] / 'metrics.json').write_text(json.dumps(M, indent=2))
+    (out_dir / 'summary.md').write_text(summary(M))
+    print(summary(M))
+    return M
+
+
+def summary(M):
+    def f(s, k='rmse', fmt='{:.3f}'):
+        return fmt.format(s[k]) if s and k in s else '-'
+
+    R = M['rates']
+    missing = [k for k in ('carto', 'ekf', 'basalt', 'vesc', 'imu') if k not in R]
+    L = [f'# SE eval: {Path(M["bag"]).parent.name}/{Path(M["bag"]).name}  ({M["duration_s"]:.0f} s)', '']
+    if missing:
+        L.append('MISSING: ' + ', '.join(missing) + '  (not in the bag, check launch.log)')
+    w = M.get('window')
+    if w:
+        L.append(f'eval window: {w["eval_start_s"]:.1f} .. {w["eval_end_s"]:.1f} s '
+                 f'(first motion at {w["t_first_motion_s"]:.1f} s + {WARMUP_S:g} s warm-up skipped)')
+    L += [
+         'rates [Hz]: ' + ' | '.join(f'{k} {v["rate_hz"]:.0f}' for k, v in R.items()),
+         'latency max [ms]: ' + ' | '.join(f'{k} {v["latency_max_s"]*1e3:.0f}' for k, v in R.items()),
+         'non-monotonic stamps: ' + (', '.join(f'{k} {v["non_monotonic"]}' for k, v in R.items() if v['non_monotonic']) or 'none'),
+         '']
+    if 'map_odom_correction' in M:
+        c = M['map_odom_correction']
+        L.append(f'global: map->odom yaw drift {c["yaw_total_drift_deg"]:.1f} deg, correction rate median '
+                 f'{f(c["yaw_rate_deg_s"], "median", "{:.1f}")} deg/s / {f(c["pos_rate_m_s"], "median", "{:.2f}")} m/s')
+    d = M['carto_discontinuity']
+    L.append(f'        tracked_pose jumps: {d["pos_jumps_gt_5cm"]} x >5 cm, {d["yaw_jumps_gt_2deg"]} x >2 deg')
+    if 'carto_vs_gt_ape' in M:
+        a = M['carto_vs_gt_ape']
+        L.append(f'        APE vs GT rmse: {f(a["trans_m"])} m, {f(a["rot_deg"], fmt="{:.2f}")} deg')
+    for k, v in M.items():
+        if k.startswith('ekf_rpe'):
+            L.append(f'local:  {k[8:]}: RPE rmse {f(v["trans_m"])} m / {f(v["rot_deg"], fmt="{:.2f}")} deg'
+                     f' (max {f(v["trans_m"], "max")} m / {f(v["rot_deg"], "max", "{:.1f}")} deg)')
+        if k.startswith('ekf_velocity_error'):
+            L.append('        EKF velocity rmse: ' + ', '.join(f'{q} {f(v[q])}' for q in ('vx', 'vy', 'vyaw')))
+    if 'tf_chain_vs_tracked_pose' in M:
+        v = M['tf_chain_vs_tracked_pose']
+        L.append(f'        TF chain vs tracked_pose rmse: {f(v["pos_m"])} m, {f(v["yaw_deg"], fmt="{:.2f}")} deg')
+    I = M['inputs']
+    L += ['', 'inputs vs reference, rmse: ' + ', '.join(f'{k[:-9]} {f(v)}' for k, v in I.items() if k.endswith('_vs_carto'))]
+    if I.get('time_offset_s'):
+        L.append('time offsets (+ = first signal early) [ms]: ' + ', '.join(f'{k} {v*1e3:+.0f}' for k, v in I['time_offset_s'].items()))
+    if 'imu_standstill_mean' in I:
+        L.append('imu standstill mean: ' + ' '.join(f'{k}={v:.3f}' for k, v in I['imu_standstill_mean'].items()))
+    return '\n'.join(L) + '\n'
+
+
+if __name__ == '__main__':
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('out_dir', help='result folder (plots/, data/, summary.md go here)')
+    ap.add_argument('--bag', help='bag to analyse (default: <out_dir>/replay)')
+    ap.add_argument('--gt-topic', help='ground truth pose topic, if the bag has one')
+    a = ap.parse_args()
+    analyze(a.out_dir, a.bag, a.gt_topic)
