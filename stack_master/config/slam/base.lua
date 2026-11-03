@@ -24,6 +24,7 @@ options = {
   fixed_frame_pose_sampling_ratio = 1.,
   imu_sampling_ratio = 1.,
   publish_to_tf = true,
+  use_pose_extrapolator = false,
   use_landmarks = false,
   publish_tracked_pose = true,
   publish_frame_projected_to_2d = true,
