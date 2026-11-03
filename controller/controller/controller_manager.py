@@ -82,7 +82,7 @@ class Controller(Node):
         self.state_machine_rate = self.get_remote_parameter('state_machine', 'rate_hz')
 
         # variables
-        self.rate = 40
+        self.rate = 40 * (self.get_parameter('time_scale').value or 1.0)   # 40 Hz in sim time
         self.state = "GB_TRACK"
 
         self.LUT_name = self.get_parameter('LU_table').value # name of lookup table

@@ -19,6 +19,7 @@
   <arg name="ego_speed_limit" default="0.0" />
   <arg name="opp_speed_limit" default="0.0" />
   <arg name="flat_speed" default="0.0" />
+  <arg name="time_scale" default="1.0" />
 
 
   <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
@@ -32,6 +33,7 @@
     <arg name="opp_s" value="$(var opp_s)" />
     <arg name="headless" value="$(var headless)" />
     <arg name="opp_d" value="$(var opp_d)" />
+    <arg name="time_scale" value="$(var time_scale)" />
 
   </include>
   <node pkg="stack_master" name="global_parameters" exec="global_parameter_node">
@@ -62,6 +64,8 @@
     <arg name="n_game_iterations" value="$(var ego_n_game_iterations)" />
     <arg name="speed_limit" value="$(var ego_speed_limit)" />
     <arg name="rival_speed_limit" value="$(var opp_speed_limit)" />
+    <arg name="time_scale" value="$(var time_scale)" />
+
 
 
   </include>
@@ -78,5 +82,7 @@
     <arg name="n_game_iterations" value="$(var opp_n_game_iterations)" />
     <arg name="speed_limit" value="$(var opp_speed_limit)" />
     <arg name="rival_speed_limit" value="$(var ego_speed_limit)" />
+    <arg name="time_scale" value="$(var time_scale)" />
+
   </include>
 </launch>

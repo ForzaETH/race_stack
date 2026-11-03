@@ -65,7 +65,7 @@ class Race:
 
 
 class Referee(Node):
-    def __init__(self, path, race):
+    def __init__(self, path, race, time_scale=1.0):
         super().__init__("bench_referee")
         self.f = open(path, "w")
         self.t_last = 0.0                             # race time of the last step [s]
@@ -77,6 +77,7 @@ class Referee(Node):
         self.flags = [0, 0]
         self.odom = {c: None for c in CARS}           # latest t, x, y, v
         self.s = {c: None for c in CARS}              # latest raceline s
+        self.time_scale = time_scale
         for c in CARS:
             self.create_subscription(Odometry, f"/{c}/car_state/odom",
                                      lambda m, c=c: self.odom_cb(c, m), 50)
@@ -109,7 +110,7 @@ class Referee(Node):
                 self.write(dict(outcome=self.outcome, t_end=0.0))
                 return
             self.t0 = e["t"]
-        t = e["t"] - self.t0
+        t = (e["t"] - self.t0) * self.time_scale     # odometry is stamped in wall time; race in sim time
         if t - self.t_last > MAX_GAP:     # the data after a gap belongs to another sim
             self.outcome = "interrupted"
             self.write(dict(outcome=self.outcome, t_end=self.t_last, min_dist=self.race.min_dist,
@@ -136,12 +137,13 @@ def main():
     ap.add_argument("log", help="jsonl file to write")
     ap.add_argument("map", help="stack_master/maps/<map>/global_waypoints.json")
     ap.add_argument("--t-max", type=float, default=30.0, help="race length limit [s]")
+    ap.add_argument("--time-scale", type=float, default=1.0, help="sim speed relative to real time")
     args = ap.parse_args()
 
     with open(args.map) as f:
         L = json.load(f)["global_traj_wpnts_iqp"]["wpnts"][-1]["s_m"]
     rclpy.init()
-    node = Referee(args.log, Race(L, t_max=args.t_max))
+    node = Referee(args.log, Race(L, t_max=args.t_max), args.time_scale)
     try:
         while rclpy.ok() and node.outcome is None:
             rclpy.spin_once(node, timeout_sec=0.1)

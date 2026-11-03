@@ -67,7 +67,9 @@ def launch_args(race, cfg, out):
             f"flat_speed:={max(cfg['attacker_speed'], cfg['defender_speed'])}",
             f"ego_s:={race['s']:.3f}", f"opp_s:={race['s'] + race['gap_m']:.3f}",
             f"ego_record_path:={out / 'ego.rec.jsonl'}", f"opp_record_path:={out / 'opp.rec.jsonl'}",
-            "opponent_source:=gt", "headless:=true"]
+            "opponent_source:=gt", "headless:=true",
+            f"time_scale:={cfg.get('time_scale', 1.0)}"]
+            
 
 
 def start(cmd, log):
@@ -110,7 +112,8 @@ def run_race(race, cfg, out, start_timeout):
     log = out / "race.jsonl"
     log.unlink(missing_ok=True)
     referee = start([sys.executable, str(HERE / "bench_referee.py"), str(log),
-                     str(map_file(race["map"])), "--t-max", str(cfg["t_max"])],
+                        str(map_file(race["map"])), "--t-max", str(cfg["t_max"]),
+                     "--time-scale", str(cfg.get("time_scale", 1.0))],
                     subprocess.DEVNULL)
     with open(out / "launch.log", "w") as f:
         launch = start(["ros2", "launch", "stack_master", "sim_two_car_launch.xml",

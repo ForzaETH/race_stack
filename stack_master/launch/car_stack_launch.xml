@@ -11,6 +11,7 @@
   <arg name="n_game_iterations" default="4" />
   <arg name="speed_limit" default="0.0" />
   <arg name="rival_speed_limit" default="0.0" />
+  <arg name="time_scale" default="1.0" />
 
 
 
@@ -33,6 +34,7 @@
     <include file="$(find-pkg-share controller)/launch/controller_launch.xml">
       <arg name="mode" value="$(var ctrl_algo)" />
       <arg name="speed_limit" value="$(var speed_limit)" />
+      <arg name="time_scale" value="$(var time_scale)" />
     </include>
 
     <group unless="$(eval '\'$(var planner)\' in [\'gb\', \'ibr\',  \'mpc\']')">
@@ -69,7 +71,7 @@
         <param name="record_path" value="$(var record_path)" />
         <param name="n_game_iterations" value="$(var n_game_iterations)" />
         <param name="opp_ns" value="$(var opp_ns)" />
-        <param name="rate_hz" value="10.0" />
+        <param name="rate_hz" value="$(eval '10.0 * $(var time_scale)')" />
         <param name="speed_scale" value="$(var speed_scale)" />
         <param name="opp_speed_scale" value="$(var rival_speed_scale)" />
         <param name="speed_limit" value="$(var speed_limit)" />
