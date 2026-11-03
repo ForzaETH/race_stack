@@ -7,6 +7,8 @@ x11-apps
 bash-completion
 python3-pip
 python3-tk
+python3-opencv
+libopencv-dev
 python3-colcon-clean
 ros-humble-rmw-zenoh-cpp
 ros-humble-foxglove-bridge

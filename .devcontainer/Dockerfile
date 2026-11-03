@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Base image is ros:humble-ros-base or 
-# nvcr.io/nvidia/l4t-jetpack:r36.3.0 on Jetson
+# nvcr.io/nvidia/l4t-jetpack:r36.4.0 on Jetson
 ARG BASE_IMAGE=ros:humble-ros-base
 ARG USE_VIO=false
 ARG USER=race_crew
@@ -19,6 +19,12 @@ RUN <<'EOF'
 set -eo pipefail
 apt-get update
 apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release sudo
+
+# Keep only Ubuntu's 4.5 OpenCV (for Jetson)
+if dpkg-query -W libopencv >/dev/null 2>&1; then
+    apt-get purge -y libopencv libopencv-dev libopencv-python libopencv-samples nvidia-opencv nvidia-opencv-dev \
+        opencv-licenses opencv-samples-data
+fi
 
 # Install ROS 2 Humble if the image doesn't come with it. This is needed for the base image for Nvidia Jetsons.
 if [ ! -f /opt/ros/humble/setup.bash ]; then
@@ -38,8 +44,8 @@ EOF
 RUN <<'EOF'
 set -e
 groupadd -fg ${GID} ${USER}
-useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev ${USER}
-echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
+useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev,video ${USER}
+echo "${USER} ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
 echo 'Defaults env_keep += "DEBIAN_FRONTEND"' >> /etc/sudoers.d/${USER}
 chmod 0440 /etc/sudoers.d/${USER}
 EOF
@@ -51,43 +57,9 @@ FROM base AS vio-false
 FROM base AS vio-true
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Set up Realsense: librealsense + realsense2_camera ROS wrapper
-RUN <<'EOF'
-set -eo pipefail
-mkdir -p /etc/apt/keyrings
-curl -sSf https://librealsense.realsenseai.com/Debian/librealsenseai.asc | gpg --dearmor > /etc/apt/keyrings/librealsenseai.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/librealsenseai.gpg] https://librealsense.realsenseai.com/Debian/apt-repo $(lsb_release -cs) main" \
-    > /etc/apt/sources.list.d/librealsense.list
-apt-get update
-apt-get install -y librealsense2-utils librealsense2-dev "ros-humble-realsense2-*"
-rm -rf /var/lib/apt/lists/*
-EOF
-
-# Set up Basalt: build basalt_ros into its own workspace /opt/basalt_ws (symlink install: keep build/),
-# separate from /ws as its Eigen clashes with the race_stack one. Sourced in the bashrc after /ws.
-COPY .install_utils/basalt.repos /tmp/basalt.repos
-RUN <<'EOF'
-set -e
-# Skip apt OpenCV if one is pre-installed (e.g. CUDA OpenCV on Jetson images)
-pkg-config --exists opencv4 || OPENCV_PKGS="libopencv-dev ros-humble-cv-bridge ros-humble-image-transport"
-apt-get update
-apt-get install -y python3-vcstool libtbb-dev libfmt-dev ros-humble-ament-cmake-clang-format $OPENCV_PKGS
-rm -rf /var/lib/apt/lists/*
-
-mkdir -p /opt/basalt_ws/src && cd /opt/basalt_ws
-vcs import --shallow --workers 1 < /tmp/basalt.repos
-BASALT_SRC=src/basalt_wrapper/basalt
-git -C $BASALT_SRC submodule update --init --depth 1 thirdparty/basalt-headers thirdparty/magic_enum
-# basalt-headers pins Eigen on gitlab.com, which often rejects requests; use the GitHub mirror
-git -c url."https://github.com/eigen-mirror/eigen.git".insteadOf="https://gitlab.com/libeigen/eigen.git" \
-    -C $BASALT_SRC/thirdparty/basalt-headers submodule update --init --depth 1 thirdparty/eigen thirdparty/Sophus thirdparty/cereal
-
-source /opt/ros/${ROS_DISTRO}/setup.bash
-colcon build --merge-install --symlink-install --cmake-args \
-    -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-    -DCMAKE_DISABLE_FIND_PACKAGE_realsense2=ON -DJUST_INSTALL_CEREAL=ON
-rm -rf /tmp/basalt.repos log
-EOF
+# Install Realsense and build Basalt
+COPY .install_utils/install_vio.sh .install_utils/basalt.repos /tmp/
+RUN bash /tmp/install_vio.sh && rm /tmp/install_vio.sh /tmp/basalt.repos
 
 # ---------- final: requirements + shell ----------
 FROM vio-${USE_VIO} AS final
@@ -108,6 +80,10 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
 COPY .install_utils/requirements/python_req.txt .install_utils/requirements/python_overrides.txt /tmp/
 RUN uv pip install --system --no-cache -r /tmp/python_req.txt --override /tmp/python_overrides.txt \
     && rm /tmp/python_req.txt /tmp/python_overrides.txt
+
+# Install PyTorch with CUDA and torchvision, on Jetson only
+COPY .install_utils/install_torch_jetson.sh /tmp/
+RUN bash /tmp/install_torch_jetson.sh && rm /tmp/install_torch_jetson.sh
 
 # Bashrc: source ROS and workspaces, display, git branch in terminal
 COPY .install_utils/bashrc /tmp/bashrc

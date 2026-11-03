@@ -47,7 +47,7 @@ networkx==3.7 ; python_full_version >= '3.12'
     # via scikit-image
 numba==0.68.1
     # via f110-gym
-numpy==1.22.0
+numpy==1.26.1
     # via
     #   -r .install_utils/requirements/python_req.in
     #   casadi
@@ -57,7 +57,6 @@ numpy==1.22.0
     #   imageio
     #   matplotlib
     #   numba
-    #   opencv-python-headless
     #   pandas
     #   pywavelets
     #   quadprog
@@ -67,8 +66,6 @@ numpy==1.22.0
     #   tifffile
     #   trajectory-planning-helpers
     #   transforms3d
-opencv-python-headless==4.7.0.72
-    # via -r .install_utils/requirements/python_req.in
 packaging==26.3
     # via
     #   matplotlib
@@ -118,7 +115,7 @@ scikit-image==0.19.2
     # via -r .install_utils/requirements/python_req.in
 scikit-learn==1.6.1
     # via -r .install_utils/requirements/python_req.in
-scipy==1.7.3
+scipy==1.11.4
     # via
     #   -r .install_utils/requirements/python_req.in
     #   f110-gym

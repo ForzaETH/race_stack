@@ -1,6 +1,7 @@
-# Must be pinned; ROS 2 Humble packages require numpy 1.x, and scipy 1.7.3 caps numpy <1.23
-numpy==1.22.0
-scipy==1.7.3
+# Must be pinned; ROS 2 Humble packages require numpy 1.x, and NVIDIA's torch wheel for
+# Jetson (see the Dockerfile) is built against the numpy >=1.23 C API. Keep scipy compatible.
+numpy==1.26.1
+scipy==1.11.4
 
 # GUI forwarded plotting will be deprecated
 matplotlib~=3.5.1
@@ -20,9 +21,6 @@ casadi==3.8.2
 # Global planner; pins quadprog==0.1.7 (no py3.10 wheels), resolve with an
 # override of quadprog==0.1.12 (same solve_qp API)
 trajectory-planning-helpers~=0.79
-
-# Global planner image processing; no cv2 windows are opened anywhere
-opencv-python-headless
 
 # Optimizer friction map
 scikit-learn

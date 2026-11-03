@@ -32,8 +32,8 @@ setup:
 	@echo "Selecting base image..."
 	@if [ -f /etc/nv_tegra_release ]; then \
 		l4t=$$(sed -n 's/^# R\([0-9]*\) (release), REVISION: \([0-9.]*\).*/r\1.\2/p' /etc/nv_tegra_release); \
-		echo "Jetson detected (L4T $$l4t)"; \
-		echo "BASE_IMAGE=nvcr.io/nvidia/l4t-jetpack:$$l4t" >> .env; \
+		echo "Jetson detected"; \
+		echo "BASE_IMAGE=nvcr.io/nvidia/l4t-jetpack:r36.4.0" >> .env; \
 		echo "DOCKER_RUNTIME=nvidia" >> .env; \
 	else \
 		echo "BASE_IMAGE=ros:humble-ros-base" >> .env; \
