@@ -152,7 +152,7 @@ def save_configs(out, car, bag, static_tf, vesc_odom):
                 REPO / f'state_estimation/config/d435_calib_{car}.json',
                 REPO / 'stack_master/config/camera/d435_config.yaml'],
         'tf': [REPO / f'stack_master/config/{car}/static_transforms.yaml'] if static_tf == 'config' else [],
-        'sensors': [REPO / 'stack_master/config/sensors.yaml']
+        'sensors': [REPO / 'stack_master/config/sensors.yaml', REPO / f'stack_master/config/{car}/imu.yaml']
                    + ([REPO / f'stack_master/config/{car}/vesc.yaml'] if vesc_odom == 'config' else []),
     }
     cfg = out / 'config'

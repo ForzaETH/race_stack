@@ -21,6 +21,7 @@
             <param name="input_topic" value="/sensors/imu/raw" />
             <param name="output_topic" value="/imu" />
             <param name="target_frame" value="base_link" />
+            <param from="$(find-pkg-share stack_master)/config/$(var racecar_version)/imu.yaml" />
         </node>
 
         <!-- EKF IMU + Odom Fusion -->
