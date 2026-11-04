@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """Headless state estimation evaluation on a recorded bag.
 
-1. starts state_estimation_launch.xml on sim time (+ vesc_to_odom_node / static TF nodes for the config modes)
+1. starts state_estimation_launch.xml on sim time + vesc_to_odom_node (recomputes /odom from the raw VESC state)
 2. records the estimator outputs + raw inputs into <out>/replay
-3. plays the raw sensor topics of the bag (+ GT_TOPIC if the bag has it), waits until it is done
-4. stops everything, copies the SLAM / EKF / TF configs into <out>/config, process logs are in <out>/logs
+3. plays the raw sensor topics of the bag (+ the ground truth topic if the bag has it), waits until it is done
+4. stops everything, copies the SLAM / EKF / VIO / TF / sensor configs into <out>/config, process logs are in <out>/logs
 5. runs analyze.py -> <out>/plots, <out>/data (csv, tum, metrics.json), <out>/summary.md
 6. points results/latest to <out>
 
-Run inside the ROS container, e.g.
-  python3 state_estimation/eval/run_eval.py bags/vio_test_06 [--map hangar_v0] [--car NUC6] [--name ekf_v2]
-VIO on/off follows USE_VIO. Re-run only the analysis: python3 analyze.py results/<run>
+Run inside the ROS container:
+  USE_VIO=true python3 state_estimation/eval/run_eval.py bags/<bag> --gt-bag bags/<gt> --map <map> [--car NUC6] [--name x]
+USE_VIO=true runs Basalt on the bagged images, USE_VIO=false runs the EKF on VESC + IMU only.
+Re-run only the analysis: python3 analyze.py results/<run>
 """
 
 import argparse
@@ -31,18 +32,16 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 from analyze import analyze  # noqa: E402
 
-# raw sensor topics that get played (mirror of bag_replay_launch.xml)
-PLAY_BASE = ['/scan', '/sensors/imu/raw']
-PLAY_VESC_RAW = ['/sensors/core', '/sensors/servo_position_command']   # --vesc-odom config: vesc_to_odom_node recomputes /odom
+# raw sensor topics that get played; /odom is recomputed by vesc_to_odom_node from the VESC state
+PLAY = ['/scan', '/sensors/imu/raw', '/tf_static', '/sensors/core', '/sensors/servo_position_command']
 PLAY_VIO = ['/camera/camera/imu', '/camera/camera/infra1/image_rect_raw', '/camera/camera/infra2/image_rect_raw']
-PLAY_NO_VIO = ['/basalt/odom']
 # what gets recorded for the analysis
 RECORD = ['/tf', '/tf_static', '/tracked_pose', '/state_estimation/odom', '/basalt/odom', '/basalt/odomimu',
           '/odom', '/imu']
 SIZE_WARN_GB = 1.0
 RESULTS = HERE / 'results'
 SETTLE_S = 6.0          # time for the nodes (cartographer pbstream load) before recording / playing
-GT_TOPIC = '/vicon/car' # ground truth pose topic; used automatically when the bag contains it
+GT_TOPIC = '/{car}/pose'  # ground truth pose topic (Vicon bridge, car name lower-case); used when the bag has it
 
 
 def bag_meta(bag):
@@ -72,7 +71,7 @@ def stop(p, timeout=15):
         os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
 
-def fail(msg, procs=(), out=None):
+def fail(msg, procs=()):
     bar = '!' * 78
     print(f'\033[1;91m{bar}\n{msg}\n{bar}\033[0m', flush=True)
     for p in procs:
@@ -140,10 +139,9 @@ def bag_static_tf(bag):
     return list(found.values())
 
 
-def save_configs(out, car, bag, static_tf, vesc_odom):
+def save_configs(out, car, bag):
     """Copy the configs the run was made with into <out>/config/{ekf,slam,vio,tf,sensors}.
-    tf/: static_transforms.yaml when the mounts come from the config, otherwise the bag's /tf_static.
-    sensors/vesc.yaml only when /odom is recomputed from it (--vesc-odom config)."""
+    tf/: the bag's /tf_static (that is what the run used)."""
     groups = {
         'ekf': [REPO / 'state_estimation/config/ekf.yaml'],
         'slam': [*sorted((REPO / 'stack_master/config/slam').glob('*.lua')),
@@ -151,9 +149,9 @@ def save_configs(out, car, bag, static_tf, vesc_odom):
         'vio': [REPO / 'state_estimation/config/vio_config.json',
                 REPO / f'state_estimation/config/d435_calib_{car}.json',
                 REPO / 'stack_master/config/camera/d435_config.yaml'],
-        'tf': [REPO / f'stack_master/config/{car}/static_transforms.yaml'] if static_tf == 'config' else [],
-        'sensors': [REPO / 'stack_master/config/sensors.yaml', REPO / f'stack_master/config/{car}/imu.yaml']
-                   + ([REPO / f'stack_master/config/{car}/vesc.yaml'] if vesc_odom == 'config' else []),
+        'tf': [],
+        'sensors': [REPO / 'stack_master/config/sensors.yaml', REPO / f'stack_master/config/{car}/imu.yaml',
+                    REPO / f'stack_master/config/{car}/vesc.yaml'],
     }
     cfg = out / 'config'
     for group, files in groups.items():
@@ -161,10 +159,8 @@ def save_configs(out, car, bag, static_tf, vesc_odom):
         for f in files:
             if f.exists():
                 shutil.copy(f, cfg / group / f.name)
-    if static_tf == 'bag':
-        (cfg / 'tf' / 'tf_static_from_bag.yaml').write_text(
-            '# /tf_static as recorded in the bag (static_tf=bag), this is what the run used\n'
-            + yaml.safe_dump(bag_static_tf(bag), sort_keys=False))
+    (cfg / 'tf' / 'tf_static_from_bag.yaml').write_text(
+        '# /tf_static as recorded in the bag, this is what the run used\n' + yaml.safe_dump(bag_static_tf(bag), sort_keys=False))
     git = {}
     for k, c in (('commit', ['git', 'rev-parse', 'HEAD']), ('branch', ['git', 'rev-parse', '--abbrev-ref', 'HEAD']),
                  ('status', ['git', 'status', '--short'])):
@@ -178,83 +174,64 @@ def save_configs(out, car, bag, static_tf, vesc_odom):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('bag', help='bag directory recorded on the car (ros2 bag record -a)')
+    ap.add_argument('--gt-bag', metavar='BAG',
+                    help='second bag with the ground truth (recorded on the mocap PC); clocks are aligned in the analysis')
     ap.add_argument('--map', default='latest', help='map name in stack_master/maps (default: latest)')
     ap.add_argument('--car', default=os.environ.get('RACECAR_VERSION'), help='racecar_version of the bag (default: $RACECAR_VERSION)')
-    ap.add_argument('--static-tf', choices=('bag', 'config'), default='bag',
-                    help='bag: play /tf_static as recorded. config: mounts from static_transforms.yaml')
-    ap.add_argument('--vesc-odom', choices=('bag', 'config'), default='bag',
-                    help='bag: play /odom as recorded. config: recompute it from the raw VESC state with vesc.yaml')
-    ap.add_argument('--scan-offset', type=float, default=0.0, metavar='S',
-                    help='shift the bagged /scan stamps by S seconds (emulates urg_node default_user_latency)')
     ap.add_argument('--name', help='label appended to the result folder name')
     a = ap.parse_args()
     if not a.car:
         ap.error('--car is required when RACECAR_VERSION is not set')
-    run_vio = os.environ.get('USE_VIO', 'false').lower() == 'true'
+    use_vio = os.environ.get('USE_VIO', 'false').lower() == 'true'
 
     bag = Path(a.bag).resolve()
-    gt_topic = GT_TOPIC if GT_TOPIC in bag_topics(bag) else None
+    gt_bag = Path(a.gt_bag).resolve() if a.gt_bag else None
+    gt_default = GT_TOPIC.format(car=a.car.lower())
+    gt_topic = gt_default if gt_default in bag_topics(gt_bag or bag) else None
+    if gt_bag and not gt_topic:
+        fail(f'no ground truth topic {gt_default} in {gt_bag}')
+    if gt_topic:
+        print(f'ground truth: {gt_topic}' + (f' from {gt_bag}' if gt_bag else ''), flush=True)
     RESULTS.mkdir(parents=True, exist_ok=True)
     label = datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + bag.name + (f'_{a.name}' if a.name else '')
     out = RESULTS / label
     out.mkdir()
     (out / 'logs').mkdir()
-    save_configs(out, a.car, bag, a.static_tf, a.vesc_odom)
-    (out / 'config' / 'meta.json').write_text(json.dumps({'bag': str(bag), 'args': vars(a), 'run_vio': run_vio,
-                                               'gt_topic': gt_topic, 'created': label}, indent=2))
+    save_configs(out, a.car, bag)
+    (out / 'config' / 'meta.json').write_text(json.dumps({'bag': str(bag), 'args': vars(a), 'use_vio': use_vio,
+                                               'gt_topic': gt_topic,
+                                               'gt_bag': str(gt_bag) if gt_bag else None, 'created': label}, indent=2))
 
-    play_topics = PLAY_BASE + (PLAY_VIO if run_vio else PLAY_NO_VIO)
-    if a.static_tf == 'bag':
-        play_topics.append('/tf_static')
-    play_topics += ['/odom'] if a.vesc_odom == 'bag' else PLAY_VESC_RAW
+    play_topics = PLAY + (PLAY_VIO if use_vio else [])
     record_topics = list(RECORD)
-    if gt_topic:
+    if gt_topic and not gt_bag:
         play_topics.append(gt_topic)
         record_topics.append(gt_topic)
 
     procs, record, play = [], None, None
     try:
         procs = [run(['ros2', 'launch', 'state_estimation', 'state_estimation_launch.xml', f'racecar_version:={a.car}',
-                      'mapping_bool:=False', f'map_name:={a.map}', 'use_sim_time:=True', f'use_vio:={str(run_vio).lower()}'],
-                     stdout=open(out / 'logs' / 'launch.log', 'w'), stderr=subprocess.STDOUT)]
-        if a.vesc_odom == 'config':
-            procs.append(run(['ros2', 'run', 'vesc_ackermann', 'vesc_to_odom_node', '--ros-args',
-                              '--params-file', str(REPO / f'stack_master/config/{a.car}/vesc.yaml'), '-p', 'use_sim_time:=true'],
-                             stdout=open(out / 'logs' / 'vesc_to_odom.log', 'w'), stderr=subprocess.STDOUT))
-        if a.scan_offset:
-            procs.append(run(['ros2', 'run', 'state_estimation', 'scan_stamp_offset_node', '--ros-args',
-                              '-p', f'offset:={a.scan_offset}', '-p', 'use_sim_time:=true'],
-                             stdout=open(out / 'logs' / 'scan_offset.log', 'w'), stderr=subprocess.STDOUT))
-        if a.static_tf == 'config':
-            # mounts from static_transforms.yaml instead of the bag; the RealSense tree still has to come from the bag
-            procs.append(run(['ros2', 'launch', 'stack_master', 'static_transforms_launch.xml',
-                              f'racecar_version:={a.car}', 'sim:=False'],
-                             stdout=open(out / 'logs' / 'static_tf.log', 'w'), stderr=subprocess.STDOUT))
-            if run_vio:
-                procs.append(run(['ros2', 'run', 'state_estimation', 'bag_static_tf_node', '--ros-args',
-                                  '-p', f'bag:={bag}', '-p', 'frame_regex:=^camera_', '-p', 'use_sim_time:=true'],
-                                 stdout=open(out / 'logs' / 'static_tf.log', 'a'), stderr=subprocess.STDOUT))
+                      'mapping_bool:=False', f'map_name:={a.map}', 'use_sim_time:=True', f'use_vio:={str(use_vio).lower()}'],
+                     stdout=open(out / 'logs' / 'launch.log', 'w'), stderr=subprocess.STDOUT),
+                 run(['ros2', 'run', 'vesc_ackermann', 'vesc_to_odom_node', '--ros-args',
+                      '--params-file', str(REPO / f'stack_master/config/{a.car}/vesc.yaml'), '-p', 'use_sim_time:=true'],
+                     stdout=open(out / 'logs' / 'vesc_to_odom.log', 'w'), stderr=subprocess.STDOUT)]
         time.sleep(SETTLE_S)
         for p in procs:
             if p.poll() is not None:
                 fail(f'{" ".join(p.args[:4])} exited with code {p.returncode}\n'
                      + (out / 'logs' / 'launch.log').read_text()[-2000:], procs)
-        required_nodes = ['/ekf_filter_node', '/cartographer_node', '/imu_to_base']
+        required_nodes = ['/ekf_filter_node', '/cartographer_node', '/imu_to_base', '/vesc_to_odom_node']
         expected_pubs = ['/imu', '/odom', '/scan', '/state_estimation/odom', '/tracked_pose']
-        if a.vesc_odom == 'config':
-            required_nodes.append('/vesc_to_odom_node')
-        if run_vio:
+        if use_vio:
             required_nodes += ['/basalt/vio_backend', '/basalt_to_ekf']
             expected_pubs += ['/basalt/odomimu', '/basalt/odom']
-        else:
-            expected_pubs += ['/basalt/odom']
         check_nodes(out, procs, required_nodes)
         record = run(['ros2', 'bag', 'record', '--use-sim-time', '--compression-mode', 'message', '--compression-format', 'zstd',
                       '-o', str(out / 'replay'), *record_topics],
                      stdout=open(out / 'logs' / 'record.log', 'w'), stderr=subprocess.STDOUT)
         time.sleep(2.0)
-        remap = ['--remap', '/scan:=/scan_bag'] if a.scan_offset else []
-        play = run(['ros2', 'bag', 'play', str(bag), '--clock', '500', *remap, '--topics', *play_topics])
+        play = run(['ros2', 'bag', 'play', str(bag), '--clock', '500', '--topics', *play_topics])
         try:
             try:
                 play.wait(timeout=8.0)
@@ -273,7 +250,7 @@ def main():
         for p in procs:
             stop(p)
 
-    analyze(out, gt_topic=gt_topic)      # exits with a red banner when an expected topic is missing
+    analyze(out, gt_topic=gt_topic, use_vio=use_vio, gt_bag=gt_bag)      # exits with a red banner when an expected topic is missing
     latest = RESULTS / 'latest'
     if latest.is_symlink() or latest.exists():
         latest.unlink()

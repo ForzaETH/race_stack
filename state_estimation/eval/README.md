@@ -5,32 +5,28 @@ Basalt) followed by an offline analysis with [evo](https://github.com/MichaelGru
 Everything of one run lands in a timestamped folder, `results/latest` points to the newest.
 
 ```shell
-python3 state_estimation/eval/run_eval.py bags/<bag> [--map <map_name>] [--car NUCx] [--name ekf_v2]
+USE_VIO=true python3 state_estimation/eval/run_eval.py bags/<bag> --gt-bag bags/<gt> --map <map> [--car NUCx] [--name ekf_v2]
 ```
 Needs `rosbags` and `evo` (in `.install_utils/python_req.txt`, so part of the image; in an older
 container: `pip3 install rosbags evo`).
 
-Defaults: `--map latest`, `--car $RACECAR_VERSION`. `USE_VIO` decides whether Basalt runs on the bagged
-images or the bagged `/basalt/odom` is used. `--static-tf bag|config` (default `bag`: `/tf_static` as
-recorded; `config`: mounts from `static_transforms.yaml`). `--vesc-odom bag|config` (default `bag`: `/odom` as
-recorded; `config`: recomputed by `vesc_to_odom_node` from `/sensors/core` with `vesc.yaml`, to test
-`speed_to_erpm_gain` or `vesc_to_odom` changes). `--scan-offset S` shifts the bagged `/scan` stamps by S seconds
-(emulates `default_user_latency` of `urg_node`, which cannot run in replay). Re-run only the analysis of an existing run
-(e.g. after changing `analyze.py`): `python3 state_estimation/eval/analyze.py results/<run>`.
+Defaults: `--map latest`, `--car $RACECAR_VERSION`, `--gt-bag` optional (see Ground truth). `USE_VIO=true` runs Basalt on the
+bagged images, `USE_VIO=false` runs the EKF on VESC + IMU only (the bagged `/basalt/odom` is never used). `/odom` is always
+recomputed by `vesc_to_odom_node` from `/sensors/core` with the workspace `vesc.yaml`, `/tf_static` is played as recorded.
+Re-run only the analysis of an existing run (e.g. after changing `analyze.py`):
+`python3 state_estimation/eval/analyze.py results/<run>` (GT topic/bag and `USE_VIO` are taken from the run's `config/meta.json`).
 
 ## What it does
 1. `ros2 launch state_estimation state_estimation_launch.xml use_sim_time:=True ...` (the same launch
-   as on the car; with `--static-tf config` additionally `static_transforms_launch.xml` and the
-   RealSense TF tree from the bag)
+   as on the car) + `vesc_to_odom_node`
 2. `ros2 bag record --use-sim-time` of the outputs and inputs into `replay/`
 3. `ros2 bag play --topics <raw sensors>` and waits until the bag is done
 4. copies the configs into `config/ekf` (`ekf.yaml`), `config/slam` (`.lua`), `config/vio` (Basalt config,
-   calibration, camera), `config/tf` (`static_transforms.yaml`, or `tf_static_from_bag.yaml` dumped from the bag in the default `--static-tf bag` mode), `config/sensors` (`sensors.yaml`, `vesc.yaml`)
+   calibration, camera), `config/tf` (`tf_static_from_bag.yaml` dumped from the bag), `config/sensors` (`sensors.yaml`, `imu.yaml`, `vesc.yaml`)
    plus the git state (`config/git.json`: commit, branch, dirty files)
 5. `analyze.py`: plots, data exports + `metrics.json`, `summary.md`
 
-Only raw sensor topics are played (`/scan`, `/sensors/imu/raw`, camera, and `/odom` or the raw VESC
-state), so every output is recomputed with the configs currently in the workspace (symlink-install:
+Only raw sensor topics are played (`/scan`, `/sensors/imu/raw`, `/sensors/core`, camera), so every output is recomputed with the configs currently in the workspace (symlink-install:
 edit, run, compare).
 
 ## Result folder
@@ -39,7 +35,7 @@ results/<YYYYmmdd_HHMMSS>_<bag>[_<name>]/
   summary.md                           the numbers, also printed to the console
   config/{ekf,slam,vio,tf,sensors}/    configs the run was made with, config/git.json, config/meta.json (args)
   data/                                carto/ekf/basalt/gt as .tum (evo CLI), all signals as .csv, metrics.json
-  logs/                                launch.log, record.log, vesc_to_odom.log, static_tf.log, scan_offset.log
+  logs/                                launch.log, record.log, vesc_to_odom.log
   plots/
     trajectories.png        cartographer in map, EKF + Basalt in odom (+ GT aligned)
     global_consistency.png  map->odom over time, its correction rate, /tracked_pose discontinuities
@@ -64,11 +60,21 @@ results/<YYYYmmdd_HHMMSS>_<bag>[_<name>]/
   IMU standstill means (bias), rates, max gaps, non-monotonic stamps, latency.
 
 ## Ground truth
-`GT_TOPIC` in `run_eval.py` (placeholder `/vicon/car`): when the bag contains it, it is played, recorded
-and used as the reference instead of cartographer. Supported message types: `PoseStamped`, `Odometry`, `TransformStamped`,
+`GT_TOPIC` in `run_eval.py` (`/<car>/pose`, e.g. `/nuc6/pose`):
+when the bag contains it, it is played, recorded and used as the reference instead of cartographer. With `--gt-bag BAG`
+the topic is read from that second bag instead (recorded on the mocap PC while the car records its own sensors). Supported message types: `PoseStamped`, `Odometry`, `TransformStamped`,
 `PoseWithCovarianceStamped` (see `pose_of()` in `analyze.py`). The GT frame does not have to be
-the map frame, cartographer is aligned to it (Umeyama, no scale) before the APE. Time offsets between
-GT and the car are not estimated, stamps must be on the same clock.
+the map frame, cartographer is aligned to it (Umeyama, no scale) before the APE. A constant clock offset
+between the mocap PC and the car (up to ±5 s) is estimated by cross-correlating the GT yaw rate with the gyro and
+removed (`gt_clock_offset_s` in metrics.json). A `<gt>/twist` topic next to the pose (`TwistStamped`, world frame) is
+used as the linear velocity reference when present (rotated into the body frame with the GT yaw, shifted by half a sample
+because the bridge stamps a backward difference at its end), otherwise the pose is differentiated. The yaw rate always comes
+from the differentiated pose: the bridge's `angular.z` is clipped at ±π and reads ~20 % low above 2.8 rad/s. It is still the
+noisiest reference signal (~0.15–0.3 rad/s rmse against the gyro, growing with yaw rate; Vicon stamps are receive times with
+~5 ms jitter), so the `vyaw` rows are limited by the GT, not by the EKF. Tracking losses (stamp gaps > 0.1 s, `gt_tracking_gaps`
+in metrics.json) are masked in the reference velocities, widened by the smoothing window. With GT, the "inputs vs reference" block
+and the time offsets are against the GT as well. The GT object origin should sit at base_link (rear axle centre):
+a position offset is removed by the alignment, but it adds yaw_rate x offset to the GT lateral velocity.
 
 ## Disk usage
 A run stores roughly 3-5 MB per minute of bag (zstd-compressed `replay/`, `/scan` and `/sensors/imu/raw` are not recorded),
@@ -76,6 +82,9 @@ plus a few MB of plots and CSVs. The driver prints the size of `results/` after 
 above 1 GB; delete old runs or just their `replay/` folders.
 
 ## Caveats
+* All numbers are taken on a window starting `WARMUP_S` (3 s) after the car first moves, and after the last map->odom
+  jump (> 0.5 m or > 10 deg) within the first `INIT_S` (10 s) of cartographer: a relocalisation at start-up is
+  initialisation, not a loss (`window` in metrics.json).
 * Reference velocities without GT are differentiated `/tracked_pose` (Savitzky-Golay, 0.15 s window),
   good enough for lag and scale checks, noisy at the mm level.
 * Latency in `timing.png` is "record time minus header stamp" with the recorder on sim time.

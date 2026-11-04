@@ -37,6 +37,7 @@ RPE_DELTA_S = 1.0
 GT_MAX_DT = 0.02
 MOVE_SPEED = 0.5      # m/s, first time the car is faster than this = start of motion
 WARMUP_S = 3.0        # s after start of motion before the evaluation window begins (cartographer init)
+INIT_S = 10.0         # s after the first map->odom TF in which a jump counts as initialisation, not as a loss
 EXPECTED = ('carto', 'ekf', 'basalt', 'vesc', 'imu', 'tf')
 RED = '\033[1;91m'
 END = '\033[0m'
@@ -160,7 +161,67 @@ def body_velocities(tr, hz=100.0, window_s=0.15):
     dy = savgol_filter(y, win, 3, deriv=1, delta=1.0 / hz)
     vyaw = savgol_filter(yaw, win, 3, deriv=1, delta=1.0 / hz)
     c, s = np.cos(yaw), np.sin(yaw)
-    return {'t': t, 'vx': c * dx + s * dy, 'vy': -s * dx + c * dy, 'vyaw': vyaw, 'yaw': wrap(yaw)}
+    out = {'t': t, 'vx': c * dx + s * dy, 'vy': -s * dx + c * dy, 'vyaw': vyaw, 'yaw': wrap(yaw), 'src': 'diff.'}
+    nan_gaps(out, tr['t'], win)
+    return out
+
+
+def gap_mask(t, ts, factor=3.0, min_gap_s=0.1):
+    """True where the grid t lies inside a gap of the source stamps ts (dt > factor x median and > min_gap_s:
+    tracking lost, not a skipped scan)."""
+    dt = np.diff(ts)
+    bad = np.zeros(len(t), bool)
+    for i in np.flatnonzero(dt > max(factor * np.median(dt), min_gap_s)):
+        bad |= (t >= ts[i]) & (t <= ts[i + 1])
+    return bad
+
+
+def nan_gaps(v, ts, win):
+    """Set the velocities of v to NaN inside gaps of ts, widened by the smoothing window (the interpolated
+    values there are fiction; NaNs are dropped by stats() and leave holes in the plots)."""
+    bad = gap_mask(v['t'], ts)
+    if bad.any():
+        bad = np.convolve(bad, np.ones(win), 'same') > 0
+        for k in ('vx', 'vy', 'vyaw'):
+            v[k][bad] = np.nan
+        v['gaps'] = int(np.diff(np.r_[0, bad.astype(int), 0]).clip(0).sum())
+
+
+def twists(msgs):
+    """TwistStamped -> dict of arrays t, vx, vy, vz, wz (frame as published)."""
+    if not msgs:
+        return None
+    d = {k: [] for k in ('t', 't_recv', 'vx', 'vy', 'vz', 'wz')}
+    for t_recv, m in msgs:
+        tw = m.twist.twist if hasattr(m.twist, 'twist') else m.twist
+        d['t'].append(stamp(m.header)); d['t_recv'].append(t_recv)
+        d['vx'].append(tw.linear.x); d['vy'].append(tw.linear.y); d['vz'].append(tw.linear.z); d['wz'].append(tw.angular.z)
+    return {k: np.asarray(v) for k, v in d.items()}
+
+
+def twist_body(tw, tr, hz=100.0, window_s=0.15):
+    """Published (world-frame) GT twist rotated into the body frame with the GT yaw, resampled and smoothed
+    like body_velocities() so the two references are comparable.
+    The Vicon bridge stamps a backward difference with the end of its interval, so the twist is valid half a
+    sample earlier; at 2.4 rad/s those ~8 ms are 1.1 deg of yaw, i.e. 0.07 m/s leaking from vx into vy.
+    The yaw rate is taken from the differentiated pose: the bridge's angular.z is clipped at +-pi and reads
+    ~20 % low above 2.8 rad/s (glc_big_bangbang, glc_oval), the pose derivative tracks the gyro."""
+    pv = body_velocities(tr, hz, window_s)
+    dt = np.diff(tw['t'])
+    bad = np.r_[False, dt > 1.5 * np.median(dt)]   # the sample after a tracking gap differences across the gap
+    tw = dict(tw, t=tw['t'] - 0.5 * np.median(dt), vx=np.where(bad, np.nan, tw['vx']), vy=np.where(bad, np.nan, tw['vy']))
+    t = np.arange(max(tw['t'][0], tr['t'][0]), min(tw['t'][-1], tr['t'][-1]), 1.0 / hz)
+    if len(t) < 10 or pv is None:
+        return None
+    win = max(5, int(window_s * hz) | 1)
+    vxw = savgol_filter(np.interp(t, tw['t'], tw['vx']), win, 3)
+    vyw = savgol_filter(np.interp(t, tw['t'], tw['vy']), win, 3)
+    yaw = np.interp(t, tr['t'], np.unwrap(tr['yaw']))
+    c, s = np.cos(yaw), np.sin(yaw)
+    out = {'t': t, 'vx': c * vxw + s * vyw, 'vy': -s * vxw + c * vyw, 'vyaw': np.interp(t, pv['t'], pv['vyaw']),
+           'yaw': wrap(yaw), 'src': 'twist'}
+    nan_gaps(out, tw['t'], win)
+    return out
 
 
 def time_offset(ta, va, tb, vb, hz=200.0, max_lag=0.6):
@@ -169,9 +230,10 @@ def time_offset(ta, va, tb, vb, hz=200.0, max_lag=0.6):
     if len(t) < 4 * hz:
         return None
     a = np.interp(t, ta, va); b = np.interp(t, tb, vb)
-    a = a - a.mean(); b = b - b.mean()
-    if np.std(a) < 1e-6 or np.std(b) < 1e-6:
+    ok = np.isfinite(a) & np.isfinite(b)   # masked gaps: zero after mean removal, they drop out of the dot products
+    if ok.sum() < 4 * hz or np.std(a[ok]) < 1e-6 or np.std(b[ok]) < 1e-6:
         return None
+    a = np.where(ok, a - a[ok].mean(), 0.0); b = np.where(ok, b - b[ok].mean(), 0.0)
     n = int(max_lag * hz)
     scores = [np.dot(a[k:], b[:len(b) - k]) if k >= 0 else np.dot(a[:k], b[-k:]) for k in range(-n, n + 1)]
     return -float((np.argmax(scores) - n) / hz)
@@ -283,12 +345,17 @@ def finish(fig, P, title, fname):
     fig.tight_layout(); fig.savefig(P['plots'] / fname, dpi=120); plt.close(fig)
 
 
-def plot_trajectories(P, carto, ekf, basalt, gt_ape):
+def plot_trajectories(P, carto, ekf, basalt, gt_ape, gt=None):
     fig, ax = plt.subplots(1, 3 if gt_ape else 2, figsize=(18, 6))
-    ax[0].plot(carto['x'], carto['y'], lw=0.8, label='cartographer map->base_link')
     if gt_ape:
-        ax[0].plot(gt_ape['aligned']['x'], gt_ape['aligned']['y'], lw=0.8, label='cartographer aligned to GT')
-    ax[0].set_title('Cartographer, map frame'); ax[0].set_xlabel('x [m]'); ax[0].set_ylabel('y [m]'); ax[0].axis('equal'); ax[0].legend()
+        # ground truth frame: GT in green, cartographer rigidly aligned onto it (Umeyama, no scale)
+        ax[0].plot(gt['x'], gt['y'], lw=1.2, color='g', label='ground truth')
+        ax[0].plot(gt_ape['aligned']['x'], gt_ape['aligned']['y'], lw=0.8, label='cartographer, aligned to GT')
+        ax[0].set_title('Ground truth frame')
+    else:
+        ax[0].plot(carto['x'], carto['y'], lw=0.8, label='cartographer map->base_link')
+        ax[0].set_title('Cartographer, map frame')
+    ax[0].set_xlabel('x [m]'); ax[0].set_ylabel('y [m]'); ax[0].axis('equal'); ax[0].legend()
     if ekf:
         ax[1].plot(ekf['x'], ekf['y'], lw=0.8, label='EKF /state_estimation/odom')
     if basalt:
@@ -340,18 +407,19 @@ def plot_velocities(P, ekf, vesc, basalt, imu_d, carto_v, gt_v):
             a.plot(d['t'] - t0, d[key], lw=0.7, label=label, **kw)
 
     line(ax[0], carto_v, 'vx', 'cartographer (diff.)', color='k', alpha=0.5)
-    line(ax[0], gt_v, 'vx', 'ground truth (diff.)', color='g')
+    gt_lab = 'ground truth (' + (gt_v['src'] if gt_v else '') + ')'
+    line(ax[0], gt_v, 'vx', gt_lab, color='g')
     line(ax[0], vesc, 'vx', '/odom (VESC)')
     line(ax[0], basalt, 'vx', '/basalt/odom')
     line(ax[0], ekf, 'vx', 'EKF')
     ax[0].set_title('Longitudinal velocity'); ax[0].set_ylabel('vx [m/s]'); ax[0].legend(loc='upper right')
     line(ax[1], carto_v, 'vy', 'cartographer (diff.)', color='k', alpha=0.5)
-    line(ax[1], gt_v, 'vy', 'ground truth (diff.)', color='g')
+    line(ax[1], gt_v, 'vy', gt_lab, color='g')
     line(ax[1], basalt, 'vy', '/basalt/odom')
     line(ax[1], ekf, 'vy', 'EKF')
     ax[1].set_title('Lateral velocity'); ax[1].set_ylabel('vy [m/s]'); ax[1].legend(loc='upper right')
     line(ax[2], carto_v, 'vyaw', 'cartographer (diff.)', color='k', alpha=0.5)
-    line(ax[2], gt_v, 'vyaw', 'ground truth (diff.)', color='g')
+    line(ax[2], gt_v, 'vyaw', gt_lab, color='g')
     line(ax[2], imu_d, 'gz', '/imu gyro z')
     line(ax[2], basalt, 'vyaw', '/basalt/odom')
     line(ax[2], ekf, 'vyaw', 'EKF')
@@ -359,7 +427,7 @@ def plot_velocities(P, ekf, vesc, basalt, imu_d, carto_v, gt_v):
     finish(fig, P, 'Velocities: inputs, EKF and reference', 'velocities.png')
 
 
-def plot_yaw(P, carto, ekf, basalt, imu_d, map_odom):
+def plot_yaw(P, carto, ekf, basalt, imu_d, map_odom, odom_base):
     fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
     t0 = P['t0']
     cy = np.unwrap(carto['yaw'])
@@ -371,12 +439,13 @@ def plot_yaw(P, carto, ekf, basalt, imu_d, map_odom):
             y = y - y[0] + np.interp(d['t'][0], carto['t'], cy)   # aligned at the start of the eval window
             ax[0].plot(d['t'] - t0, np.degrees(wrap(y)), lw=0.8, label=lab + ' (offset removed)')
     ax[0].set_title('Yaw of all sources (odom-frame yaws aligned to cartographer at the window start)'); ax[0].set_ylabel('[deg]'); ax[0].set_ylim(-185, 185); ax[0].legend(loc='upper right')
-    if ekf is not None:
-        ye = interp_to(carto['t'], ekf, 'yaw', angular=True)
-        ym = interp_to(carto['t'], map_odom, 'yaw', angular=True)
-        ax[1].plot(carto['t'] - t0, np.degrees(wrap(carto['yaw'] - ye - ym)), lw=0.8)
+    if ekf is not None and odom_base is not None:
+        # what cartographer looks up (the TF, stamped with transform_time_offset) vs what the EKF estimated:
+        # a constant yaw-rate-proportional residual means the TF stamp does not match its pose
+        ye = interp_to(odom_base['t'], ekf, 'yaw', angular=True)
+        ax[1].plot(odom_base['t'] - t0, np.degrees(wrap(odom_base['yaw'] - ye)), lw=0.8)
         ax[1].set_ylabel('[deg]')
-        ax[1].set_title('TF chain residual: /tracked_pose minus (map → odom → base_link) yaw')
+        ax[1].set_title('odom → base_link TF minus /state_estimation/odom yaw, at the TF stamps (TF stamp error · yaw rate)')
     ax[1].set_xlabel('t [s]')
     finish(fig, P, 'Yaw', 'yaw.png')
 
@@ -409,15 +478,20 @@ def plot_timing(P, series):
 
 
 # ----------------------------------------------------------------------------
-def analyze(out_dir, bag=None, gt_topic=None):
+def analyze(out_dir, bag=None, gt_topic=None, use_vio=True, gt_bag=None):
     out_dir = Path(out_dir)
     bag = Path(bag) if bag else out_dir / 'replay'
     P = {'plots': out_dir / 'plots', 'data': out_dir / 'data'}
     P['plots'].mkdir(parents=True, exist_ok=True)
     P['data'].mkdir(parents=True, exist_ok=True)
 
-    topics = list(TOPICS.values()) + ([gt_topic] if gt_topic else [])
+    topics = list(TOPICS.values()) + ([gt_topic] if gt_topic and not gt_bag else [])
     raw = read_bag(bag, topics)
+    gt_twist_topic = gt_topic.replace('/pose', '/twist') if gt_topic and gt_topic.endswith('/pose') else None
+    if gt_bag:
+        raw.update(read_bag(gt_bag, [gt_topic] + ([gt_twist_topic] if gt_twist_topic else [])))
+    elif gt_twist_topic:
+        raw.update(read_bag(bag, [gt_twist_topic]))
     carto = poses(raw[TOPICS['carto']])
     ekf = poses(raw[TOPICS['ekf']])
     basalt = poses(raw[TOPICS['basalt']])
@@ -426,14 +500,32 @@ def analyze(out_dir, bag=None, gt_topic=None):
     map_odom = tf_pairs(raw[TOPICS['tf']], 'map', 'odom')
     odom_base = tf_pairs(raw[TOPICS['tf']], 'odom', 'base_link')
     gt = poses(raw[gt_topic]) if gt_topic else None
-    missing = [k for k in EXPECTED if not raw[TOPICS[k]]]
+    gt_twist = twists(raw[gt_twist_topic]) if gt_twist_topic and raw.get(gt_twist_topic) else None
+    missing = [k for k in EXPECTED if not raw[TOPICS[k]] and (use_vio or k != 'basalt')]
     if missing:
         alert('MISSING TOPICS in the replay bag: ' + ', '.join(f'{k} ({TOPICS[k]})' for k in missing)
               + '\n-> the corresponding node did not run or did not publish, check logs/launch.log. Stopping.')
         raise SystemExit(1)
+    if gt is not None:
+        # the mocap PC has its own clock: align GT stamps to the car by cross-correlating its yaw rate with the gyro
+        gv = body_velocities(gt)
+        off = time_offset(gv['t'], gv['vyaw'], imu_d['t'], imu_d['gz'], max_lag=5.0)
+        if off is None:
+            alert('ground truth: could not estimate the clock offset to the car (too short / no rotation)')
+        else:
+            gt['t'] = gt['t'] + off
+            if gt_twist is not None:
+                gt_twist['t'] = gt_twist['t'] + off
+            print(f'ground truth clock offset to the car: {off*1e3:+.0f} ms (GT stamps shifted by it)', flush=True)
+        overlap = min(gt['t'][-1], carto['t'][-1]) - max(gt['t'][0], carto['t'][0])
+        if overlap < 5.0:
+            alert(f'ground truth and bag overlap only {overlap:.1f} s in time: wrong GT bag, or clocks more than 5 s apart. Stopping.')
+            raise SystemExit(1)
     P['t0'] = carto['t'][0]
     P['label'] = out_dir.resolve().name
-    M = {'bag': str(bag), 'duration_s': float(carto['t'][-1] - carto['t'][0]), 'rates': {}}
+    M = {'bag': str(bag), 'duration_s': float(carto['t'][-1] - carto['t'][0]), 'rates': {}, 'use_vio': use_vio}
+    if gt is not None and off is not None:
+        M['gt_clock_offset_s'] = off
 
     # timing plot on the whole bag, all numbers on the window after cartographer had time to settle
     plot_timing(P, {'carto': carto, 'ekf': ekf, 'basalt': basalt, 'vesc': vesc, 'imu': imu_d,
@@ -443,10 +535,17 @@ def analyze(out_dir, bag=None, gt_topic=None):
     moving = np.hypot(full_v['vx'], full_v['vy']) > MOVE_SPEED
     t_move = full_v['t'][np.argmax(moving)] if moving.any() else carto['t'][0]
     t_start = t_move + WARMUP_S
+    if map_odom is not None:
+        # cartographer (re)localising: a jump of map->odom within the first INIT_S is still initialisation
+        early = map_odom['t'][1:] < map_odom['t'][0] + INIT_S
+        jump = (np.hypot(np.diff(map_odom['x']), np.diff(map_odom['y'])) > 0.5) | (np.abs(wrap(np.diff(map_odom['yaw']))) > math.radians(10))
+        j = np.flatnonzero(early & jump)
+        if len(j):
+            t_start = max(t_start, map_odom['t'][j[-1] + 1] + WARMUP_S)
     M['window'] = {'t_first_motion_s': float(t_move - P['t0']), 'eval_start_s': float(t_start - P['t0']),
                    'eval_end_s': float(carto['t'][-1] - P['t0'])}
-    carto, ekf, basalt, vesc, imu_d, map_odom, odom_base, gt = (
-        crop(d, t_start) for d in (carto, ekf, basalt, vesc, imu_d, map_odom, odom_base, gt))
+    carto, ekf, basalt, vesc, imu_d, map_odom, odom_base, gt, gt_twist = (
+        crop(d, t_start) for d in (carto, ekf, basalt, vesc, imu_d, map_odom, odom_base, gt, gt_twist))
     if len(carto['t']) < 50:
         raise SystemExit(f'cartographer trajectory too short after the {WARMUP_S:g} s warm-up window')
 
@@ -483,8 +582,13 @@ def analyze(out_dir, bag=None, gt_topic=None):
         gt_ape = evo_ape(gt, carto, GT_MAX_DT, align=True)
         M['carto_vs_gt_ape'] = {k: gt_ape[k]['stats'] for k in ('trans_m', 'rot_deg')}
         plot_rpe(P, gt_ape, 'Cartographer absolute pose error vs ground truth', 'carto_ape_gt.png')
-        gt_v = body_velocities(gt)
-    plot_trajectories(P, carto, ekf, basalt, gt_ape)
+        gt_v = twist_body(gt_twist, gt) if gt_twist is not None else body_velocities(gt)
+        if gt_v is not None and gt_v.get('gaps'):
+            M['gt_tracking_gaps'] = gt_v['gaps']
+            alert(f'ground truth has {gt_v["gaps"]} tracking gap(s): velocities masked there, check carto_ape_gt.png')
+    plot_trajectories(P, carto, ekf, basalt, gt_ape, gt)
+    ref_v = gt_v if gt_v is not None else carto_v
+    write_csv(P['data'] / 'ref_velocity.csv', {k: ref_v[k] for k in ('t', 'vx', 'vy', 'vyaw')})
 
     # --- local: EKF ---------------------------------------------------------
     if ekf is not None:
@@ -492,7 +596,6 @@ def analyze(out_dir, bag=None, gt_topic=None):
         rpe = evo_rpe(ref, ekf)
         M[f'ekf_rpe_{RPE_DELTA_S:g}s_vs_{ref_name}'] = {k: rpe[k]['stats'] for k in ('trans_m', 'rot_deg')}
         plot_rpe(P, rpe, f'EKF relative pose error over {RPE_DELTA_S:g} s vs {ref_name}', 'ekf_rpe.png')
-        ref_v = gt_v if gt_v is not None else carto_v
         ve = {}
         for k in ('vx', 'vy', 'vyaw'):
             ve[k] = stats(ekf[k] - np.interp(ekf['t'], ref_v['t'], ref_v[k]))
@@ -506,30 +609,30 @@ def analyze(out_dir, bag=None, gt_topic=None):
         if gt is not None:
             ape_gt_ekf = evo_ape(gt, ekf, GT_MAX_DT, align=True)
             M['ekf_vs_gt_ape_aligned'] = {k: ape_gt_ekf[k]['stats'] for k in ('trans_m', 'rot_deg')}
-        plot_yaw(P, carto, ekf, basalt, imu_d, map_odom if map_odom is not None else {'t': carto['t'], 'yaw': np.zeros(len(carto['t']))})
+        plot_yaw(P, carto, ekf, basalt, imu_d, map_odom if map_odom is not None else {'t': carto['t'], 'yaw': np.zeros(len(carto['t']))}, odom_base)
 
     # --- inputs -------------------------------------------------------------
     inp = {}
     for name, d, k in (('vesc_vx', vesc, 'vx'), ('basalt_vx', basalt, 'vx'), ('basalt_vy', basalt, 'vy'),
                        ('basalt_vyaw', basalt, 'vyaw'), ('imu_gz', imu_d, 'gz')):
         if d is not None:
-            inp[name + '_vs_carto'] = stats(d[k] - np.interp(d['t'], carto_v['t'], carto_v[k if k != 'gz' else 'vyaw']))
+            inp[name + '_vs_ref'] = stats(d[k] - np.interp(d['t'], ref_v['t'], ref_v[k if k != 'gz' else 'vyaw']))
     offs = {}
     if imu_d is not None:
-        offs['gyro_vs_carto'] = time_offset(imu_d['t'], imu_d['gz'], carto_v['t'], carto_v['vyaw'])
+        offs['gyro_vs_ref'] = time_offset(imu_d['t'], imu_d['gz'], ref_v['t'], ref_v['vyaw'])
         if basalt is not None:
             offs['basalt_vyaw_vs_gyro'] = time_offset(basalt['t'], basalt['vyaw'], imu_d['t'], imu_d['gz'])
     if basalt is not None:
-        offs['basalt_vx_vs_carto'] = time_offset(basalt['t'], basalt['vx'], carto_v['t'], carto_v['vx'])
+        offs['basalt_vx_vs_ref'] = time_offset(basalt['t'], basalt['vx'], ref_v['t'], ref_v['vx'])
     if vesc is not None:
-        offs['vesc_vx_vs_carto'] = time_offset(vesc['t'], vesc['vx'], carto_v['t'], carto_v['vx'])
+        offs['vesc_vx_vs_ref'] = time_offset(vesc['t'], vesc['vx'], ref_v['t'], ref_v['vx'])
     if ekf is not None:
-        offs['ekf_vx_vs_carto'] = time_offset(ekf['t'], ekf['vx'], carto_v['t'], carto_v['vx'])
-        offs['ekf_vyaw_vs_carto'] = time_offset(ekf['t'], ekf['vyaw'], carto_v['t'], carto_v['vyaw'])
+        offs['ekf_vx_vs_ref'] = time_offset(ekf['t'], ekf['vx'], ref_v['t'], ref_v['vx'])
+        offs['ekf_vyaw_vs_ref'] = time_offset(ekf['t'], ekf['vyaw'], ref_v['t'], ref_v['vyaw'])
     inp['time_offset_s'] = {k: v for k, v in offs.items() if v is not None}
     if imu_d is not None:
-        still = np.hypot(np.interp(imu_d['t'], carto_v['t'], carto_v['vx']),
-                         np.interp(imu_d['t'], carto_v['t'], carto_v['vy'])) < 0.05
+        still = np.hypot(np.interp(imu_d['t'], ref_v['t'], ref_v['vx']),
+                         np.interp(imu_d['t'], ref_v['t'], ref_v['vy'])) < 0.05
         if still.sum() > 50:
             inp['imu_standstill_mean'] = {k: float(imu_d[k][still].mean()) for k in ('gx', 'gy', 'gz', 'ax', 'ay', 'az')}
     M['inputs'] = inp
@@ -547,7 +650,7 @@ def summary(M):
         return fmt.format(s[k]) if s and k in s else '-'
 
     R = M['rates']
-    missing = [k for k in ('carto', 'ekf', 'basalt', 'vesc', 'imu') if k not in R]
+    missing = [k for k in ('carto', 'ekf', 'basalt', 'vesc', 'imu') if k not in R and (M.get('use_vio', True) or k != 'basalt')]
     L = [f'# SE eval: {Path(M["bag"]).parent.name}/{Path(M["bag"]).name}  ({M["duration_s"]:.0f} s)', '']
     if missing:
         L.append('MISSING: ' + ', '.join(missing) + '  (not in the bag, check launch.log)')
@@ -579,7 +682,7 @@ def summary(M):
         v = M['tf_chain_vs_tracked_pose']
         L.append(f'        TF chain vs tracked_pose rmse: {f(v["pos_m"])} m, {f(v["yaw_deg"], fmt="{:.2f}")} deg')
     I = M['inputs']
-    L += ['', 'inputs vs reference, rmse: ' + ', '.join(f'{k[:-9]} {f(v)}' for k, v in I.items() if k.endswith('_vs_carto'))]
+    L += ['', 'inputs vs reference, rmse: ' + ', '.join(f'{k[:-7]} {f(v)}' for k, v in I.items() if k.endswith('_vs_ref'))]
     if I.get('time_offset_s'):
         L.append('time offsets (+ = first signal early) [ms]: ' + ', '.join(f'{k} {v*1e3:+.0f}' for k, v in I['time_offset_s'].items()))
     if 'imu_standstill_mean' in I:
@@ -592,5 +695,8 @@ if __name__ == '__main__':
     ap.add_argument('out_dir', help='result folder (plots/, data/, summary.md go here)')
     ap.add_argument('--bag', help='bag to analyse (default: <out_dir>/replay)')
     ap.add_argument('--gt-topic', help='ground truth pose topic, if the bag has one')
+    ap.add_argument('--gt-bag', help='separate bag holding the ground truth topic')
     a = ap.parse_args()
-    analyze(a.out_dir, a.bag, a.gt_topic)
+    meta = Path(a.out_dir) / 'config' / 'meta.json'   # defaults of a re-analysis: what the run was made with
+    m = json.loads(meta.read_text()) if meta.exists() else {}
+    analyze(a.out_dir, a.bag, a.gt_topic or m.get('gt_topic'), m.get('use_vio', m.get('run_vio', True)), a.gt_bag or m.get('gt_bag'))

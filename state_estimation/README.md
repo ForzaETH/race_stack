@@ -11,6 +11,30 @@ The resulting car state is exposed as:
 - `/state_estimation/odom`: velocity estimate from the EKF (twist in the `base_link` frame).
 - `/car_state/frenet/odom`: pose and velocity in the Frenet frame, published by the `frenet_odom_republisher` node (`utilities/nodes/frenet_odom_republisher`), which combines the TF pose with `/state_estimation/odom`. Launched for both simulation and the physical car by `stack_master/launch/base_system_launch.xml`.
 
+## Recording and offline evaluation ##
+
+Record a bag on the car with `state_estimation/eval/record_bag.sh <name>` (all topics except the compressed camera
+streams, into `bags/<name>`). With motion capture, record the ground truth on the mocap PC into a second bag, e.g.
+`ros2 bag record /nuc6/pose /nuc6/twist -o <name>_gt` (recording the car topics over WiFi stalls the car's publishers).
+Replay the bag through the stack headlessly and get plots and metrics (see `eval/README.md`):
+```
+USE_VIO=true python3 state_estimation/eval/run_eval.py bags/<name> --gt-bag bags/<name>_gt --map <map>
+```
+To watch a replay in RViz instead: `ros2 launch stack_master bag_replay_launch.xml bag:=<abs path> map_name:=<map>`
+(same recomputation, args `run_vio`, `vesc_odom_from_bag`, `static_tf_from_bag`, `mapping`, `rate`, `start_offset`).
+
+### Tuning experiments
+
+Everything derived is recomputed in the replay, so these can be tuned from one bag: `process_noise_covariance` and the
+sensor configs in `config/ekf.yaml`, the VESC twist covariance (`vesc_to_odom.cpp`, needs a build), the Basalt
+covariances (`basalt_to_ekf_node.py`), `gyro_scale` in `stack_master/config/<car>/imu.yaml`, `speed_to_erpm_gain` in
+`vesc.yaml` and the camera mount in `static_transforms.yaml` (replayed through `bag_replay_launch.xml` with
+`static_tf_from_bag:=False`). Not tunable offline: the LiDAR stamp (`default_user_latency` in `sensors.yaml`), it is in
+the recording. Change one value, run with `USE_VIO=true` and `USE_VIO=false`, compare `summary.md` of the runs: EKF
+velocity rmse and 1 s RPE against the reference (local accuracy), map->odom correction rate and yaw drift (how much
+cartographer has to fix), the "inputs vs reference" block (scale and lag of each sensor). Use several bags (slow, fast,
+both turn directions): a value that wins on one track can lose on another.
+
 ## Kalman Filter ##
 
 The Kalman Filter is implemented using the `robot_localization` package published [here](https://github.com/cra-ros-pkg/robot_localization) [see our paper for reference]. 
