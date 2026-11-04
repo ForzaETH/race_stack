@@ -34,6 +34,9 @@ class ImuToBase(Node):
         # constant gyro offset in the IMU frame, measured at standstill (per car, stack_master/config/<car>/imu.yaml)
         self.declare_parameter('gyro_bias', [0.0, 0.0, 0.0])
         self.gyro_bias = np.array(self.get_parameter('gyro_bias').value, dtype=float)
+        # multiplies the bias-corrected rate: integrated gyro yaw / cartographer yaw over whole laps
+        self.declare_parameter('gyro_scale', 1.0)
+        self.gyro_scale = float(self.get_parameter('gyro_scale').value)
 
         self.target_frame = self.get_parameter('target_frame').value
         self.R = None          # target <- imu rotation matrix
@@ -72,7 +75,8 @@ class ImuToBase(Node):
         out.header.frame_id = self.target_frame
 
         R = self.R
-        w = R @ (np.array([msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]) - self.gyro_bias)
+        w = R @ ((np.array([msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]) - self.gyro_bias)
+                 * self.gyro_scale)
         a = R @ [msg.linear_acceleration.x, msg.linear_acceleration.y, msg.linear_acceleration.z]
         out.angular_velocity.x, out.angular_velocity.y, out.angular_velocity.z = map(float, w)
         out.linear_acceleration.x, out.linear_acceleration.y, out.linear_acceleration.z = map(float, a)
