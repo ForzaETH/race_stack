@@ -1,24 +1,16 @@
+import argparse
 import numpy as np
 import pandas as pd
 import dataclasses
 from pathlib import Path
+from ament_index_python.packages import get_package_share_directory
 from rosbags.highlevel import AnyReader
 from rosbags.typesys import Stores, get_typestore
 from rosbags.typesys import get_types_from_msg
 
 typestore = get_typestore(Stores.ROS2_HUMBLE)
 
-base_path = Path(__file__).resolve().parent
-
-print(base_path)
-
-input_bag = (base_path / '../bags/results/output-1/').resolve()
-print(input_bag)
-out_dir = (base_path / '../bags/results/converted-1/').resolve()
-print(out_dir)
-out_dir.mkdir(parents=True, exist_ok=True)
-
-msg_dir = (base_path / '../../../utilities/libraries/f110_msgs/msg').resolve()
+msg_dir = Path(get_package_share_directory('f110_msgs')) / 'msg'
 
 add_types = {}
 for msg_file in msg_dir.glob('*.msg'):
@@ -51,7 +43,18 @@ def flatten(msg, prefix=''):
 
 
 def main():
+    # parse_known_args, because launch appends --ros-args to the command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-input', required=True, type=Path, help='Bag folder to convert')
+    input_bag = parser.parse_known_args()[0].input
+
+    # results/output-1 is written to results/converted-1, next to the input bag
+    out_dir = input_bag.parent / f'converted-{input_bag.name.removeprefix("output-")}'
+    print(input_bag)
+    print(out_dir)
+
     with AnyReader([input_bag], default_typestore=typestore) as reader:
+        out_dir.mkdir(parents=True, exist_ok=True)
         for conn in reader.connections:
 
             name = conn.topic.strip('/').replace('/', '_')

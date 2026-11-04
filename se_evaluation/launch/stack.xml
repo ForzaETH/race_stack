@@ -8,10 +8,9 @@
         name="sim_opp" default="True"
         description="True to remap topics to the simulated opponent ones" />
 
-    <!-- bags folder in the source tree (not the install space), same convention as stack_master
-    maps -->
+    <!-- bags folder in the source tree (not the install space), override with SE_EVALUATION_BAGS -->
     <arg name="bag_path" description="ros2 input bag"
-        default="$(find-pkg-prefix se_evaluation)/../../src/race_stack/se_evaluation/bags" />
+        default="$(env SE_EVALUATION_BAGS $(env HOME)/ws/src/race_stack/se_evaluation/bags)" />
     <arg name="input" description="Name of the input bag" />
     <arg name="bag_rate" default="1.0" description="the rate of bag playback" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
