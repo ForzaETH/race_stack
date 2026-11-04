@@ -1,0 +1,74 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+
+def compare_topics(dir_v1, dir_v2, filename, column_name, label_unit=""):
+    """Vergleicht einen bestimmten Wert in einer CSV-Datei zwischen zwei Stacks."""
+    file1 = dir_v1 / filename
+    file2 = dir_v2 / filename
+
+    if not file1.exists() or not file2.exists():
+        print(f"warining: file '{filename}' is missing at least in one folder.")
+        return
+
+    df1 = pd.read_csv(file1)
+    df2 = pd.read_csv(file2)
+
+    # Prüfen, ob die Spalte in beiden CSVs existiert
+    if column_name not in df1.columns or column_name not in df2.columns:
+        print(f"warining: column '{column_name}' in '{filename}' not found. Available: {list(df1.columns[:5])}...")
+        return
+
+    # Zeitstempel auf Startpunkt t0 = 0s normieren
+    t1 = df1['time_s'] - df1['time_s'].min()
+    t2 = df2['time_s'] - df2['time_s'].min()
+
+    # Gemeinsames Zeitgitter (100 Hz = 0.01s)
+    t_max = min(t1.max(), t2.max())
+    t_common = np.arange(0, t_max, 0.01)
+
+    # Interpolieren
+    v1_interp = np.interp(t_common, t1, df1[column_name])
+    v2_interp = np.interp(t_common, t2, df2[column_name])
+
+    # Metriken berechnen
+    diff = v2_interp - v1_interp
+    rmse = np.sqrt(np.mean(diff**2))
+    mae = np.mean(np.abs(diff))
+
+    print(f"=== Comparison for: {filename} -> column: '{column_name}' ===")
+    print(f"  RMSE (deviation) : {rmse:.4f} {label_unit}")
+    print(f"  MAE  (Abs. offset): {mae:.4f} {label_unit}")
+    print(f"  Max deviation    : {np.max(np.abs(diff)):.4f} {label_unit}\n")
+
+    # Plot erstellen
+    plt.figure(figsize=(10, 4))
+    plt.plot(t_common, v1_interp, label='Stack V1 (Baseline)', color='blue')
+    plt.plot(t_common, v2_interp, label='Stack V2 (New)', color='orange', linestyle='--')
+    plt.xlabel('time since start [s]')
+    plt.ylabel(f'{column_name} [{label_unit}]')
+    plt.title(f'Comparison: {filename} -> {column_name}')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+if __name__ == '__main__':
+    # 1. Pfade definieren
+    dir_v1 = Path('/home/hannah/ws/src/race_stack/se_evaluation/bags/results/Run1/converted-1')
+    dir_v2 = Path('/home/hannah/ws/src/race_stack/se_evaluation/bags/results/Run1/converted-2')
+
+    # 2. Liste der zu vergleichenden Themen (CSV-Datei, Spalte, Einheit)
+    comparisons_to_run = [
+        ('car_state_odom.csv', 'twist.twist.linear.x', 'm/s'),
+        ('car_state_odom.csv', 'twist.twist.angular.z', 'rad/s'),
+        ('steering.csv', 'data', 'rad'),  # Prüfe ggf. mit df.columns ob 'data' stimmt
+        ('commands_motor_speed.csv', 'data', 'm/s'),
+        ('min_car_distance_to_boundary.csv', 'data', 'm'),
+    ]
+
+    # 3. Automatisch alle Vergleiche nacheinander ausführen
+    for filename, col, unit in comparisons_to_run:
+        compare_topics(dir_v1, dir_v2, filename, col, unit)
