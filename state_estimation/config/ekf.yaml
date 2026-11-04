@@ -112,7 +112,7 @@ ekf_filter_node:
                                 false,
                                 false,
                                 false,
-                                true,
+                                false,
                                 false,
                                 false,
                                 false,
