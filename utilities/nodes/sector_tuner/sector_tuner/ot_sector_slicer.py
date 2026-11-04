@@ -7,6 +7,7 @@ import numpy as np
 from ament_index_python.packages import get_package_share_directory
 from pathlib import Path
 from visualization_msgs.msg import MarkerArray
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from matplotlib.patches import Arrow
@@ -87,6 +88,11 @@ class OvertakingSectorSlicer(Node):
         s = np.array(s)
         x = np.array(x)
         y = np.array(y)
+
+        if matplotlib.get_backend().lower() == 'agg':
+            self.get_logger().warn("No display, writing a single sector over the whole track.")
+            self.sector_pnts = [0, len(s)]
+            return
 
         # plot raceline without sector points
         fig, (ax1, axslider, axselect, axfinish) = plt.subplots(4, 1, gridspec_kw={'height_ratios': [5, 1, 1, 1]})
