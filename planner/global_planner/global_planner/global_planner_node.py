@@ -9,7 +9,9 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from scipy import interpolate, spatial
 from skimage.morphology import skeletonize
+import trajectory_planning_helpers.spline_approximation as tph_spline_approximation
 
 import rclpy
 from stack_master.qos import LATCHED_QOS
@@ -33,6 +35,14 @@ from .global_planner_utils import extract_centerline, \
     create_wpnts_markers, \
     compare_direction, \
     get_data_path
+
+
+def _dist_to_p(t_glob, path, p):
+    # scipy >= 1.11 rejects the (2, 1) shape that splev returns for a 1-element t_glob
+    return spatial.distance.euclidean(p, np.ravel(interpolate.splev(t_glob, path)))
+
+
+tph_spline_approximation.dist_to_p = _dist_to_p
 
 
 class GlobalPlannerNode(Node):

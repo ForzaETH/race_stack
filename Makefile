@@ -24,7 +24,10 @@ setup:
 	@echo "Exporting environment variables to .env..."
 	@printf "Enter ROS_DOMAIN_ID [48]: " && read domain_id && echo "ROS_DOMAIN_ID=$${domain_id:-48}" > .env
 	@printf "Enter RACECAR_VERSION (SIM for laptops, NUCx for cars) [SIM]: " && read racecar_version && echo "RACECAR_VERSION=$${racecar_version:-SIM}" >> .env
-	@printf "Does this machine run VIO with a RealSense camera? (true/false) [false]: " && read use_vio && echo "USE_VIO=$${use_vio:-false}" >> .env
+	@printf "Does this machine run VIO with a RealSense camera? (true/false) [false]: " && read use_vio && echo "USE_VIO=$${use_vio:-false}" >> .env && \
+	if [ "$${use_vio:-false}" = "true" ]; then \
+		printf "Which RealSense camera model? (d435/d455) [d435]: " && read camera_model && echo "VIO_CAMERA_MODEL=$${camera_model:-d435}" >> .env; \
+	fi
 	@echo "HOST_UID=$$(id -u)" >> .env
 	@echo "HOST_GID=$$(id -g)" >> .env
 	@echo "COMPOSE_BAKE=false" >> .env
