@@ -6,11 +6,11 @@ repositories:
   f1tenth_system:
     type: git
     url: https://github.com/ForzaETH/f1tenth_system.git
-    version: bf5cf1c149ea5d9d3da9d9394c6b8b0021df5169
+    version: 04fe2b33c5b87919202a9c5733dec653ab232db6
   vesc:
     type: git
     url: https://github.com/ForzaETH/vesc.git
-    version: 57a92228aac9403f19644f4c76f23286257b2b9b
+    version: 1f94a2d2dd5cb581cf7a6fcfb8bae7736335d9eb
   global_racetrajectory_optimization:
     type: git
     url: https://github.com/ForzaETH/global_racetrajectory_optimization.git

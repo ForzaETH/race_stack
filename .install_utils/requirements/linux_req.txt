@@ -23,3 +23,4 @@ ros-humble-asio-cmake-module
 ros-humble-ackermann-msgs
 ros-humble-nav2-msgs
 ros-humble-bond
+ros-humble-image-transport-plugins

@@ -1,9 +1,9 @@
 # -----------------------------------------------------------------------------
-# RealSense D435 driver + Basalt VIO + Basalt -> EKF bridge. Included by
-# state_estimation_launch.xml when USE_VIO=true.
-# Camera and both Basalt stages share one component container so images move
-# intra-process. basalt_ros comes from its own workspace (/opt/basalt_ws, built
-# in the Dockerfile and sourced in the bashrc).
+# Basalt VIO + Basalt -> EKF bridge. Included by state_estimation_launch.xml
+# when USE_VIO=true. The RealSense driver itself is launched with the other
+# sensors in stack_master/launch/teleop_launch.xml.
+# basalt_ros comes from its own workspace (/opt/basalt_ws, built in the
+# Dockerfile and sourced in the bashrc).
 # Component layout based on Bernd Pfrommer <bernd.pfrommer@gmail.com>
 # -----------------------------------------------------------------------------
 import os
@@ -23,11 +23,6 @@ def state_estimation_file(fname):
         [FindPackageShare('state_estimation'), 'config', fname])
 
 
-def camera_file(fname):
-    return PathJoinSubstitution(
-        [FindPackageShare('stack_master'), 'config', 'camera', fname])
-
-
 def camera_topic(*parts):
     """Build /<camera_name>/<camera_name>/<parts...> so image/imu topics always
     track whatever camera_name the RealSense node is launched under."""
@@ -43,7 +38,6 @@ def launch_setup(context, *args, **kwargs):
 
     racecar_version = LaunchConfig('racecar_version').perform(context)
     camera_model = LaunchConfig('camera_model').perform(context)
-    camera_name = LaunchConfig('camera_name').perform(context)
 
     common_parameters = {
         'calibration_file': state_estimation_file(f"{camera_model}_calib_{racecar_version}.json"),
@@ -75,14 +69,6 @@ def launch_setup(context, *args, **kwargs):
         package='rclcpp_components',
         executable='component_container',
         composable_node_descriptions=[
-            ComposableNode(
-                package='realsense2_camera',
-                plugin='realsense2_camera::RealSenseNodeFactory',
-                name=camera_name,
-                namespace=camera_name,
-                parameters=[camera_file(f"{camera_model}_config.yaml")],
-                extra_arguments=[{'use_intra_process_comms': True}],
-            ),
             ComposableNode(
                 package='basalt_ros',
                 plugin='basalt_ros::VIOFrontEndNode',
@@ -147,11 +133,10 @@ def generate_launch_description():
     return launch.LaunchDescription([
         LaunchArg('camera_name',
                   default_value='camera',
-                  description='Name/namespace of the RealSense node'),
+                  description='Name/namespace the RealSense node is launched under (see bringup_launch.py)'),
         LaunchArg('camera_model',
                   default_value=os.environ.get('VIO_CAMERA_MODEL', 'd435'),
-                  description="'d435' / 'd455': selects stack_master/config/camera/<model>_config.yaml "
-                              "and state_estimation/config/<model>_calib_<racecar_version>.json"),
+                  description="'d435' / 'd455': selects state_estimation/config/<model>_calib_<racecar_version>.json"),
 
         # --- Basalt / EKF bridge args ---
         LaunchArg('racecar_version',
