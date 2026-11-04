@@ -15,7 +15,7 @@
     <arg name="bag_rate" default="1.0" description="the rate of bag playback" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
     <arg name="map_name" default="hangar_1905_v0" description="Map name in stack_master/maps" />
-    <arg name="output" default="$(var bag_path)/results/"
+    <arg name="output" default="$(var bag_path)/results/$(var input)/"
         description="Folder the recorded bags are written to" />
 
     <group>

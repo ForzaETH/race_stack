@@ -19,7 +19,7 @@
         <set_parameter name="use_sim_time" value="True" />
 
         <node pkg="se_evaluation" name="se_evaluation" exec="rosbag_recordings_input"
-            args="-input $(var bag_path)/$(var input)"
+            args="-input $(var bag_path)/results/$(var input)"
             output="screen" />
     </group>
 </launch>
