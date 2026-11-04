@@ -36,9 +36,12 @@ Then you can run the global planner:
 ros2 launch stack_master planner_launch.xml map_name:=<map name of choice>
 ```
  - `<map_name_of_choice` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
+ - `racecar_version:=NUCx` defaults to `$RACECAR_VERSION`. Mass, `v_max` and the curvature limit (`1 / min_radius_curv_m`) come from `config/<racecar_version>/car_model.yaml` (required), everything else from `config/global_planner/racecar_f110.ini`.
 
 A GUI will popup showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
 Be careful as once a sector is chosen it cannot be further subdivided. 
+
+Without a display (no `DISPLAY` set) the plots are skipped and a single sector over the whole track is written for both speed scaling and overtaking. Add `headless:=true` to also skip rviz.
 
 ### Base System
 ```shell
@@ -47,6 +50,24 @@ ros2 launch stack_master base_system_launch.xml map_name:=<name of mapped track>
   - `<name of mapped track>` is the name of the track you want to run on. It must belong to the list of maps available in the `stack_master/maps` folder or be omitted. Then the map called `latest` is used. 
   - `<true/false>` is a boolean value that indicates if you want to run the simulation or the real car. 
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). You can also omit this if the `.env` file was created.
+
+### Bag replay (tuning state estimation offline)
+Record a bag on the car with
+```shell
+ros2 bag record -a -x '/camera/.*/(compressed|compressedDepth|theora)' -o bags/<name>
+```
+(the `bags/` folder is git-ignored). The exclude matters: subscribing to the compressed/theora image topics makes the camera node encode every frame, which halves its rate and adds ~300 ms latency to the VIO. Then, on any machine with the container:
+```shell
+ros2 launch stack_master bag_replay_launch.xml bag:=/home/$USER/ws/src/race_stack/bags/<name> map_name:=<map the bag was recorded on> racecar_version:=<NUCx the bag was recorded on>
+```
+This runs the state estimation launch (IMU rotation, EKF, cartographer, VIO) plus RViz on top of the bag; no car drivers and no simulator. Only the raw sensor topics (`/scan`, `/odom`, `/sensors/imu/raw`, camera images + IMU) are played back, everything derived from them (`/tf`, `/imu`, `/basalt/odom`, `/state_estimation/odom`, `/map`, ...) is recomputed, so `ekf.yaml` and the slam `.lua` files can be edited between runs.
+  - `run_vio:=false` plays the recorded `/basalt/odom` instead of running Basalt (default: `USE_VIO` from `.env`). 
+  - `vesc_odom_from_bag:=true` (default) plays `/odom` as recorded. `vesc_odom_from_bag:=false` recomputes it with `vesc_to_odom_node` from `/sensors/core` and `vesc.yaml` (to tune `speed_to_erpm_gain`).
+  - `static_tf_from_bag:=true` (default) plays `/tf_static` as recorded. `static_tf_from_bag:=false` publishes the mounts from `static_transforms.yaml` instead (to tune them) and republishes only the RealSense-internal TFs from the bag (`bag_static_tf_node`, needs `pip install rosbags`).
+  - `mapping:=true` runs cartographer in mapping mode instead of localizing on `map_name`.
+  - `rate`, `start_offset`, `delay`: playback rate, seconds skipped at the start, seconds waited before playing.
+  - `rviz:=false` to not start RViz (`stack_master/viz/head_to_head.rviz`, started with `use_sim_time`).
+  - Headless evaluation with plots and metrics on top of this: see [`state_estimation/eval`](../state_estimation/eval/README.md).
 
 ### Time trials 
 ```shell
