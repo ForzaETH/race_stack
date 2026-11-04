@@ -3,3 +3,5 @@
 transforms:
   - {parent: base_link, child: laser, xyz: [0.27, 0.0, 0.11], rpy: [0.0, 0.0, 0.0]}
   - {parent: base_link, child: imu, xyz: [0.07, 0.0, 0.05], rpy: [0.0, 0.0, 1.5707963]}
+  # RealSense D455 (VIO)
+  - {parent: base_link, child: camera_link, xyz: [0.33, 0.05, 0.10], rpy: [0.0, -0.1745, 0.0]}
