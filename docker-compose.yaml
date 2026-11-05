@@ -2,15 +2,10 @@ name: race_stack
 
 services:
   race_stack:
-    build:
-      context: .
-      dockerfile: .devcontainer/Dockerfile
-      args:
-        BASE_IMAGE: ${BASE_IMAGE:-ros:humble-ros-base}
-        USE_VIO: ${USE_VIO:-false}
-        UID: ${HOST_UID:-1000}
-        GID: ${HOST_GID:-1000}
+    # Built by make images, which VS Code runs on open and rebuild; it falls back to the
+    # existing image without internet, which a build section here could not do
     image: race_stack:humble_${HOST_UID:-1000}
+    pull_policy: never
     # Passing the user allows multiple users per machine
     container_name: forzaeth_devcontainer_${HOST_UID:-1000} 
     hostname: ${RACECAR_VERSION:-SIM}
@@ -97,8 +92,9 @@ services:
 
   # Virtual desktop for visualisations (RVIZ), used by sessions without a display
   novnc:
-    build: https://github.com/ForzaETH/remote-novnc.git#main
+    # Built by make images if missing
     image: forzaeth_novnc:latest
+    pull_policy: never
     container_name: forzaeth_novnc
     restart: unless-stopped
     tmpfs:

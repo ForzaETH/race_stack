@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Base image is ros:humble-ros-base or 
 # nvcr.io/nvidia/l4t-jetpack:r36.4.0 on Jetson
 ARG BASE_IMAGE=ros:humble-ros-base
@@ -61,6 +59,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 COPY .install_utils/install_vio.sh .install_utils/basalt.repos /tmp/
 RUN bash /tmp/install_vio.sh && rm /tmp/install_vio.sh /tmp/basalt.repos
 
+# ---------- manifests: only the package.xml files ----------
+# Editing other files in .install_utils re-runs this stage, but not the rosdep step that uses its output.
+FROM base AS manifests
+COPY . /ctx
+RUN mkdir /manifests && cd /ctx && find . -name package.xml -exec cp --parents {} /manifests/ \;
+
 # ---------- final: requirements + shell ----------
 FROM vio-${USE_VIO} AS final
 ARG USER UID GID
@@ -75,15 +79,31 @@ xargs apt-get install -y < /tmp/linux_req.txt
 rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
 EOF
 
-# Install python dependencies
 COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
-COPY .install_utils/requirements/python_req.txt .install_utils/requirements/python_overrides.txt /tmp/
-RUN uv pip install --system --no-cache -r /tmp/python_req.txt --override /tmp/python_overrides.txt \
-    && rm /tmp/python_req.txt /tmp/python_overrides.txt
 
 # Install PyTorch with CUDA and torchvision, on Jetson only
 COPY .install_utils/install_torch_jetson.sh /tmp/
 RUN bash /tmp/install_torch_jetson.sh && rm /tmp/install_torch_jetson.sh
+
+# Install python dependencies
+COPY .install_utils/requirements/python_req.txt .install_utils/requirements/python_overrides.txt /tmp/
+RUN uv pip install --system --no-cache -r /tmp/python_req.txt --override /tmp/python_overrides.txt \
+    && rm /tmp/python_req.txt /tmp/python_overrides.txt
+
+# Install the rosdep dependencies of the workspace and the external repositories, so
+# new containers can build without internet. Last so package.xml changes only re-run this.
+COPY --from=manifests /manifests /tmp/rosdep/race_stack
+COPY .install_utils/dependencies.repos /tmp/dependencies.repos
+RUN <<'EOF'
+set -e
+apt-get update
+rosdep update
+mkdir -p /tmp/rosdep/deps
+vcs import --recursive /tmp/rosdep/deps < /tmp/dependencies.repos
+# python-transforms3d-pip was removed from rosdistro (transforms3d is installed via pip)
+rosdep install --from-paths /tmp/rosdep --ignore-src -y --skip-keys "python-transforms3d-pip"
+rm -rf /tmp/rosdep /tmp/dependencies.repos /root/.ros /var/lib/apt/lists/*
+EOF
 
 # Bashrc: source ROS and workspaces, display, git branch in terminal
 COPY .install_utils/bashrc /tmp/bashrc

@@ -1,3 +1,5 @@
+-include .env
+
 MAPS_DIR := ../race_stack_maps
 BAGS_DIR := ../race_stack_bags
 DEPS_DIR := ../race_stack_deps
@@ -8,11 +10,25 @@ COMPOSE := docker compose -f docker-compose.yaml -f $(LOCAL_COMPOSE)
 
 XAUTH_DIR := $(HOME)/.docker_xauth
 
-.PHONY: setup launch x11 x11-refresh help
+# Same defaults as docker-compose.yaml
+BASE_IMAGE ?= ros:humble-ros-base
+USE_VIO ?= false
+HOST_UID ?= 1000
+HOST_GID ?= 1000
+
+STACK_IMAGE := race_stack:humble_$(HOST_UID)
+NOVNC_IMAGE := forzaeth_novnc:latest
+BUILD_STACK := docker build -f .devcontainer/Dockerfile -t $(STACK_IMAGE) --build-arg BASE_IMAGE=$(BASE_IMAGE) \
+	--build-arg USE_VIO=$(USE_VIO) --build-arg UID=$(HOST_UID) --build-arg GID=$(HOST_GID) .
+BUILD_NOVNC := docker build -t $(NOVNC_IMAGE) https://github.com/ForzaETH/remote-novnc.git\#main
+
+.PHONY: setup images launch x11 x11-refresh help
 
 help:
 	@echo "Usage: make setup"
 	@echo "Prepares the host folders and environment variables for the VS Code DevContainer setup."
+	@echo "       make images"
+	@echo "Builds the images, falling back to the existing ones if that fails; VS Code runs this on open and rebuild."
 	@echo "       make launch"
 	@echo "Starts the containers without VS Code and opens a shell (runs the post-create setup on first start)."
 	@echo "       make x11"
@@ -30,7 +46,6 @@ setup:
 	fi
 	@echo "HOST_UID=$$(id -u)" >> .env
 	@echo "HOST_GID=$$(id -g)" >> .env
-	@echo "COMPOSE_BAKE=false" >> .env
 
 	@echo "Selecting base image..."
 	@if [ -f /etc/nv_tegra_release ]; then \
@@ -46,9 +61,16 @@ setup:
 	@echo "Setup complete! Open VS Code, type CTRL + SHIFT + P and select 'Reopen in Container'."
 	@echo "========================================"
 
+# Build when internet is available; else use existing image
+images:
+	@$(BUILD_STACK) || { docker image inspect $(STACK_IMAGE) >/dev/null 2>&1 \
+		&& echo "WARNING: image build failed (no internet?), using the existing $(STACK_IMAGE)"; }
+	@docker image inspect $(NOVNC_IMAGE) >/dev/null 2>&1 || $(BUILD_NOVNC)
+
 launch: x11-refresh
 	@[ -f .env ] || { echo "No .env found, run 'make setup' first."; exit 1; }
 	@[ -f $(LOCAL_COMPOSE) ] || cp .devcontainer/docker-compose.local.template.yaml $(LOCAL_COMPOSE)
+	@$(MAKE) -s images
 	@$(COMPOSE) up -d
 	@docker exec $(CONTAINER) test -f /ws/install/setup.bash \
 		|| docker exec -it $(CONTAINER) bash /ws/src/race_stack/.install_utils/post_create_command.sh
