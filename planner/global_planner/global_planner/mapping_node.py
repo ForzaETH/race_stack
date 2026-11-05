@@ -4,6 +4,7 @@ import termios
 import tty
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -170,7 +171,8 @@ class MappingNode(Node):
                 "saving the map with initial_pose (0, 0, 0).")
             self.initial_position = (0.0, 0.0, 0.0)
 
-        _check_default_map(self.map_name, self.map_dir, self.map_dir.parent / 'backup', self.get_logger().warn)
+        backup_dir = self.map_dir.parent / f'backup_{datetime.now():%y-%m-%d_%H-%M-%S}'
+        _check_default_map(self.map_name, self.map_dir, backup_dir, self.get_logger().warn)
         os.makedirs(self.map_dir)
  
         self.get_logger().info(f'Successfully created the folder {self.map_dir}')
@@ -239,8 +241,6 @@ class MappingNode(Node):
 def _check_default_map(map_name: str, map_dir: Path, backup_dir: Path, logwarn) -> None:
     if map_name == 'latest':
         if map_dir.exists():
-            if backup_dir.exists():
-                shutil.rmtree(backup_dir)
             shutil.move(str(map_dir), str(backup_dir))
             logwarn(f"Map directory already exists. Backed up the old map to {backup_dir}")
             

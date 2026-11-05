@@ -12,7 +12,7 @@ subscribes to it.
 1. Each car has its own domain id (`remote_car.sh` convention: `40 + NUC number`).
 2. Launch the ego stack **without** perception, then:
    ```bash
-   ros2 launch car_to_car_sync car_to_car_sync_launch.xml opp_domain:=46 opp_ip:=<OPP_IP>
+   ros2 launch car_to_car_sync car_to_car_sync_launch.xml opp_domain:=<OPP_DOMAIN> opp_ip:=<OPP_IP>
    ```
    The bridge connects to the opponent zenoh router directly, so the local router does not need to be restarted.
 

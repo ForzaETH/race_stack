@@ -35,9 +35,9 @@ Then you can run the global planner:
 ```shell
 ros2 launch stack_master planner_launch.xml map:=<map name of choice>
 ```
- - `<map name of choice>` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
+ - `<map name of choice>` must be the name of any prerecorded map. If it is omitted the map called `latest` will be used.
 
-A GUI will popup showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
+A GUI will pop up showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
 Be careful as once a sector is chosen it cannot be further subdivided. 
 
 ### Base System
