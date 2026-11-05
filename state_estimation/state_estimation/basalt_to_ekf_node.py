@@ -146,7 +146,7 @@ class BasaltToEkf(Node):
         out.pose.covariance[0] = 0.05    # x
         out.pose.covariance[7] = 0.05    # y
         out.pose.covariance[35] = 0.01   # yaw
-        out.twist.covariance[0] = 0.01   # vx
+        out.twist.covariance[0] = 0.05   # vx: same weight as the VESC
         out.twist.covariance[7] = 0.01   # vy
         out.twist.covariance[35] = 0.001 # vyaw (camera gyro sample)
 

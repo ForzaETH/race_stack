@@ -18,3 +18,6 @@ __pycache__/
 # Recorded data
 bags/
 sysid_bags/
+
+# state estimation eval results
+state_estimation/eval/results/

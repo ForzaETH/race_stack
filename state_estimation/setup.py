@@ -28,6 +28,7 @@ setup(
             'basalt_to_ekf_node = state_estimation.basalt_to_ekf_node:main',
             'ekf_node = state_estimation.ekf_node.ekf_node:main',
             'imu_to_base_node = state_estimation.imu_to_base_node:main',
+            'bag_static_tf_node = state_estimation.bag_static_tf_node:main',
         ],
     },
 )
