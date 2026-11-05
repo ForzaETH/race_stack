@@ -3,7 +3,9 @@
 transforms:
   - {parent: base_link, child: laser, xyz: [0.258, 0.0, 0.127], rpy: [0.0, 0.0, 0.0]}
   - {parent: base_link, child: imu, xyz: [0.07, 0.0, 0.05], quat: [0.0, 0.0, -0.7071068, 0.7071068]}
-  # RealSense D455 (VIO), remeasure on a mount change
-  - {parent: base_link, child: camera_link, xyz: [0.262377, 0.043761, 0.120451], rpy: [-0.03, -0.241, 0.009]}
+  # RealSense D435 (VIO), remeasure on a mount change. camera_link = left imager (depth origin). From the 1/4" screw hole,
+  # measured at [0.31, 0.0, 0.08] in base_link (2026-11-05), plus the D435 screw -> camera_link offset of realsense2_description
+  # [0.0106, 0.0175, 0.0125] rotated by the mount rpy. Vicon says the Basalt velocity point was ~3 cm ahead of the old x 0.262.
+  - {parent: base_link, child: camera_link, xyz: [0.317, 0.018, 0.094], rpy: [-0.03, -0.241, 0.009]}
   # D455 camera_link -> IMU body (factory)
   # - {parent: camera_link, child: camera_imu, xyz: [-0.016020, -0.030220, 0.007400], quat: [-0.5, 0.5, -0.5, 0.5]}
