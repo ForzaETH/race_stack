@@ -1,5 +1,5 @@
 free_thresh: 0.196
-image: zuri.png
+image: sim_zuri.png
 negate: 0
 occupied_thresh: 0.65
 origin:

@@ -15,12 +15,12 @@ There are two important parameters when running the base system or mapping:
  - racecar_version: This sets car related parameters such as TFs, lookup tables or Pacejka Parameters. By default this is written to the `.env` file in the installation progress.
  Everything that differs between cars lives in `stack_master/config/RACECAR_VERSION/`, e.g. the sensor mounting transforms in `static_transforms.yaml` (published by `static_transforms_launch.xml` for base system, mapping and simulator alike).
  - use_vio: Launches the RealSense D455 camera and Basalt VIO. Defaults to the `USE_VIO` value in the `.env` file (set during installation); only works if the container was built with `USE_VIO=true`.
- - map_name: This is the name of the map that you want to use / create. Every map is saved in `stack_master/maps/MAP_NAME/`. However, by default a map called `latest` is used.
+ - map: This is the name of the map that you want to use / create. Every map is saved in `$MAPS_DIR/<map>/`. However, by default a map called `latest` is used.
 
 ### Mapping (on the real car)
 Run the mapping launch file:
 ```shell
-ros2 launch stack_master mapping_launch.xml map_name:=<map name of choice>
+ros2 launch stack_master mapping_launch.xml map:=<map name of choice>
 ```
   - `<map name of choice>` can be any name with no white space. Conventionally we use the location name (eg, 'hangar', 'ETZ', 'icra') followed by the day of the month followed by an incremental version number. For instance, `hangar_12_v0`. You can also omit this argument. Then a map called `latest` is created. If there already is such a map it is copied to `backup`.
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). If you have exported a `.env` file during the build process this is read from the env variables and does not have to be set.
@@ -33,18 +33,18 @@ If you have a display connected (the noVNC container provides one, see [GUI Forw
 After mapping we can run the global planner. Before you can check the saved png and edit it with your favorite image editing software. This allows you to remove mapping artefacts or add new virtual chicanes to the map.
 Then you can run the global planner:
 ```shell
-ros2 launch stack_master planner_launch.xml map_name:=<map name of choice>
+ros2 launch stack_master planner_launch.xml map:=<map name of choice>
 ```
- - `<map_name_of_choice` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
+ - `<map name of choice>` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
 
 A GUI will popup showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
 Be careful as once a sector is chosen it cannot be further subdivided. 
 
 ### Base System
 ```shell
-ros2 launch stack_master base_system_launch.xml map_name:=<name of mapped track> sim:=<true/false> racecar_version:=<NUCX used>
+ros2 launch stack_master base_system_launch.xml map:=<name of mapped track> sim:=<true/false> racecar_version:=<NUCX used>
 ```
-  - `<name of mapped track>` is the name of the track you want to run on. It must belong to the list of maps available in the `stack_master/maps` folder or be omitted. Then the map called `latest` is used. 
+  - `<name of mapped track>` is the name of the track you want to run on. It must belong to the list of maps available in the `$MAPS_DIR` folder or be omitted. Then the map called `latest` is used. 
   - `<true/false>` is a boolean value that indicates if you want to run the simulation or the real car. 
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). You can also omit this if the `.env` file was created.
 
@@ -78,7 +78,7 @@ It is possible to add a steerable opponent to the simulation by changing the fol
 ```
 and then launching the the simulator normally, eg:
 ```shell
-ros2 launch stack_master base_system_launch.xml map_name:=glc_ot_ez sim:=true
+ros2 launch stack_master base_system_launch.xml map:=glc_ot_ez sim:=true
 ```
 
 Then, using the `sim_opp` flag, time trials can be rerouted to control the opponent:

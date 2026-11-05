@@ -11,8 +11,8 @@ The Global Planner package is a ROS2 package designed to generate a global traje
  - `filter_kernel_size`: The size of the kernel for the morphological filtering.
  - `show_plots`: Show additional plots for debugging during generation of the global trajectory.
  - `map_editor`: `True` if the map editor is used.
- - `map_name`: Sets the name of the map.
- - `create_map`: Create a map that can be used in the simulator and save a YAML file and a PNG of the map in the directory `stack_master/maps/map_name`.
+ - `map_path`: Sets the directory of the map (`$MAPS_DIR/<map>`).
+ - `create_map`: Create a map that can be used in the simulator and save a YAML file and a PNG of the map in the directory `$MAPS_DIR/<map>`.
  - `reverse_mapping`: Generate a global trajectory in the reverse direction.
  - `required_laps`: Number of laps required before the generation of the global trajectory can be started.
 

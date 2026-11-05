@@ -13,6 +13,12 @@ rosdep update
 # python-transforms3d-pip was removed from rosdistro (transforms3d is installed via pip)
 rosdep install --from-paths /ws/src --ignore-src -y --skip-keys "python-transforms3d-pip"
 
+# Copy the sample maps into MAPS_DIR, keeping any map that is already there
+for map in /ws/src/race_stack/sample_maps/*/; do
+	name=$(basename "$map")
+	[ -e "${MAPS_DIR:?MAPS_DIR is not set}/$name" ] || cp -r "$map" "$MAPS_DIR/$name"
+done
+
 # Apply Joystick patch
 sudo chmod 666 /dev/input/js0 2>/dev/null || true
 sudo chmod 666 /dev/input/event* 2>/dev/null || true

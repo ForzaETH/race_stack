@@ -4,6 +4,7 @@ import termios
 import tty
 import os
 import shutil
+from pathlib import Path
 
 import yaml
 import cv2
@@ -22,8 +23,6 @@ from nav_msgs.msg import OccupancyGrid
 from cartographer_ros_msgs.srv import FinishTrajectory, WriteState
 from tf_transformations import euler_from_quaternion
 
-from .global_planner_utils import get_data_path
-
 
 
 class MappingNode(Node):
@@ -32,8 +31,8 @@ class MappingNode(Node):
     def __init__(self):
         super().__init__('mapping_node', allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
-        self.map_name = self.get_parameter('map_name').value
-        self.map_dir = get_data_path('maps/' + self.map_name)
+        self.map_dir = Path(self.get_parameter('map_path').value)
+        self.map_name = self.map_dir.name
         self.rate = self.get_parameter('rate').value
         self.map_occupancy_grid_threshold = self.get_parameter('occupancy_grid_threshold').value
         self.filter_kernel_size = self.get_parameter('filter_kernel_size').value
@@ -171,7 +170,7 @@ class MappingNode(Node):
                 "saving the map with initial_pose (0, 0, 0).")
             self.initial_position = (0.0, 0.0, 0.0)
 
-        _check_default_map(self.map_name, self.map_dir, get_data_path('maps/backup'), self.get_logger().warn)
+        _check_default_map(self.map_name, self.map_dir, self.map_dir.parent / 'backup', self.get_logger().warn)
         os.makedirs(self.map_dir)
  
         self.get_logger().info(f'Successfully created the folder {self.map_dir}')
@@ -237,7 +236,7 @@ class MappingNode(Node):
         self._tty.close()
         super().destroy_node()
 
-def _check_default_map(map_name: str, map_dir: str, backup_dir: str, logwarn) -> None:
+def _check_default_map(map_name: str, map_dir: Path, backup_dir: Path, logwarn) -> None:
     if map_name == 'latest':
         if map_dir.exists():
             if backup_dir.exists():
