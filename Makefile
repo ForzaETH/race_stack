@@ -28,7 +28,7 @@ help:
 	@echo "Usage: make setup"
 	@echo "Prepares the host folders and environment variables for the VS Code DevContainer setup."
 	@echo "       make images"
-	@echo "Builds the images, falling back to the existing ones if that fails; VS Code runs this on open and rebuild."
+	@echo "Builds the images, falling back to the existing ones if that fails, and starts the shared services; VS Code runs this on open and rebuild."
 	@echo "       make launch"
 	@echo "Starts the containers without VS Code and opens a shell (runs the post-create setup on first start)."
 	@echo "       make x11"
@@ -66,6 +66,8 @@ images:
 	@$(BUILD_STACK) || { docker image inspect $(STACK_IMAGE) >/dev/null 2>&1 \
 		&& echo "WARNING: image build failed (no internet?), using the existing $(STACK_IMAGE)"; }
 	@docker image inspect $(NOVNC_IMAGE) >/dev/null 2>&1 || $(BUILD_NOVNC)
+	@# One per machine, shared by all users: started if needed, never replaced
+	@docker compose -p race_stack_shared up -d --no-recreate zenoh_router foxglove_bridge novnc
 
 launch: x11-refresh
 	@[ -f .env ] || { echo "No .env found, run 'make setup' first."; exit 1; }

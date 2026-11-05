@@ -10,6 +10,9 @@
         "docker-compose.local.yaml"
     ],
     "service": "race_stack",
+    "runServices": [
+        "race_stack"
+    ],
     "forwardPorts": [
         20501
     ],
