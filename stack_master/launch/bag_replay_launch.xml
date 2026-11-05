@@ -7,7 +7,7 @@
          Headless version with plots and metrics: state_estimation/eval/run_eval.py -->
     <arg name="bag" description="Path to the bag directory (recorded with ros2 bag record -a)" />
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'NUCx' the bag was recorded on" />
-    <arg name="map" default="latest" description="Map name in stack_master/maps (localization mode)" />
+    <arg name="map" default="latest" description="Map at $MAPS_DIR/map (localization mode)" />
     <arg name="mapping" default="False" description="True: cartographer mapping instead of localization" />
     <arg name="run_vio" default="$(env USE_VIO false)" description="True: run Basalt on the bagged camera images. False: use the bagged /basalt/odom" />
     <arg name="viz_flow" default="False" />
