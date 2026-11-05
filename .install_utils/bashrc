@@ -12,3 +12,5 @@ export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u) && mkdir -p -m 0700 $XDG_RUNTIME_DI
 # Git branch in the prompt
 source /usr/lib/git-core/git-sh-prompt
 PS1="\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$(__git_ps1 \" (%s)\")\$ "
+
+alias scripz='cd /ws/src/race_stack/stack_master/scripts'
