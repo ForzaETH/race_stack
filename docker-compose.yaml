@@ -1,4 +1,5 @@
-name: race_stack
+# Per user, so one user's up cannot replace another user's running containers
+name: race_stack_${HOST_UID:-1000}
 
 services:
   race_stack:
