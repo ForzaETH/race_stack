@@ -7,7 +7,6 @@ import yaml
 import cv2
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from skimage.morphology import skeletonize
 
@@ -106,6 +105,10 @@ class GlobalPlannerNode(Node):
         else:
             self.initial_position = map_info['initial_pose']
         self.skeleton = skeleton
+        if matplotlib.get_backend().lower() == 'agg':
+            self.get_logger().info("No display, skipping the map and optimizer plots.")
+            self.show_plots = False
+            return
         try:
             f, (ax0, ax1) = plt.subplots(2, 1)
             f.suptitle(f"Map [{self.map_name}]: Filtered map versus morphological skeleton")
@@ -216,7 +219,7 @@ class GlobalPlannerNode(Node):
         try:
             global_trajectory_iqp, bound_r_iqp, bound_l_iqp, est_t_iqp = trajectory_optimizer(
                 input_path=self.input_path, track_name=iqp_centerline_path, curv_opt_type='mincurv_iqp', safety_width=self.safety_width, plot=(
-                    self.show_plots and not self.map_editor_mode))
+                    self.show_plots))
         except RuntimeError as e:
             self.get_logger().warn(f"Error during iterative minimum curvature optimization, error: {e}")
             self.get_logger().info('Try again later!')
@@ -278,7 +281,7 @@ class GlobalPlannerNode(Node):
                                                             track_name=iqp_centerline_path,
                                                             curv_opt_type='mincurv_iqp',
                                                             safety_width=self.safety_width_sp,
-                                                            plot=(self.show_plots and not self.map_editor_mode))
+                                                            plot=(self.show_plots))
 
         # use new iqp path as centerline
         new_cent_with_dist = add_dist_to_cent(centerline_smooth=global_trajectory_iqp_ot[:, 1:3],
@@ -297,7 +300,7 @@ class GlobalPlannerNode(Node):
         # is a bit faster but cuts corner a bit more
         global_trajectory_sp, bound_r_sp, bound_l_sp, est_t_sp = trajectory_optimizer(
             input_path=self.input_path, track_name=sp_centerline_path, curv_opt_type='shortest_path', safety_width=self.safety_width_sp, plot=(
-                self.show_plots and not self.map_editor_mode))
+                self.show_plots))
 
         self.est_lap_time = Float32()  # variable which will be published and used in l1_param_optimizer
         self.est_lap_time.data = est_t_sp
