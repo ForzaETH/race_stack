@@ -20,6 +20,13 @@
   <arg name="opp_speed_limit" default="0.0" />
   <arg name="flat_speed" default="0.0" />
   <arg name="time_scale" default="1.0" />
+  <arg name="ego_n_steps" default="15" />
+  <arg name="opp_n_steps" default="15" />
+  <arg name="ego_alpha" default="1.0" />
+  <arg name="opp_alpha" default="1.0" />
+  <arg name="ego_belief" default="1.0" />
+  <arg name="opp_belief" default="1.0" />
+
 
 
   <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
@@ -65,6 +72,10 @@
     <arg name="speed_limit" value="$(var ego_speed_limit)" />
     <arg name="rival_speed_limit" value="$(var opp_speed_limit)" />
     <arg name="time_scale" value="$(var time_scale)" />
+    <arg name="n_steps" value="$(var ego_n_steps)" />
+    <arg name="alpha" value="$(var ego_alpha)" />
+    <arg name="belief" value="$(var ego_belief)" />
+
 
 
 
@@ -83,6 +94,10 @@
     <arg name="speed_limit" value="$(var opp_speed_limit)" />
     <arg name="rival_speed_limit" value="$(var ego_speed_limit)" />
     <arg name="time_scale" value="$(var time_scale)" />
+    <arg name="n_steps" value="$(var opp_n_steps)" />
+    <arg name="alpha" value="$(var opp_alpha)" />
+    <arg name="belief" value="$(var opp_belief)" />
+
 
   </include>
 </launch>

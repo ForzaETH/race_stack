@@ -20,8 +20,27 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]                     # race_stack/
-PLANNERS = {"spliner": ("spliner", 4), "gb": ("gb", 4), "mpc": ("mpc", 4),
-            "ibr1": ("ibr", 1), "ibr4": ("ibr", 4)}     # name: (planner, game iterations)
+def variants(cfg):
+    """Every planner the batch uses, by name. 'ibr' is the base; each other IBR differs
+    from it in exactly one setting. gb, spliner and MPC get the base values, which they
+    ignore apart from MPC's horizon, so MPC stays at N=15 as in the first test."""
+    base = cfg["ibr_base"]
+    out = {name: dict(base, planner=name) for name in ("spliner", "gb", "mpc")}
+    out["ibr"] = dict(base, planner="ibr")
+    for key, levels in cfg["ibr_sweep"].items():
+        for level in levels:
+            out[f"ibr_{key}{level}"] = dict(base, planner="ibr", **{key: level})
+    return out
+
+
+def pairings(cfg, planners):
+    pairs = [tuple(p) for p in cfg["controls"]]
+    for name in planners:
+        if name.startswith("ibr"):
+            pairs += [(name, d) for d in cfg["ibr_attacks"]]
+            pairs += [(a, name) for a in cfg["ibr_defends"]]
+    return list(dict.fromkeys(pairs))      # drops the second copy of ibr vs ibr, keeps the order
+
 MAX_TRIES = 3
 STOP_GRACE = 8.0   # [s] time a launch gets to exit after SIGINT
 STALL = 5.0        # [s] a started race whose log stops growing has lost its sim
@@ -37,31 +56,34 @@ def raceline_length(name):
         return json.load(f)["global_traj_wpnts_iqp"]["wpnts"][-1]["s_m"]
 
 
+
+
 def list_races(cfg, pilot):
-    """Every race of the batch. The spawns are the same for each pairing, so pairings can be
-    compared race by race. Attackers run in the order listed, so the last one is what gets cut
-    if time runs out."""
+    """Every race of the batch, the same spawns for each pairing so they compare race by race."""
+    planners = variants(cfg)
     races = []
-    for attacker in cfg["attackers"]:
+    for attacker, defender in pairings(cfg, planners):
         for name in cfg["pilot_maps"] if pilot else cfg["maps"]:
             L = raceline_length(name)
             spots = [i * L / cfg["n_positions"] for i in range(cfg["n_positions"])]
             spots = spots[::cfg["every"]][:cfg["use_positions"]]
             spawns = [(k, s, gap) for k, s in enumerate(spots) for gap in cfg["gaps_s"]]
             if pilot:
-                spawns = spawns[::10]             # three spots, one of each gap
-            for defender in cfg["defenders"]:
-                for k, s, gap in spawns:
-                    races.append(dict(map=name, attacker=attacker, defender=defender, spot=k,
-                                      s=s, gap_s=gap, gap_m=gap * cfg["defender_speed"]))
+                spawns = spawns[::10]             # spot 0 gap 1 and spot 3 gap 2
+            for k, s, gap in spawns:
+                races.append(dict(map=name, attacker=attacker, defender=defender, spot=k,
+                                  s=s, gap_s=gap, gap_m=gap * cfg["defender_speed"],
+                                  attacker_cfg=planners[attacker],
+                                  defender_cfg=planners[defender]))
     return races
 
-
 def launch_args(race, cfg, out):
-    ego, ego_n = PLANNERS[race["attacker"]]
-    opp, opp_n = PLANNERS[race["defender"]]
-    return [f"map_name:={race['map']}", f"ego_planner:={ego}", f"opp_planner:={opp}",
-            f"ego_n_game_iterations:={ego_n}", f"opp_n_game_iterations:={opp_n}",
+    ego, opp = race["attacker_cfg"], race["defender_cfg"]
+    return [f"map_name:={race['map']}", f"ego_planner:={ego['planner']}", f"opp_planner:={opp['planner']}",
+            f"ego_n_game_iterations:={ego['iters']}", f"opp_n_game_iterations:={opp['iters']}",
+            f"ego_n_steps:={ego['n_steps']}", f"opp_n_steps:={opp['n_steps']}",
+            f"ego_alpha:={float(ego['alpha'])}", f"opp_alpha:={float(opp['alpha'])}",
+            f"ego_belief:={float(ego['belief'])}", f"opp_belief:={float(opp['belief'])}",
             "ego_speed_scale:=1.0", "opp_speed_scale:=1.0",
             f"ego_speed_limit:={cfg['attacker_speed']}", f"opp_speed_limit:={cfg['defender_speed']}",
             f"flat_speed:={max(cfg['attacker_speed'], cfg['defender_speed'])}",
@@ -161,7 +183,7 @@ def main():
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
-    folder = "pilot" if args.pilot else Path(args.config).stem
+    folder = Path(args.config).stem + ("_pilot" if args.pilot else "")
     results = ROOT / "bench_results" / folder
     races = list_races(cfg, args.pilot)
 

@@ -1,0 +1,20 @@
+# IBR sweep: one setting at a time around the base, 69 pairings x 4 maps x 12 spawns = 3,312 races
+maps: [spa, baku, glc_ot_ez, GLC_smile_small]
+pilot_maps: [spa, glc_ot_ez]
+attacker_speed: 2.4
+defender_speed: 2.0
+n_positions: 33
+every: 8                # positions 0, 8, 16, 24...
+use_positions: 4        # ...so 4 positions x 3 gaps = 12 spawns per map
+gaps_s: [1, 2, 3]
+t_max: 30
+time_scale: 0.25        # 400 ms per tick; N=25 with 4 iterations measured p95 288 ms
+ibr_base: {n_steps: 15, alpha: 1.0, belief: 1.0, iters: 2}
+ibr_sweep:              # runs in this order, so if time runs out the last sweep is cut
+  belief: [0.7, 0.85, 1.15, 1.3]
+  n_steps: [8, 25]
+  iters: [1, 4]
+  alpha: [0.0, 3.0]
+ibr_attacks: [gb, mpc, ibr]       # defenders each IBR variant attacks
+ibr_defends: [spliner, mpc, ibr]  # attackers each IBR variant defends against
+controls: [[spliner, gb], [spliner, mpc], [mpc, gb], [mpc, mpc]]

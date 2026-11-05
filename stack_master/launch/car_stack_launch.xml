@@ -12,6 +12,11 @@
   <arg name="speed_limit" default="0.0" />
   <arg name="rival_speed_limit" default="0.0" />
   <arg name="time_scale" default="1.0" />
+  <arg name="n_steps" default="15" />
+  <arg name="alpha" default="1.0" />
+  <arg name="belief" default="1.0" />
+
+
 
 
 
@@ -75,8 +80,12 @@
         <param name="speed_scale" value="$(var speed_scale)" />
         <param name="opp_speed_scale" value="$(var rival_speed_scale)" />
         <param name="speed_limit" value="$(var speed_limit)" />
-        <param name="rival_speed_limit" value="$(var rival_speed_limit)" />
+        <param name="rival_speed_limit" value="$(eval '$(var rival_speed_limit) * $(var belief)')" />
         <param name="naive_mpc" value="$(eval '\'$(var planner)\' == \'mpc\'')" />
+        <param name="n_steps" value="$(var n_steps)" />
+        <param name="alpha" value="$(var alpha)" />
+        <param name="alpha_opp" value="$(var alpha)" />
+
 
 
       </node>
