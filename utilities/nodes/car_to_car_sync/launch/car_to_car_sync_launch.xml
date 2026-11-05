@@ -5,11 +5,11 @@
   <arg name="size" default="0.5" description="opponent obstacle size [m]" />
   <arg name="obstacles_topic" default="/perception/obstacles" description="set to /perception/ground_truth to run alongside perception" />
 
-  <!-- Only the bridge connects to the opponent: its session peers with both the local and the opponent router -->
+  <!-- Only the bridge connects to the opponent, as a client of the opponent router -->
   <node pkg="car_to_car_sync" exec="domain_bridge" name="domain_bridge" output="screen">
-    <env name="ZENOH_CONFIG_OVERRIDE" value='connect/endpoints=["tcp/localhost:7447","tcp/$(var opp_ip):7447"]' />
     <param from="$(find-pkg-share car_to_car_sync)/config/topics.yaml" />
     <param name="opp_domain" value="$(var opp_domain)" />
+    <param name="opp_ip" value="$(var opp_ip)"/>
   </node>
 
   <node pkg="car_to_car_sync" exec="opp_gt_publisher" name="opp_gt_publisher" output="screen" if="$(var gt)">
