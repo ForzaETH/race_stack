@@ -1,5 +1,4 @@
 
-# --- race_stack ---
 # Source ROS, the workspace and basalt (separate workspace, only built with USE_VIO=true)
 source /opt/ros/$ROS_DISTRO/setup.bash
 [ -f /ws/install/setup.bash ] && source /ws/install/setup.bash
@@ -13,4 +12,5 @@ export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u) && mkdir -p -m 0700 $XDG_RUNTIME_DI
 source /usr/lib/git-core/git-sh-prompt
 PS1="\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$(__git_ps1 \" (%s)\")\$ "
 
+# Aliases for shortcuts
 alias scripz='cd /ws/src/race_stack/stack_master/scripts'

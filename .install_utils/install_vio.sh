@@ -10,8 +10,7 @@ apt-get update
 apt-get install -y librealsense2-utils librealsense2-dev "ros-humble-realsense2-*"
 rm -rf /var/lib/apt/lists/*
 
-# Set up Basalt: build basalt_ros into its own workspace /opt/basalt_ws (symlink install: keep build/),
-# separate from /ws as its Eigen clashes with the race_stack one. Sourced in the bashrc after /ws.
+# Set up Basalt: build basalt_ros into its own workspace /opt/basalt_ws due to an Eigen clash
 apt-get update
 apt-get install -y python3-vcstool libtbb-dev libfmt-dev ros-humble-ament-cmake-clang-format \
     libopencv-dev ros-humble-cv-bridge ros-humble-image-transport
@@ -21,7 +20,6 @@ mkdir -p /opt/basalt_ws/src && cd /opt/basalt_ws
 vcs import --shallow --workers 1 < /tmp/basalt.repos
 BASALT_SRC=src/basalt_wrapper/basalt
 git -C $BASALT_SRC submodule update --init --depth 1 thirdparty/basalt-headers thirdparty/magic_enum
-# basalt-headers pins Eigen on gitlab.com, which often rejects requests; use the GitHub mirror
 git -c url."https://github.com/eigen-mirror/eigen.git".insteadOf="https://gitlab.com/libeigen/eigen.git" \
     -C $BASALT_SRC/thirdparty/basalt-headers submodule update --init --depth 1 thirdparty/eigen thirdparty/Sophus thirdparty/cereal
 

@@ -2,11 +2,8 @@ name: race_stack_${HOST_UID:-1000}
 
 services:
   race_stack:
-    # Built by make images, which VS Code runs on open and rebuild; it falls back to the
-    # existing image without internet, which a build section here could not do
     image: race_stack:humble_${HOST_UID:-1000}
     pull_policy: never
-    # Passing the user allows multiple users per machine
     container_name: forzaeth_devcontainer_${HOST_UID:-1000} 
     hostname: ${RACECAR_VERSION:-SIM}
     extra_hosts:
@@ -21,7 +18,6 @@ services:
     init: true
     stdin_open: true
     tty: true
-    # Named volumes keep the owner they were created with; re-own them to the current UID
     command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; sudo chown $$(id -u):$$(id -g) /ws; exec tail -f /dev/null"
     volumes:
       - /dev:/dev:rw
@@ -31,7 +27,6 @@ services:
       - ./:/ws/src/race_stack:rw
       - ../race_stack_maps:/ws/maps:rw
       - ../race_stack_bags:/ws/bags:rw
-      # The workspace is one volume, so colcon clean can delete build, install and log inside it
       - ws:/ws
     environment:
       - DISPLAY=${DISPLAY:-:501}
@@ -44,7 +39,6 @@ services:
       - BAGS_DIR=/ws/bags
       - RCUTILS_COLORIZED_OUTPUT=1
       - TERM=xterm-256color
-      # Outside the build volume: root also writes here (VS Code passes it to sudo), and colcon clean cannot remove that
       - PYTHONPYCACHEPREFIX=/tmp/pycache
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
       - COLCON_DEFAULTS_FILE=/ws/src/race_stack/.install_utils/colcon_defaults.yaml
