@@ -37,3 +37,9 @@ vcs2l
 
 # Simulator; pin it with the commit
 f110_gym @ git+https://github.com/ForzaETH/f1tenth_gym@09f3686e9c50b44a3d05ab8f41ec033049c787f0
+
+
+# State estimation evaluation (state_estimation/eval)
+rosbags>=0.10.0
+evo==1.21.0
+eth-colors-pbl

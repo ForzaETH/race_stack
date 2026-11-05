@@ -20,7 +20,7 @@ Replay the bag through the stack headlessly and get plots and metrics (see `eval
 ```
 USE_VIO=true python3 state_estimation/eval/run_eval.py bags/<name> --gt-bag bags/<name>_gt --map <map>
 ```
-To watch a replay in RViz instead: `ros2 launch stack_master bag_replay_launch.xml bag:=<abs path> map_name:=<map>`
+To watch a replay in RViz instead: `ros2 launch stack_master bag_replay_launch.xml bag:=<abs path> map:=<map>`
 (same recomputation, args `run_vio`, `vesc_odom_from_bag`, `static_tf_from_bag`, `mapping`, `rate`, `start_offset`).
 
 ### Tuning experiments

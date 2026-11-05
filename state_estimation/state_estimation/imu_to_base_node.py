@@ -97,7 +97,6 @@ class ImuToBase(Node):
                 transformed = R @ C @ R.T
             setattr(out, name, transformed.ravel().tolist())
 
-
         self.pub.publish(out)
 
 
