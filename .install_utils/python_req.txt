@@ -15,6 +15,7 @@ pydantic
 # State estimation evaluation (state_estimation/eval)
 rosbags
 evo==1.21.0
+eth-colors-pbl
 
 # Gym requirements
 gymnasium==0.29.1

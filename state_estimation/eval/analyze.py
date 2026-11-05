@@ -18,7 +18,18 @@ import math
 from pathlib import Path
 
 import matplotlib
+try:
+    from eth_colors_pbl import ETHColors as _ETH
+    _eth = {k: _ETH[k].value for k in ('ETH_BLUE', 'ETH_PETROL', 'ETH_GREEN', 'ETH_BRONZE', 'ETH_RED', 'ETH_PURPLE', 'ETH_GRAY', 'ETH_GRAY_DARK')}
+except ImportError:   # pip install eth-colors-pbl; same values so the plots look the same without it
+    _eth = {'ETH_BLUE': '#215caf', 'ETH_PETROL': '#007894', 'ETH_GREEN': '#627313', 'ETH_BRONZE': '#8e6713',
+            'ETH_RED': '#b7352d', 'ETH_PURPLE': '#a7117a', 'ETH_GRAY': '#6f6f6f', 'ETH_GRAY_DARK': '#575757'}
 matplotlib.use('Agg')
+# one colour per source in every plot (ETH palette)
+COL = {'gt': _eth['ETH_GREEN'], 'carto': _eth['ETH_GRAY_DARK'], 'ekf': _eth['ETH_RED'], 'basalt': _eth['ETH_PETROL'],
+       'vesc': _eth['ETH_BLUE'], 'imu': _eth['ETH_BRONZE'], 'alt': _eth['ETH_PURPLE']}
+matplotlib.rcParams['axes.prop_cycle'] = matplotlib.cycler(
+    color=[_eth[k] for k in ('ETH_BLUE', 'ETH_RED', 'ETH_PETROL', 'ETH_GREEN', 'ETH_BRONZE', 'ETH_PURPLE', 'ETH_GRAY')])
 import matplotlib.pyplot as plt
 import numpy as np
 from rosbags.rosbag2 import Reader
@@ -37,6 +48,8 @@ RPE_DELTA_S = 1.0
 GT_MAX_DT = 0.02
 MOVE_SPEED = 0.5      # m/s, first time the car is faster than this = start of motion
 WARMUP_S = 3.0        # s after start of motion before the evaluation window begins (cartographer init)
+VEL_WINDOW_S = 0.25   # s, Savitzky-Golay window of the reference velocities (0.15 left 0.045 m/s jitter on Vicon vy, 0.25 halves it)
+YAW_WINDOW_S = 0.3    # s, smoothing of the reference heading before rotating velocities into the body frame
 INIT_S = 10.0         # s after the first map->odom TF in which a jump counts as initialisation, not as a loss
 EXPECTED = ('carto', 'ekf', 'basalt', 'vesc', 'imu', 'tf')
 RED = '\033[1;91m'
@@ -148,18 +161,22 @@ def wrap(a):
     return (a + np.pi) % (2 * np.pi) - np.pi
 
 
-def body_velocities(tr, hz=100.0, window_s=0.15):
-    """vx, vy, vyaw in body frame by differentiating a pose trajectory (resampled, Savitzky-Golay)."""
+def body_velocities(tr, hz=100.0, window_s=VEL_WINDOW_S, yaw_window_s=YAW_WINDOW_S):
+    """vx, vy, vyaw in body frame by differentiating a pose trajectory (resampled, Savitzky-Golay).
+    The heading used to rotate into the body frame is smoothed too: its jitter (~0.4 deg for Vicon) leaks
+    v * sin(jitter) of the speed into vy, 0.03 m/s per sample at 4 m/s."""
     t = np.arange(tr['t'][0], tr['t'][-1], 1.0 / hz)
     if len(t) < 10:
         return None
     x = np.interp(t, tr['t'], tr['x'])
     y = np.interp(t, tr['t'], tr['y'])
-    yaw = np.interp(t, tr['t'], np.unwrap(tr['yaw']))
+    yaw_raw = np.interp(t, tr['t'], np.unwrap(tr['yaw']))
     win = max(5, int(window_s * hz) | 1)
+    wy = max(5, int(yaw_window_s * hz) | 1)
+    yaw = savgol_filter(yaw_raw, wy, 3)
     dx = savgol_filter(x, win, 3, deriv=1, delta=1.0 / hz)
     dy = savgol_filter(y, win, 3, deriv=1, delta=1.0 / hz)
-    vyaw = savgol_filter(yaw, win, 3, deriv=1, delta=1.0 / hz)
+    vyaw = savgol_filter(yaw_raw, wy, 3, deriv=1, delta=1.0 / hz)
     c, s = np.cos(yaw), np.sin(yaw)
     out = {'t': t, 'vx': c * dx + s * dy, 'vy': -s * dx + c * dy, 'vyaw': vyaw, 'yaw': wrap(yaw), 'src': 'diff.'}
     nan_gaps(out, tr['t'], win)
@@ -199,14 +216,14 @@ def twists(msgs):
     return {k: np.asarray(v) for k, v in d.items()}
 
 
-def twist_body(tw, tr, hz=100.0, window_s=0.15):
+def twist_body(tw, tr, hz=100.0, window_s=VEL_WINDOW_S, yaw_window_s=YAW_WINDOW_S):
     """Published (world-frame) GT twist rotated into the body frame with the GT yaw, resampled and smoothed
     like body_velocities() so the two references are comparable.
     The Vicon bridge stamps a backward difference with the end of its interval, so the twist is valid half a
     sample earlier; at 2.4 rad/s those ~8 ms are 1.1 deg of yaw, i.e. 0.07 m/s leaking from vx into vy.
     The yaw rate is taken from the differentiated pose: the bridge's angular.z is clipped at +-pi and reads
     ~20 % low above 2.8 rad/s (glc_big_bangbang, glc_oval), the pose derivative tracks the gyro."""
-    pv = body_velocities(tr, hz, window_s)
+    pv = body_velocities(tr, hz, window_s, yaw_window_s)
     dt = np.diff(tw['t'])
     bad = np.r_[False, dt > 1.5 * np.median(dt)]   # the sample after a tracking gap differences across the gap
     tw = dict(tw, t=tw['t'] - 0.5 * np.median(dt), vx=np.where(bad, np.nan, tw['vx']), vy=np.where(bad, np.nan, tw['vy']))
@@ -216,7 +233,7 @@ def twist_body(tw, tr, hz=100.0, window_s=0.15):
     win = max(5, int(window_s * hz) | 1)
     vxw = savgol_filter(np.interp(t, tw['t'], tw['vx']), win, 3)
     vyw = savgol_filter(np.interp(t, tw['t'], tw['vy']), win, 3)
-    yaw = np.interp(t, tr['t'], np.unwrap(tr['yaw']))
+    yaw = savgol_filter(np.interp(t, tr['t'], np.unwrap(tr['yaw'])), max(5, int(yaw_window_s * hz) | 1), 3)
     c, s = np.cos(yaw), np.sin(yaw)
     out = {'t': t, 'vx': c * vxw + s * vyw, 'vy': -s * vxw + c * vyw, 'vyaw': np.interp(t, pv['t'], pv['vyaw']),
            'yaw': wrap(yaw), 'src': 'twist'}
@@ -341,57 +358,96 @@ def evo_ape(ref, est, max_dt, align=True):
 # plots
 # ----------------------------------------------------------------------------
 def finish(fig, P, title, fname):
-    fig.suptitle(f'{title}  –  {P["label"]}', fontsize=14, fontweight='bold')
-    fig.tight_layout(); fig.savefig(P['plots'] / fname, dpi=120); plt.close(fig)
+    fig.suptitle(title, fontsize=14, fontweight='bold')
+    fig.tight_layout(); fig.savefig((P['plots'] / fname).with_suffix('.pdf')); plt.close(fig)   # vector, viewable in VS Code with a PDF extension
 
 
 def plot_trajectories(P, carto, ekf, basalt, gt_ape, gt=None):
     fig, ax = plt.subplots(1, 3 if gt_ape else 2, figsize=(18, 6))
     if gt_ape:
         # ground truth frame: GT in green, cartographer rigidly aligned onto it (Umeyama, no scale)
-        ax[0].plot(gt['x'], gt['y'], lw=1.2, color='g', label='ground truth')
-        ax[0].plot(gt_ape['aligned']['x'], gt_ape['aligned']['y'], lw=0.8, label='cartographer, aligned to GT')
+        ax[0].plot(gt['x'], gt['y'], lw=1.2, color=COL['gt'], label='ground truth')
+        ax[0].plot(gt_ape['aligned']['x'], gt_ape['aligned']['y'], lw=0.8, color=COL['carto'], label='cartographer, aligned to GT')
         ax[0].set_title('Ground truth frame')
     else:
-        ax[0].plot(carto['x'], carto['y'], lw=0.8, label='cartographer map->base_link')
+        ax[0].plot(carto['x'], carto['y'], lw=0.8, color=COL['carto'], label='cartographer map->base_link')
         ax[0].set_title('Cartographer, map frame')
     ax[0].set_xlabel('x [m]'); ax[0].set_ylabel('y [m]'); ax[0].axis('equal'); ax[0].legend()
     if ekf:
-        ax[1].plot(ekf['x'], ekf['y'], lw=0.8, label='EKF /state_estimation/odom')
+        ax[1].plot(ekf['x'], ekf['y'], lw=0.8, color=COL['ekf'], label='EKF /state_estimation/odom')
     if basalt:
-        ax[1].plot(basalt['x'], basalt['y'], lw=0.8, label='/basalt/odom')
+        ax[1].plot(basalt['x'], basalt['y'], lw=0.8, color=COL['basalt'], label='/basalt/odom')
     ax[1].set_title('Odometry sources, odom frame'); ax[1].set_xlabel('x [m]'); ax[1].set_ylabel('y [m]'); ax[1].axis('equal'); ax[1].legend()
     if gt_ape:
-        ax[2].plot(gt_ape['trans_m']['t'] - P['t0'], gt_ape['trans_m']['err'])
+        ax[2].plot(gt_ape['trans_m']['t'] - P['t0'], gt_ape['trans_m']['err'], color=COL['carto'])
         ax[2].set_title(f'Cartographer APE vs ground truth, rmse {gt_ape["trans_m"]["stats"]["rmse"]:.3f} m')
         ax[2].set_xlabel('t [s]'); ax[2].set_ylabel('error [m]')
     finish(fig, P, 'Trajectories', 'trajectories.png')
 
 
-def plot_global(P, map_odom, carto, carto_jump):
-    fig, ax = plt.subplots(4, 1, figsize=(14, 12), sharex=True)
+def lap_bounds(ref, r=0.5):
+    """Start times of the laps of a closed track: every return to within r of the first position of the window after
+    having been more than 3 r away. The window starts wherever the car was, so "lap" = that point to that point."""
+    d = np.hypot(ref['x'] - ref['x'][0], ref['y'] - ref['y'][0])
+    bounds, away = [ref['t'][0]], False
+    for i in range(len(d)):
+        if d[i] > 3 * r:
+            away = True
+        elif away and d[i] < r:
+            bounds.append(ref['t'][i]); away = False
+    return bounds + [ref['t'][-1]]
+
+
+def window(d, t0, t1):
+    keep = (d['t'] >= t0) & (d['t'] <= t1)
+    return {k: v[keep] for k, v in d.items() if isinstance(v, np.ndarray) and len(v) == len(keep)}
+
+
+def plot_laps(P, ref, ref_name, sources):
+    """plots/laps/trajectory_<i>.pdf: one plot per lap, each odometry source aligned (Umeyama, no scale) onto the
+    reference over that lap only, so the per-lap drift of EKF / Basalt is visible. Returns per-lap stats."""
+    bounds = lap_bounds(ref)
+    laps = []
+    (P['plots'] / 'laps').mkdir(exist_ok=True)
+    for i in range(len(bounds) - 1):
+        t0, t1 = bounds[i], bounds[i + 1]
+        if t1 - t0 < 1.0:
+            continue
+        rl = window(ref, t0, t1)
+        fig, ax = plt.subplots(figsize=(9, 8))
+        ax.plot(rl['x'], rl['y'], lw=1.5, color=COL[ref_name], label=ref_name.replace('gt', 'ground truth').replace('carto', 'cartographer'))
+        lap = {'lap': i, 't_start_s': float(t0 - P['t0']), 't_end_s': float(t1 - P['t0'])}
+        for name, d in sources:
+            if d is None:
+                continue
+            dl = window(d, t0, t1)
+            if len(dl['t']) < 10:
+                continue
+            ape = evo_ape(rl, dl, GT_MAX_DT, align=True)
+            lap[f'{name}_ape_m'] = ape['trans_m']['stats']['rmse']
+            ax.plot(ape['aligned']['x'], ape['aligned']['y'], lw=0.9, color=COL[name],
+                    label=f'{name.replace("carto", "cartographer").replace("ekf", "EKF").replace("basalt", "Basalt")}, aligned, APE {ape["trans_m"]["stats"]["rmse"]:.3f} m')
+        ax.set_title(f'Lap {i}: t = {t0 - P["t0"]:.1f} .. {t1 - P["t0"]:.1f} s ({t1 - t0:.1f} s)')
+        ax.set_xlabel('x [m]'); ax.set_ylabel('y [m]'); ax.axis('equal'); ax.legend(loc='upper right')
+        finish(fig, P, 'Trajectory per lap', f'laps/trajectory_{i}.png')
+        laps.append(lap)
+    return laps
+
+
+def plot_global(P, map_odom):
+    fig, ax = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
     t = map_odom['t'] - P['t0']
-    ax[0].plot(t, map_odom['x'], label='x'); ax[0].plot(t, map_odom['y'], label='y')
-    ax[0].set_title('map → odom translation'); ax[0].set_ylabel('[m]'); ax[0].legend()
-    ax[1].plot(t, np.degrees(np.unwrap(map_odom['yaw'])))
-    ax[1].set_title('map → odom yaw'); ax[1].set_ylabel('[deg]')
-    dt = np.diff(map_odom['t'])
-    ok = dt > 1e-4
-    dyaw = np.degrees(np.abs(wrap(np.diff(np.unwrap(map_odom['yaw'])))))[ok] / dt[ok]
-    dp = np.hypot(np.diff(map_odom['x']), np.diff(map_odom['y']))[ok] / dt[ok]
-    ax[2].plot(t[1:][ok], dyaw, lw=0.6, label='|d yaw/dt| [deg/s]')
-    ax[2].plot(t[1:][ok], dp, lw=0.6, label='|d pos/dt| [m/s]')
-    ax[2].set_title('map → odom correction rate (how hard cartographer corrects the EKF)'); ax[2].set_yscale('symlog'); ax[2].legend()
-    ax[3].plot(carto_jump['t'] - P['t0'], carto_jump['pos'], lw=0.6, label='position step - v*dt [m]')
-    ax[3].plot(carto_jump['t'] - P['t0'], np.degrees(carto_jump['yaw']), lw=0.6, label='yaw step - w*dt [deg]')
-    ax[3].set_title('/tracked_pose discontinuities (step minus velocity · dt)'); ax[3].legend(); ax[3].set_xlabel('t [s]')
+    ax[0].plot(t, map_odom['x'], lw=0.8); ax[0].set_title('map → odom x'); ax[0].set_ylabel('[m]')
+    ax[1].plot(t, map_odom['y'], lw=0.8); ax[1].set_title('map → odom y'); ax[1].set_ylabel('[m]')
+    ax[2].plot(t, np.degrees(np.unwrap(map_odom['yaw'])), lw=0.8)
+    ax[2].set_title('map → odom yaw'); ax[2].set_ylabel('[deg]'); ax[2].set_xlabel('t [s]')
     finish(fig, P, 'Global consistency', 'global_consistency.png')
 
 
-def plot_rpe(P, rpe, title, fname):
+def plot_rpe(P, rpe, title, fname, color=COL['ekf']):
     fig, ax = plt.subplots(2, 1, figsize=(14, 7), sharex=True)
     for a, k, lab in ((ax[0], 'trans_m', 'translation [m]'), (ax[1], 'rot_deg', 'rotation [deg]')):
-        a.plot(rpe[k]['t'] - P['t0'], rpe[k]['err'], lw=0.8)
+        a.plot(rpe[k]['t'] - P['t0'], rpe[k]['err'], lw=0.8, color=color)
         s = rpe[k]['stats']
         a.set_ylabel(lab); a.set_title(f'{lab.split(" ")[0].capitalize()}: rmse {s.get("rmse", 0):.3f}, max {s.get("max", 0):.3f}')
     ax[1].set_xlabel('t [s]')
@@ -406,72 +462,54 @@ def plot_velocities(P, ekf, vesc, basalt, imu_d, carto_v, gt_v):
         if d is not None and key in d:
             a.plot(d['t'] - t0, d[key], lw=0.7, label=label, **kw)
 
-    line(ax[0], carto_v, 'vx', 'cartographer (diff.)', color='k', alpha=0.5)
+    line(ax[0], carto_v, 'vx', 'cartographer (diff.)', color=COL['carto'], alpha=0.5)
     gt_lab = 'ground truth (' + (gt_v['src'] if gt_v else '') + ')'
-    line(ax[0], gt_v, 'vx', gt_lab, color='g')
-    line(ax[0], vesc, 'vx', '/odom (VESC)')
-    line(ax[0], basalt, 'vx', '/basalt/odom')
-    line(ax[0], ekf, 'vx', 'EKF')
+    line(ax[0], gt_v, 'vx', gt_lab, color=COL['gt'])
+    line(ax[0], vesc, 'vx', '/odom (VESC)', color=COL['vesc'])
+    line(ax[0], basalt, 'vx', '/basalt/odom', color=COL['basalt'])
+    line(ax[0], ekf, 'vx', 'EKF', color=COL['ekf'])
     ax[0].set_title('Longitudinal velocity'); ax[0].set_ylabel('vx [m/s]'); ax[0].legend(loc='upper right')
-    line(ax[1], carto_v, 'vy', 'cartographer (diff.)', color='k', alpha=0.5)
-    line(ax[1], gt_v, 'vy', gt_lab, color='g')
-    line(ax[1], basalt, 'vy', '/basalt/odom')
-    line(ax[1], ekf, 'vy', 'EKF')
+    line(ax[1], carto_v, 'vy', 'cartographer (diff.)', color=COL['carto'], alpha=0.5)
+    line(ax[1], gt_v, 'vy', gt_lab, color=COL['gt'])
+    line(ax[1], basalt, 'vy', '/basalt/odom', color=COL['basalt'])
+    line(ax[1], ekf, 'vy', 'EKF', color=COL['ekf'])
     ax[1].set_title('Lateral velocity'); ax[1].set_ylabel('vy [m/s]'); ax[1].legend(loc='upper right')
-    line(ax[2], carto_v, 'vyaw', 'cartographer (diff.)', color='k', alpha=0.5)
-    line(ax[2], gt_v, 'vyaw', gt_lab, color='g')
-    line(ax[2], imu_d, 'gz', '/imu gyro z')
-    line(ax[2], basalt, 'vyaw', '/basalt/odom')
-    line(ax[2], ekf, 'vyaw', 'EKF')
+    line(ax[2], carto_v, 'vyaw', 'cartographer (diff.)', color=COL['carto'], alpha=0.5)
+    line(ax[2], gt_v, 'vyaw', gt_lab, color=COL['gt'])
+    line(ax[2], imu_d, 'gz', '/imu gyro z', color=COL['imu'])
+    line(ax[2], basalt, 'vyaw', '/basalt/odom', color=COL['basalt'])
+    line(ax[2], ekf, 'vyaw', 'EKF', color=COL['ekf'])
     ax[2].set_title('Yaw rate'); ax[2].set_ylabel('[rad/s]'); ax[2].legend(loc='upper right'); ax[2].set_xlabel('t [s]')
     finish(fig, P, 'Velocities: inputs, EKF and reference', 'velocities.png')
 
 
-def plot_yaw(P, carto, ekf, basalt, imu_d, map_odom, odom_base):
-    fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
+def plot_yaw(P, carto, ekf, basalt, imu_d):
+    fig, ax = plt.subplots(1, 1, figsize=(14, 5))
+    ax = [ax]
     t0 = P['t0']
     cy = np.unwrap(carto['yaw'])
-    ax[0].plot(carto['t'] - t0, np.degrees(carto['yaw']), lw=0.8, label='cartographer (map)', color='k')
-    for d, lab in ((ekf, 'EKF (odom)'), (basalt, '/basalt/odom'), (imu_d, '/imu orientation')):
+    ax[0].plot(carto['t'] - t0, np.degrees(carto['yaw']), lw=0.8, label='cartographer (map)', color=COL['carto'])
+    for d, lab, col in ((ekf, 'EKF (odom)', COL['ekf']), (basalt, '/basalt/odom', COL['basalt']), (imu_d, '/imu orientation', COL['imu'])):
         if d is not None:
             # odom-frame yaws start at the cartographer yaw so they are comparable; drift shows as divergence
             y = np.unwrap(d['yaw'])
             y = y - y[0] + np.interp(d['t'][0], carto['t'], cy)   # aligned at the start of the eval window
-            ax[0].plot(d['t'] - t0, np.degrees(wrap(y)), lw=0.8, label=lab + ' (offset removed)')
+            ax[0].plot(d['t'] - t0, np.degrees(wrap(y)), lw=0.8, color=col, label=lab + ' (offset removed)')
     ax[0].set_title('Yaw of all sources (odom-frame yaws aligned to cartographer at the window start)'); ax[0].set_ylabel('[deg]'); ax[0].set_ylim(-185, 185); ax[0].legend(loc='upper right')
-    if ekf is not None and odom_base is not None:
-        # what cartographer looks up (the TF, stamped with transform_time_offset) vs what the EKF estimated:
-        # a constant yaw-rate-proportional residual means the TF stamp does not match its pose
-        ye = interp_to(odom_base['t'], ekf, 'yaw', angular=True)
-        ax[1].plot(odom_base['t'] - t0, np.degrees(wrap(odom_base['yaw'] - ye)), lw=0.8)
-        ax[1].set_ylabel('[deg]')
-        ax[1].set_title('odom → base_link TF minus /state_estimation/odom yaw, at the TF stamps (TF stamp error · yaw rate)')
-    ax[1].set_xlabel('t [s]')
+    ax[0].set_xlabel('t [s]')
     finish(fig, P, 'Yaw', 'yaw.png')
-
-
-def plot_imu(P, imu_d):
-    if imu_d is None:
-        return
-    fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
-    t = imu_d['t'] - P['t0']
-    for k in ('gx', 'gy', 'gz'):
-        ax[0].plot(t, imu_d[k], lw=0.7, label=k)
-    for k in ('ax', 'ay', 'az'):
-        ax[1].plot(t, imu_d[k], lw=0.7, label=k)
-    ax[0].set_title('Angular velocity'); ax[0].set_ylabel('[rad/s]'); ax[0].legend()
-    ax[1].set_title('Linear acceleration'); ax[1].set_ylabel('[m/s²]'); ax[1].legend(); ax[1].set_xlabel('t [s]')
-    finish(fig, P, 'IMU in base_link (/imu)', 'imu.png')
 
 
 def plot_timing(P, series):
     fig, ax = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
     t0 = P['t0']
+    cols = {'carto': COL['carto'], 'ekf': COL['ekf'], 'basalt': COL['basalt'], 'vesc': COL['vesc'], 'imu': COL['imu'],
+            'tf map->odom': COL['alt'], 'tf odom->base': _eth['ETH_GRAY'], 'gt': COL['gt']}
     for lab, d in series.items():
         if d is None or len(d['t']) < 2:
             continue
-        ax[0].plot(d['t'][1:] - t0, np.diff(d['t']) * 1e3, '.', ms=2, label=lab)
-        ax[1].plot(d['t'] - t0, (d['t_recv'] - d['t']) * 1e3, '.', ms=2, label=lab)
+        ax[0].plot(d['t'][1:] - t0, np.diff(d['t']) * 1e3, '.', ms=2, label=lab, color=cols.get(lab))
+        ax[1].plot(d['t'] - t0, (d['t_recv'] - d['t']) * 1e3, '.', ms=2, label=lab, color=cols.get(lab))
     ax[0].set_title('Interval between consecutive header stamps'); ax[0].set_ylabel('[ms]'); ax[0].set_yscale('log'); ax[0].legend(ncol=3, fontsize=8)
     ax[1].set_title('Latency: record time minus header stamp'); ax[1].set_ylabel('[ms]'); ax[1].legend(ncol=3, fontsize=8); ax[1].set_xlabel('t [s]')
     finish(fig, P, 'Timing', 'timing.png')
@@ -576,16 +614,16 @@ def analyze(out_dir, bag=None, gt_topic=None, use_vio=True, gt_bag=None):
             'pos_rate_m_s': stats(np.hypot(np.diff(map_odom['x']), np.diff(map_odom['y']))[ok] / dtm[ok]),
             'yaw_total_drift_deg': float(np.degrees(np.unwrap(map_odom['yaw'])[-1] - map_odom['yaw'][0])),
         }
-        plot_global(P, map_odom, carto, cv)
+        plot_global(P, map_odom)
     gt_ape = gt_v = None
     if gt is not None:
         gt_ape = evo_ape(gt, carto, GT_MAX_DT, align=True)
         M['carto_vs_gt_ape'] = {k: gt_ape[k]['stats'] for k in ('trans_m', 'rot_deg')}
-        plot_rpe(P, gt_ape, 'Cartographer absolute pose error vs ground truth', 'carto_ape_gt.png')
+        plot_rpe(P, gt_ape, 'Cartographer absolute pose error vs ground truth', 'carto_ape_gt.png', color=COL['carto'])
         gt_v = twist_body(gt_twist, gt) if gt_twist is not None else body_velocities(gt)
         if gt_v is not None and gt_v.get('gaps'):
             M['gt_tracking_gaps'] = gt_v['gaps']
-            alert(f'ground truth has {gt_v["gaps"]} tracking gap(s): velocities masked there, check carto_ape_gt.png')
+            alert(f'ground truth has {gt_v["gaps"]} tracking gap(s): velocities masked there, check carto_ape_gt.pdf')
     plot_trajectories(P, carto, ekf, basalt, gt_ape, gt)
     ref_v = gt_v if gt_v is not None else carto_v
     write_csv(P['data'] / 'ref_velocity.csv', {k: ref_v[k] for k in ('t', 'vx', 'vy', 'vyaw')})
@@ -609,7 +647,12 @@ def analyze(out_dir, bag=None, gt_topic=None, use_vio=True, gt_bag=None):
         if gt is not None:
             ape_gt_ekf = evo_ape(gt, ekf, GT_MAX_DT, align=True)
             M['ekf_vs_gt_ape_aligned'] = {k: ape_gt_ekf[k]['stats'] for k in ('trans_m', 'rot_deg')}
-        plot_yaw(P, carto, ekf, basalt, imu_d, map_odom if map_odom is not None else {'t': carto['t'], 'yaw': np.zeros(len(carto['t']))}, odom_base)
+        plot_yaw(P, carto, ekf, basalt, imu_d)
+
+    if gt is not None:
+        M['laps'] = plot_laps(P, gt, 'gt', [('carto', carto), ('ekf', ekf), ('basalt', basalt)])
+    else:
+        M['laps'] = plot_laps(P, carto, 'carto', [('ekf', ekf), ('basalt', basalt)])
 
     # --- inputs -------------------------------------------------------------
     inp = {}
@@ -637,7 +680,6 @@ def analyze(out_dir, bag=None, gt_topic=None, use_vio=True, gt_bag=None):
             inp['imu_standstill_mean'] = {k: float(imu_d[k][still].mean()) for k in ('gx', 'gy', 'gz', 'ax', 'ay', 'az')}
     M['inputs'] = inp
     plot_velocities(P, ekf, vesc, basalt, imu_d, carto_v, gt_v)
-    plot_imu(P, imu_d)
 
     (P['data'] / 'metrics.json').write_text(json.dumps(M, indent=2))
     (out_dir / 'summary.md').write_text(summary(M))
@@ -682,6 +724,8 @@ def summary(M):
         v = M['tf_chain_vs_tracked_pose']
         L.append(f'        TF chain vs tracked_pose rmse: {f(v["pos_m"])} m, {f(v["yaw_deg"], fmt="{:.2f}")} deg')
     I = M['inputs']
+    if M.get('laps'):
+        L.append(f'laps:   {len(M["laps"])} (plots/laps/), EKF APE per lap: ' + ' '.join(f'{l.get("ekf_ape_m", float("nan")):.3f}' for l in M['laps']) + ' m')
     L += ['', 'inputs vs reference, rmse: ' + ', '.join(f'{k[:-7]} {f(v)}' for k, v in I.items() if k.endswith('_vs_ref'))]
     if I.get('time_offset_s'):
         L.append('time offsets (+ = first signal early) [ms]: ' + ', '.join(f'{k} {v*1e3:+.0f}' for k, v in I['time_offset_s'].items()))
@@ -700,3 +744,4 @@ if __name__ == '__main__':
     meta = Path(a.out_dir) / 'config' / 'meta.json'   # defaults of a re-analysis: what the run was made with
     m = json.loads(meta.read_text()) if meta.exists() else {}
     analyze(a.out_dir, a.bag, a.gt_topic or m.get('gt_topic'), m.get('use_vio', m.get('run_vio', True)), a.gt_bag or m.get('gt_bag'))
+

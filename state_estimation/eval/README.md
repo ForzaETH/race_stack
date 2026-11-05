@@ -5,24 +5,23 @@ Basalt) followed by an offline analysis with [evo](https://github.com/MichaelGru
 Everything of one run lands in a timestamped folder, `results/latest` points to the newest.
 
 ```shell
-USE_VIO=true python3 state_estimation/eval/run_eval.py bags/<bag> --gt-bag bags/<gt> --map <map> [--car NUCx] [--name ekf_v2]
+USE_VIO=true python3 state_estimation/eval/run_eval.py bags/<bag> --gt-bag bags/<gt> [--map <map>] [--car NUCx] [--name ekf_v2]
 ```
-Needs `rosbags` and `evo` (in `.install_utils/python_req.txt`, so part of the image; in an older
-container: `pip3 install rosbags evo`).
 
 Defaults: `--map latest`, `--car $RACECAR_VERSION`, `--gt-bag` optional (see Ground truth). `USE_VIO=true` runs Basalt on the
 bagged images, `USE_VIO=false` runs the EKF on VESC + IMU only (the bagged `/basalt/odom` is never used). `/odom` is always
-recomputed by `vesc_to_odom_node` from `/sensors/core` with the workspace `vesc.yaml`, `/tf_static` is played as recorded.
+recomputed by `vesc_to_odom_node` from `/sensors/core` with the workspace `vesc.yaml`, and `/tf_static` is published from
+`static_transforms.yaml` (only the RealSense-internal `camera_*` frames come from the bag), so sensor mounts can be tuned offline.
 Re-run only the analysis of an existing run (e.g. after changing `analyze.py`):
 `python3 state_estimation/eval/analyze.py results/<run>` (GT topic/bag and `USE_VIO` are taken from the run's `config/meta.json`).
 
 ## What it does
 1. `ros2 launch state_estimation state_estimation_launch.xml use_sim_time:=True ...` (the same launch
-   as on the car) + `vesc_to_odom_node`
+   as on the car) + `vesc_to_odom_node` + `static_transforms_launch.xml` (+ `bag_static_tf_node` for the camera tree)
 2. `ros2 bag record --use-sim-time` of the outputs and inputs into `replay/`
 3. `ros2 bag play --topics <raw sensors>` and waits until the bag is done
 4. copies the configs into `config/ekf` (`ekf.yaml`), `config/slam` (`.lua`), `config/vio` (Basalt config,
-   calibration, camera), `config/tf` (`tf_static_from_bag.yaml` dumped from the bag), `config/sensors` (`sensors.yaml`, `imu.yaml`, `vesc.yaml`)
+   calibration, camera), `config/tf` (`static_transforms.yaml` as used, `tf_static_from_bag.yaml` for comparison), `config/sensors` (`sensors.yaml`, `imu.yaml`, `vesc.yaml`)
    plus the git state (`config/git.json`: commit, branch, dirty files)
 5. `analyze.py`: plots, data exports + `metrics.json`, `summary.md`
 
@@ -35,16 +34,18 @@ results/<YYYYmmdd_HHMMSS>_<bag>[_<name>]/
   summary.md                           the numbers, also printed to the console
   config/{ekf,slam,vio,tf,sensors}/    configs the run was made with, config/git.json, config/meta.json (args)
   data/                                carto/ekf/basalt/gt as .tum (evo CLI), all signals as .csv, metrics.json
-  logs/                                launch.log, record.log, vesc_to_odom.log
+  logs/                                launch.log, record.log, vesc_to_odom.log, static_tf.log
   plots/
-    trajectories.png        cartographer in map, EKF + Basalt in odom (+ GT aligned)
-    global_consistency.png  map->odom over time, its correction rate, /tracked_pose discontinuities
-    ekf_rpe.png             EKF relative pose error over 1 s vs cartographer (or GT): local accuracy
-    velocities.png          vx / vy / yaw rate: VESC, Basalt, gyro, EKF, differentiated cartographer (or GT)
-    yaw.png                 yaw of all sources + residual of the TF chain vs /tracked_pose
-    imu.png                 /imu gyro and accel (base_link)
-    timing.png              header stamp intervals and record-time minus header-stamp latency per topic
-    carto_ape_gt.png        (with GT) cartographer absolute pose error
+    trajectories.pdf        cartographer in map, EKF + Basalt in odom (+ GT aligned)
+    global_consistency.pdf  map->odom x, y and yaw over time
+    ekf_rpe.pdf             EKF relative pose error over 1 s vs cartographer (or GT): local accuracy
+    velocities.pdf          vx / vy / yaw rate: VESC, Basalt, gyro, EKF, differentiated cartographer (or GT)
+    yaw.pdf                 yaw of all sources
+    timing.pdf              header stamp intervals and record-time minus header-stamp latency per topic
+    carto_ape_gt.pdf        (with GT) cartographer absolute pose error
+    laps/trajectory_<i>.pdf one plot per lap (return to the window's first position): reference + each odometry source
+                            aligned onto it over that lap only, with the per-lap APE
+
   replay/                              recorded bag of the run
 ```
 
@@ -76,18 +77,11 @@ in metrics.json) are masked in the reference velocities, widened by the smoothin
 and the time offsets are against the GT as well. The GT object origin should sit at base_link (rear axle centre):
 a position offset is removed by the alignment, but it adds yaw_rate x offset to the GT lateral velocity.
 
-## Disk usage
-A run stores roughly 3-5 MB per minute of bag (zstd-compressed `replay/`, `/scan` and `/sensors/imu/raw` are not recorded),
-plus a few MB of plots and CSVs. The driver prints the size of `results/` after each run and warns
-above 1 GB; delete old runs or just their `replay/` folders.
-
-## Caveats
+## Some info
 * All numbers are taken on a window starting `WARMUP_S` (3 s) after the car first moves, and after the last map->odom
   jump (> 0.5 m or > 10 deg) within the first `INIT_S` (10 s) of cartographer: a relocalisation at start-up is
   initialisation, not a loss (`window` in metrics.json).
-* Reference velocities without GT are differentiated `/tracked_pose` (Savitzky-Golay, 0.15 s window),
-  good enough for lag and scale checks, noisy at the mm level.
-* Latency in `timing.png` is "record time minus header stamp" with the recorder on sim time.
-  Nodes stamping at receive time (VESC IMU) show ~0.
-* `analyze.py` needs no ROS, it reads the bag with `rosbags`. It runs on any bag with the topics,
-  e.g. a bag recorded on the car: `python3 analyze.py <out_dir> --bag bags/<bag>`.
+* Reference velocities are Savitzky-Golay smoothed over `VEL_WINDOW_S` (0.25 s), the reference heading over
+  `YAW_WINDOW_S` (0.3 s) before rotating into the body frame (heading jitter leaks speed into vy). Longer windows
+  cut the jitter further but smear the 0.2-0.3 s turn-in transients. Without GT the reference is the differentiated output of cartographer.
+* Latency in `timing.pdf` is "record time minus header stamp" with the recorder on sim time. Some nodes, e.g. vesc imu node, stampt at receive time so it will always show ~0.

@@ -2,6 +2,7 @@
 """Headless state estimation evaluation on a recorded bag.
 
 1. starts state_estimation_launch.xml on sim time + vesc_to_odom_node (recomputes /odom from the raw VESC state)
+   + static_transforms_launch.xml (mounts from static_transforms.yaml; the RealSense-internal TF tree comes from the bag)
 2. records the estimator outputs + raw inputs into <out>/replay
 3. plays the raw sensor topics of the bag (+ the ground truth topic if the bag has it), waits until it is done
 4. stops everything, copies the SLAM / EKF / VIO / TF / sensor configs into <out>/config, process logs are in <out>/logs
@@ -32,8 +33,9 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 from analyze import analyze  # noqa: E402
 
-# raw sensor topics that get played; /odom is recomputed by vesc_to_odom_node from the VESC state
-PLAY = ['/scan', '/sensors/imu/raw', '/tf_static', '/sensors/core', '/sensors/servo_position_command']
+# raw sensor topics that get played; /odom is recomputed by vesc_to_odom_node from the VESC state, /tf_static is published
+# from static_transforms.yaml (+ the camera_* frames of the bag), so the mounts can be tuned offline
+PLAY = ['/scan', '/sensors/imu/raw', '/sensors/core', '/sensors/servo_position_command']
 PLAY_VIO = ['/camera/camera/imu', '/camera/camera/infra1/image_rect_raw', '/camera/camera/infra2/image_rect_raw']
 # what gets recorded for the analysis
 RECORD = ['/tf', '/tf_static', '/tracked_pose', '/state_estimation/odom', '/basalt/odom', '/basalt/odomimu',
@@ -141,7 +143,7 @@ def bag_static_tf(bag):
 
 def save_configs(out, car, bag):
     """Copy the configs the run was made with into <out>/config/{ekf,slam,vio,tf,sensors}.
-    tf/: the bag's /tf_static (that is what the run used)."""
+    tf/: static_transforms.yaml (what the run used) and the bag's /tf_static for comparison."""
     groups = {
         'ekf': [REPO / 'state_estimation/config/ekf.yaml'],
         'slam': [*sorted((REPO / 'stack_master/config/slam').glob('*.lua')),
@@ -149,7 +151,7 @@ def save_configs(out, car, bag):
         'vio': [REPO / 'state_estimation/config/vio_config.json',
                 REPO / f'state_estimation/config/d435_calib_{car}.json',
                 REPO / 'stack_master/config/camera/d435_config.yaml'],
-        'tf': [],
+        'tf': [REPO / f'stack_master/config/{car}/static_transforms.yaml'],
         'sensors': [REPO / 'stack_master/config/sensors.yaml', REPO / f'stack_master/config/{car}/imu.yaml',
                     REPO / f'stack_master/config/{car}/vesc.yaml'],
     }
@@ -160,7 +162,8 @@ def save_configs(out, car, bag):
             if f.exists():
                 shutil.copy(f, cfg / group / f.name)
     (cfg / 'tf' / 'tf_static_from_bag.yaml').write_text(
-        '# /tf_static as recorded in the bag, this is what the run used\n' + yaml.safe_dump(bag_static_tf(bag), sort_keys=False))
+        '# /tf_static as recorded in the bag, for comparison: the run used static_transforms.yaml, only the camera_* frames of this\n'
+        + yaml.safe_dump(bag_static_tf(bag), sort_keys=False))
     git = {}
     for k, c in (('commit', ['git', 'rev-parse', 'HEAD']), ('branch', ['git', 'rev-parse', '--abbrev-ref', 'HEAD']),
                  ('status', ['git', 'status', '--short'])):
@@ -215,7 +218,15 @@ def main():
                      stdout=open(out / 'logs' / 'launch.log', 'w'), stderr=subprocess.STDOUT),
                  run(['ros2', 'run', 'vesc_ackermann', 'vesc_to_odom_node', '--ros-args',
                       '--params-file', str(REPO / f'stack_master/config/{a.car}/vesc.yaml'), '-p', 'use_sim_time:=true'],
-                     stdout=open(out / 'logs' / 'vesc_to_odom.log', 'w'), stderr=subprocess.STDOUT)]
+                     stdout=open(out / 'logs' / 'vesc_to_odom.log', 'w'), stderr=subprocess.STDOUT),
+                 # sensor mounts from the config; the RealSense driver's internal tree (camera_link -> ... -> camera_imu_optical_frame)
+                 # is not running, so those frames are republished from the bag
+                 run(['ros2', 'launch', 'stack_master', 'static_transforms_launch.xml', f'racecar_version:={a.car}', 'sim:=False'],
+                     stdout=open(out / 'logs' / 'static_tf.log', 'w'), stderr=subprocess.STDOUT)]
+        if use_vio:
+            procs.append(run(['ros2', 'run', 'state_estimation', 'bag_static_tf_node', '--ros-args',
+                              '-p', f'bag:={bag}', '-p', 'frame_regex:=^camera_', '-p', 'use_sim_time:=true'],
+                             stdout=open(out / 'logs' / 'static_tf.log', 'a'), stderr=subprocess.STDOUT))
         time.sleep(SETTLE_S)
         for p in procs:
             if p.poll() is not None:
@@ -224,7 +235,7 @@ def main():
         required_nodes = ['/ekf_filter_node', '/cartographer_node', '/imu_to_base', '/vesc_to_odom_node']
         expected_pubs = ['/imu', '/odom', '/scan', '/state_estimation/odom', '/tracked_pose']
         if use_vio:
-            required_nodes += ['/basalt/vio_backend', '/basalt_to_ekf']
+            required_nodes += ['/basalt/vio_backend', '/basalt_to_ekf', '/bag_static_tf']
             expected_pubs += ['/basalt/odomimu', '/basalt/odom']
         check_nodes(out, procs, required_nodes)
         record = run(['ros2', 'bag', 'record', '--use-sim-time', '--compression-mode', 'message', '--compression-format', 'zstd',
