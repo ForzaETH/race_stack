@@ -23,7 +23,7 @@ This specifically provides the functionality to slice the sectors.
 
 One may launch the global planner:
 ```
-ros2 launch stack_master planner_launch.xml map:=sim_test
+ros2 launch stack_master planner_launch.xml map:=test
 ```
 Then the sector slicers will open GUIs for defining the sectors and generating a `speed_scaling.yaml` and a `ot_sectors.yaml`, respectively, within the maps folder. 
 

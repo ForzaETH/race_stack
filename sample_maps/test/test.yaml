@@ -1,5 +1,5 @@
 free_thresh: 0.196
-image: sim_test.png
+image: test.png
 negate: 0
 occupied_thresh: 0.65
 origin:

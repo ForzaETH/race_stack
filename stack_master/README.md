@@ -16,6 +16,7 @@ There are two important parameters when running the base system or mapping:
  Everything that differs between cars lives in `stack_master/config/RACECAR_VERSION/`, e.g. the sensor mounting transforms in `static_transforms.yaml` (published by `static_transforms_launch.xml` for base system, mapping and simulator alike).
  - use_vio: Launches the RealSense D455 camera and Basalt VIO. Defaults to the `USE_VIO` value in the `.env` file (set during installation); only works if the container was built with `USE_VIO=true`.
  - map: This is the name of the map that you want to use / create. Every map is saved in `$MAPS_DIR/<map>/`. However, by default a map called `latest` is used.
+ Note that the sample maps `baku`, `spa`, `test` and `zuri` are for the simulator only.
 
 ### Mapping (on the real car)
 Run the mapping launch file:
