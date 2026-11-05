@@ -18,6 +18,7 @@ from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 
+
 def state_estimation_file(fname):
     return PathJoinSubstitution(
         [FindPackageShare('state_estimation'), 'config', fname])
@@ -93,20 +94,6 @@ def launch_setup(context, *args, **kwargs):
         output={'stdout': 'log', 'stderr': 'log'},
     )
 
-    # --- Basalt -> EKF bridge ---
-    basalt_to_ekf_node = Node(
-        package='state_estimation',
-        executable='basalt_to_ekf_node',
-        name='basalt_to_ekf',
-        output='screen',
-        parameters=[{
-            'input_topic': '/basalt/odomimu',
-            'output_topic': LaunchConfig('odom_topic'),
-            'imu_topic': LaunchConfig('imu_topic'),
-            'tf_timeout': LaunchConfig('tf_timeout')
-        }]
-    )
-
     # --- Optional feature-track visualization (/basalt/flow_image) ---
     viz_flow_node = Node(
         package='basalt_ros',
@@ -120,6 +107,20 @@ def launch_setup(context, *args, **kwargs):
             ('optical_flow', 'optical_flow')               # frontend output, /basalt/optical_flow
         ],
         condition=IfCondition(LaunchConfig('viz_flow')),
+    )
+
+    # --- Basalt -> EKF bridge ---
+    basalt_to_ekf_node = Node(
+        package='state_estimation',
+        executable='basalt_to_ekf_node',
+        name='basalt_to_ekf',
+        output='screen',
+        parameters=[{
+            'input_topic': '/basalt/odomimu',
+            'output_topic': LaunchConfig('odom_topic'),
+            'imu_topic': LaunchConfig('imu_topic'),
+            'tf_timeout': LaunchConfig('tf_timeout')
+        }]
     )
 
     return [vio_container, basalt_to_ekf_node, viz_flow_node]
