@@ -3,6 +3,9 @@
 # Stop at error
 set -e
 
+# Source ROS here too, as make launch runs this script without the .bashrc that VS Code loads
+source /opt/ros/$ROS_DISTRO/setup.bash
+
 # env_keep in sudoers passes DEBIAN_FRONTEND through rosdep's sudo apt-get
 export DEBIAN_FRONTEND=noninteractive
 
@@ -32,3 +35,6 @@ sudo chmod 666 /dev/input/event* 2>/dev/null || true
 # Build workspace
 cd /ws
 colcon build --symlink-install --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+# Tells make launch that this container is set up
+touch /tmp/.post_create_done

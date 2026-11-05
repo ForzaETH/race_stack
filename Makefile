@@ -22,7 +22,7 @@ BUILD_STACK := docker build -f .devcontainer/Dockerfile -t $(STACK_IMAGE) --buil
 	--build-arg USE_VIO=$(USE_VIO) --build-arg UID=$(HOST_UID) --build-arg GID=$(HOST_GID) .
 BUILD_NOVNC := docker build -t $(NOVNC_IMAGE) https://github.com/ForzaETH/remote-novnc.git\#main
 
-.PHONY: setup images launch x11 x11-refresh help
+.PHONY: setup images launch rebuild x11 x11-refresh help
 
 help:
 	@echo "Usage: make setup"
@@ -31,6 +31,8 @@ help:
 	@echo "Builds the images, falling back to the existing ones if that fails, and starts the shared services; VS Code runs this on open and rebuild."
 	@echo "       make launch"
 	@echo "Starts the containers without VS Code and opens a shell (runs the post-create setup on first start)."
+	@echo "       make rebuild"
+	@echo "Same as make launch, but always with a fresh container, like Rebuild Container in VS Code."
 	@echo "       make x11"
 	@echo "Run from an ssh -X terminal: gives the running container access to this session's display."
 
@@ -73,11 +75,14 @@ launch: x11-refresh
 	@[ -f .env ] || { echo "No .env found, run 'make setup' first."; exit 1; }
 	@[ -f $(LOCAL_COMPOSE) ] || cp .devcontainer/docker-compose.local.template.yaml $(LOCAL_COMPOSE)
 	@$(MAKE) -s images
-	@$(COMPOSE) up -d
-	@docker exec $(CONTAINER) test -f /ws/install/setup.bash \
+	@$(COMPOSE) up -d $(UP_FLAGS)
+	@# Once per new container, like VS Code; the marker is in the container, so it is gone when that is recreated
+	@docker exec $(CONTAINER) test -f /tmp/.post_create_done \
 		|| docker exec -it $(CONTAINER) bash /ws/src/race_stack/.install_utils/post_create_command.sh
 	@docker exec -it $(CONTAINER) bash
 
+rebuild: UP_FLAGS := --force-recreate
+rebuild: launch
 
 # For X11 forwarding for GUI applications, both locally (xhost) and remotely (xauth)
 x11:
