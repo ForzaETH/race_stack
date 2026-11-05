@@ -110,7 +110,7 @@ COPY .install_utils/bashrc /tmp/bashrc
 RUN cat /tmp/bashrc >> /home/${USER}/.bashrc && rm /tmp/bashrc
 
 # Create mount points for persistent volumes (extensions, home storage, colcon workspace)
-RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist /ws/build /ws/install /ws/log \
+RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist /ws/src /ws/build /ws/install /ws/log \
     && chown -R ${UID}:${GID} /home/${USER}/.vscode-server /home/${USER}/.persist /ws
 
 # Set runtime environment

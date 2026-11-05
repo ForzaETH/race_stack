@@ -22,7 +22,7 @@ services:
     stdin_open: true
     tty: true
     # Named volumes keep the owner they were created with; re-own them to the current UID
-    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; sudo chown $$(id -u):$$(id -g) /ws/build /ws/install /ws/log; exec tail -f /dev/null"
+    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; sudo chown $$(id -u):$$(id -g) /ws; exec tail -f /dev/null"
     volumes:
       - /dev:/dev:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -31,9 +31,8 @@ services:
       - ./:/ws/src/race_stack:rw
       - ../race_stack_maps:/ws/maps:rw
       - ../race_stack_bags:/ws/bags:rw
-      - ws-build:/ws/build
-      - ws-install:/ws/install
-      - ws-log:/ws/log
+      # The workspace is one volume, so colcon clean can delete build, install and log inside it
+      - ws:/ws
     environment:
       - DISPLAY=${DISPLAY:-:501}
       - XAUTHORITY=/tmp/.docker_xauth/xauth
@@ -45,7 +44,8 @@ services:
       - BAGS_DIR=/ws/bags
       - RCUTILS_COLORIZED_OUTPUT=1
       - TERM=xterm-256color
-      - PYTHONPYCACHEPREFIX=/ws/build/.pycache
+      # Outside the build volume: root also writes here (VS Code passes it to sudo), and colcon clean cannot remove that
+      - PYTHONPYCACHEPREFIX=/tmp/pycache
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
       - COLCON_DEFAULTS_FILE=/ws/src/race_stack/.install_utils/colcon_defaults.yaml
 
@@ -78,8 +78,7 @@ services:
     network_mode: host
     restart: unless-stopped
     volumes:
-      - ws-install:/ws/install:ro
-      - ws-build:/ws/build:ro
+      - ws:/ws:ro
       - ../race_stack_deps:/ws/src:ro
       - ./:/ws/src/race_stack:ro
     command: >
@@ -113,9 +112,5 @@ services:
 
 # Named per host user, so users sharing a machine never share build artifacts
 volumes:
-  ws-build:
-    name: race_stack_humble_build_${HOST_UID:-1000}
-  ws-install:
-    name: race_stack_humble_install_${HOST_UID:-1000}
-  ws-log:
-    name: race_stack_humble_log_${HOST_UID:-1000}
+  ws:
+    name: race_stack_humble_ws_${HOST_UID:-1000}
