@@ -13,7 +13,7 @@ transforms3d>0.4
 pydantic
 
 # State estimation evaluation (state_estimation/eval)
-rosbags
+rosbags>=0.10.0
 evo==1.21.0
 eth-colors-pbl
 

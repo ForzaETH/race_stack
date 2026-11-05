@@ -68,8 +68,8 @@ def main():
 
     yaw = np.unwrap(ref['yaw'])
     ref_rate = np.gradient(yaw, ref['t'])
-    off = time_offset(ref['t'], ref_rate, d['t'], wz, max_lag=5.0) or 0.0   # reference clock ahead of the car by off
-    t0, t1 = ref['t'][0] - off, ref['t'][-1] - off
+    off = time_offset(ref['t'], ref_rate, d['t'], wz, max_lag=5.0) or 0.0   # > 0: reference stamps early, car time = ref time + off
+    t0, t1 = ref['t'][0] + off, ref['t'][-1] + off
     m = (d['t'] >= t0) & (d['t'] <= t1)
     if m.sum() < 100:
         raise SystemExit('reference and IMU do not overlap in time')
@@ -81,7 +81,7 @@ def main():
     halves = []
     for lo, hi in ((t0, tm), (tm, t1)):
         mm = (d['t'] >= lo) & (d['t'] <= hi)
-        r_lo, r_hi = np.interp([lo + off, hi + off], ref['t'], yaw)
+        r_lo, r_hi = np.interp([lo - off, hi - off], ref['t'], yaw)
         halves.append((r_hi - r_lo) / trapz(wz[mm], d['t'][mm]))
 
     print(f'reference {ref_name}: {len(ref["t"])} poses over {t1 - t0:.1f} s, clock offset to the car {off * 1e3:+.0f} ms')

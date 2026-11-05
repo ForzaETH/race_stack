@@ -2,8 +2,6 @@
 imu_to_base:
   ros__parameters:
     # constant gyro offset [x, y, z] in rad/s, in the IMU's own frame; subtracted before rotating into base_link.
-    # Temperature dependent, re-measure when the odom frame starts drifting at standstill.
-    gyro_bias: [0.0007, 0.0012, -0.0053]  # measured on bags/standstill, 2026-11-03 (58 s at rest)
-    # scale factor on the gyro rate: cartographer net yaw / integrated gyro yaw. 0.9952 on both bags/vio_test and
-    # bags/glc_small (2026-11-04), i.e. the odom frame lagged 0.5 % of the turned angle.
+    gyro_bias: [0.0007, 0.0012, -0.0053] # measured on bags/standstill, 2026-11-03 (58 s at rest)
+    # scale factor on the gyro rate = reference net yaw / integrated (bias-corrected) gyro yaw
     gyro_scale: 1.0048

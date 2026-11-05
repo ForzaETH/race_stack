@@ -69,10 +69,10 @@ class SectorSlicer(Node):
         
         #Select Sectors via the GUI
         self.sector_gui()
-        self.get_logger().info('Selected Sector IDXs: '+str(self.sector_pnts))
-
-        #Write sectors to yaml
-        self.sectors_to_yaml()
+        if self.sector_pnts is not None:   # None: headless and the yaml already exists, keep it
+            self.get_logger().info('Selected Sector IDXs: '+str(self.sector_pnts))
+            #Write sectors to yaml
+            self.sectors_to_yaml()
         #Indicate that the task is done and execution of the node can be stopped
         self.future.set_result(None)
 
@@ -92,8 +92,12 @@ class SectorSlicer(Node):
         y = np.array(y)
 
         if matplotlib.get_backend().lower() == 'agg':
-            self.get_logger().warn("No display, writing a single sector over the whole track.")
-            self.sector_pnts = [0, len(s)]
+            if os.path.exists(os.path.join(self.yaml_dir, 'speed_scaling.yaml')):
+                self.get_logger().warn("No display, keeping the existing speed_scaling.yaml.")
+                self.sector_pnts = None
+            else:
+                self.get_logger().warn("No display, writing a single sector over the whole track.")
+                self.sector_pnts = [0, len(s)]
             return
 
         # plot raceline without sector points
