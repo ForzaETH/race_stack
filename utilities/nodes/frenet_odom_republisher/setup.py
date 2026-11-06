@@ -16,10 +16,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Nadine Imholz',
-    maintainer_email='nimholz@ethz.ch',
+    maintainer='ForzaETH',
+    maintainer_email='contact@forzaeth.ch',
     description='Republishing odometry in frenet frame',
-    license='Apache License 2.0',
+    license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [

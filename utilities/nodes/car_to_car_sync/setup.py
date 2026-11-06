@@ -16,10 +16,10 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Maurice Brunner',
-    maintainer_email='maurice.brunner@pbl.ee.ethz.ch',
+    maintainer='ForzaETH',
+    maintainer_email='contact@forzaeth.ch',
     description='Stream opponent car topics across ROS domains and publish them as ground-truth obstacles',
-    license='Apache License 2.0',
+    license='MIT',
     entry_points={
         'console_scripts': [
             'domain_bridge = car_to_car_sync.domain_bridge:main',

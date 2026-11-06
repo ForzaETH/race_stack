@@ -4,7 +4,7 @@
   <name>steering_lookup</name>
   <version>0.0.0</version>
   <description>The steering_lookup library</description>
-  <maintainer email="nicolas.baumann@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <test_depend>ament_copyright</test_depend>

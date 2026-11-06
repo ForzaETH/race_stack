@@ -17,7 +17,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='nicolas.baumann@pbl.ee.ethz.ch',
+    maintainer_email='contact@forzaeth.ch',
     description='Controller runs whatever f110 controller is desired',
     license='MIT',
     tests_require=['pytest'],
