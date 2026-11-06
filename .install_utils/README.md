@@ -34,7 +34,7 @@ sudo apt install git make
 ```
 Clone the repository inside the WSL home directory (`~/`), not under `/mnt/c/`, as mounts from the Windows drive are slow and break file permissions.
 
-### Jetson
+### Jetson
 Install [Docker Engine](https://docs.nvidia.com/jetson/orin-nano-devkit/user-guide/latest/setup_docker.html) following the Nvidia documentation and follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/). Check that the Nvidia runtime is available:
 ```bash
 docker info | grep -i runtime  # should list nvidia
