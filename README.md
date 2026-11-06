@@ -59,8 +59,9 @@ This project would not be possible without the use of multiple great open-source
 ### Problems
 If you are having problem with the SIM (no car/scans showing for example), try the setup once again:
 ```bash
-source ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh
+bash /ws/src/race_stack/.install_utils/post_create_command.sh
 ```
+The simulator (`f110_gym`) is installed in the container image, so if it is missing, rebuild the container.
 
 If your joystick is not working, try the following while the controller is connected:
 ```bash

@@ -5,7 +5,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 from skimage.segmentation import watershed
-from ament_index_python.packages import get_package_share_directory
 
 import trajectory_planning_helpers as tph
 from global_racetrajectory_optimization import helper_funcs_glob
@@ -13,13 +12,6 @@ from global_racetrajectory_optimization import helper_funcs_glob
 from geometry_msgs.msg import Point
 from f110_msgs.msg import Wpnt, WpntArray
 from visualization_msgs.msg import Marker, MarkerArray
-
-
-def get_data_path(subpath=''):
-    """
-    Helper function to get an absolute path to the specified (relative) path within the data folder.
-    """
-    return Path(get_package_share_directory('stack_master')).parents[3] / 'src/race_stack/stack_master' / subpath
 
 
 def extract_centerline(skeleton, cent_length: float, map_resolution: float) -> np.ndarray:

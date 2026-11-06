@@ -1,9 +1,13 @@
 # -----------------------------------------------------------------------------
-# Basalt VIO -> EKF bridge. The RealSense D435 driver itself is launched with
-# the other sensors in stack_master/launch/teleop_launch.xml (USE_VIO=true).
-# Basalt calibration/VIO config lives in the state_estimation package.
+# Basalt VIO + Basalt -> EKF bridge. Included by state_estimation_launch.xml
+# when USE_VIO=true. The RealSense driver itself is launched with the other
+# sensors in stack_master/launch/teleop_launch.xml.
+# basalt_ros comes from its own workspace (/opt/basalt_ws, built in the
+# Dockerfile and sourced in the bashrc).
 # Component layout based on Bernd Pfrommer <bernd.pfrommer@gmail.com>
 # -----------------------------------------------------------------------------
+import os
+
 import launch
 from launch.substitutions import LaunchConfiguration as LaunchConfig
 from launch.substitutions import PathJoinSubstitution, TextSubstitution
@@ -21,8 +25,8 @@ def state_estimation_file(fname):
 
 
 def camera_topic(*parts):
-    """Build /<camera_name>/<parts...> so image/imu topics always track
-    whatever camera_name the RealSense node is actually launched under."""
+    """Build /<camera_name>/<camera_name>/<parts...> so image/imu topics always
+    track whatever camera_name the RealSense node is launched under."""
     subs = [TextSubstitution(text='/'), LaunchConfig('camera_name')]
     subs += [TextSubstitution(text='/'), LaunchConfig('camera_name')]
     for p in parts:
@@ -33,14 +37,12 @@ def camera_topic(*parts):
 def launch_setup(context, *args, **kwargs):
     """Dynamically set up parameters and assemble VIO nodes."""
 
-    # --- Basalt VIO container ---
     racecar_version = LaunchConfig('racecar_version').perform(context)
-    calib_file_name = f"d435_calib_{racecar_version}.json"
-    config_file_name = "vio_config.json"
+    camera_model = LaunchConfig('camera_model').perform(context)
 
     common_parameters = {
-        'calibration_file': state_estimation_file(calib_file_name),
-        'vio_config_file': state_estimation_file(config_file_name)
+        'calibration_file': state_estimation_file(f"{camera_model}_calib_{racecar_version}.json"),
+        'vio_config_file': state_estimation_file('vio_config.json')
     }
 
     frontend_parameters = common_parameters
@@ -132,12 +134,15 @@ def generate_launch_description():
     return launch.LaunchDescription([
         LaunchArg('camera_name',
                   default_value='camera',
-                  description='Name/namespace the RealSense node is launched under (see teleop_launch.xml)'),
+                  description='Name/namespace the RealSense node is launched under (see bringup_launch.py)'),
+        LaunchArg('camera_model',
+                  default_value=os.environ.get('VIO_CAMERA_MODEL', 'd435'),
+                  description="'d435' / 'd455': selects state_estimation/config/<model>_calib_<racecar_version>.json"),
 
         # --- Basalt / EKF bridge args ---
         LaunchArg('racecar_version',
                   default_value='NUC6',
-                  description='Selects config/d435_calib_<racecar_version>.json'),
+                  description='Selects the calibration file'),
         LaunchArg('left_image_topic',
                   default_value=camera_topic('infra1', 'image_rect_raw'),
                   description='Left infra camera raw image topic'),

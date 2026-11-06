@@ -1,62 +1,119 @@
-ARG IMAGE=ros:humble
-FROM ${IMAGE}
+# Base image is ros:humble-ros-base or 
+# nvcr.io/nvidia/l4t-jetpack:r36.4.0 on Jetson
+ARG BASE_IMAGE=ros:humble-ros-base
 ARG USE_VIO=false
+ARG USER=race_crew
+ARG UID=1000
+ARG GID=1000
 
+# ---------- base: ROS + user ----------
+FROM ${BASE_IMAGE} AS base
+ARG USER UID GID
+ARG DEBIAN_FRONTEND=noninteractive
 SHELL [ "/bin/bash", "-c" ]
+ENV ROS_DISTRO=humble LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+RUN <<'EOF'
+set -eo pipefail
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release sudo
+
+# Keep only Ubuntu's 4.5 OpenCV (for Jetson)
+if dpkg-query -W libopencv >/dev/null 2>&1; then
+    apt-get purge -y libopencv libopencv-dev libopencv-python libopencv-samples nvidia-opencv nvidia-opencv-dev \
+        opencv-licenses opencv-samples-data
+fi
+
+# Install ROS 2 Humble if the image doesn't come with it. This is needed for the base image for Nvidia Jetsons.
+if [ ! -f /opt/ros/humble/setup.bash ]; then
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \
+        > /etc/apt/sources.list.d/ros2.list
+    apt-get update
+    apt-get install -y --no-install-recommends ros-humble-ros-base build-essential git python3-rosdep \
+        python3-colcon-common-extensions python3-colcon-mixin
+    rosdep init
+fi
+rm -rf /var/lib/apt/lists/*
+EOF
+
+# Create user with matching UID/GID so bind-mounted files stay owned by
+# the host user. Also give access to serial (VESC) and USB devices.
+RUN <<'EOF'
+set -e
+groupadd -fg ${GID} ${USER}
+useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev,video ${USER}
+echo "${USER} ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
+echo 'Defaults env_keep += "DEBIAN_FRONTEND"' >> /etc/sudoers.d/${USER}
+chmod 0440 /etc/sudoers.d/${USER}
+EOF
+
+# ---------- vio-false / vio-true: selected by USE_VIO ----------
+# Placed before the requirements so changing those does not rebuild Basalt.
+FROM base AS vio-false
+
+FROM base AS vio-true
 ARG DEBIAN_FRONTEND=noninteractive
 
-ADD ./.install_utils/basalt.repos /.install_utils/basalt.repos
-ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
-RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh; fi
+# Install Realsense and build Basalt
+COPY .install_utils/install_vio.sh .install_utils/basalt.repos /tmp/
+RUN bash /tmp/install_vio.sh && rm /tmp/install_vio.sh /tmp/basalt.repos
 
-ARG PLATFORM=arm
-ARG USER
-ARG UID
-ARG GID
+# ---------- manifests: only the package.xml files ----------
+# Editing other files in .install_utils re-runs this stage, but not the rosdep step that uses its output.
+FROM base AS manifests
+COPY . /ctx
+RUN mkdir /manifests && cd /ctx && find . -name package.xml -exec cp --parents {} /manifests/ \;
 
-ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
-RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
+# ---------- final: requirements + shell ----------
+FROM vio-${USE_VIO} AS final
+ARG USER UID GID
+ARG DEBIAN_FRONTEND=noninteractive
 
+# Install system (apt) dependencies
+COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
+RUN <<'EOF'
+set -e
+apt-get update
+xargs apt-get install -y < /tmp/linux_req.txt
+rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
+EOF
 
-ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt
-RUN if [[ "$PLATFORM" == "jet" ]]; then \
-      mkdir -p /tmp/ocvdummy/DEBIAN && \
-      printf '%s\n' \
-        'Package: libopencv-dev' \
-        'Version: 4.8.1' \
-        'Architecture: all' \
-        'Maintainer: none <none@localhost>' \
-        'Provides: libopencv-core-dev, libopencv-imgproc-dev, libopencv-imgcodecs-dev, libopencv-videoio-dev, libopencv-highgui-dev, libopencv-calib3d-dev, libopencv-features2d-dev, libopencv-flann-dev, libopencv-ml-dev, libopencv-objdetect-dev, libopencv-photo-dev, libopencv-video-dev, libopencv-dnn-dev, libopencv-contrib-dev, libopencv-stitching-dev, libopencv-shape-dev, libopencv-superres-dev, libopencv-videostab-dev, libopencv-viz-dev, opencv-data' \
-        'Description: Dummy, OpenCV 4.8.1 is provided by the base image' \
-        > /tmp/ocvdummy/DEBIAN/control && \
-      dpkg-deb --build /tmp/ocvdummy /tmp/libopencv-dev_4.8.1_all.deb && \
-      dpkg -i /tmp/libopencv-dev_4.8.1_all.deb && \
-      rm -rf /tmp/ocvdummy /tmp/libopencv-dev_4.8.1_all.deb; \
-    fi
+COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
 
-RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req.txt
-ADD ./.install_utils/python_req.txt /tmp/.install_utils/python_req.txt
-RUN pip3 install --index-url https://pypi.org/simple -r /tmp/.install_utils/python_req.txt || true
+# Install PyTorch with CUDA and torchvision, on Jetson only
+COPY .install_utils/install_torch_jetson.sh /tmp/
+RUN bash /tmp/install_torch_jetson.sh && rm /tmp/install_torch_jetson.sh
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3-dev && \
-    pip3 install --index-url https://pypi.org/simple "setuptools==58.2.0" wheel "cython<3" && \
-    SETUPTOOLS_USE_DISTUTILS=stdlib \
-    pip3 install --index-url https://pypi.org/simple --no-build-isolation "quadprog~=0.1.11"
+# Install python dependencies
+COPY .install_utils/requirements/python_req.txt .install_utils/requirements/python_overrides.txt /tmp/
+RUN uv pip install --system --no-cache -r /tmp/python_req.txt --override /tmp/python_overrides.txt \
+    && rm /tmp/python_req.txt /tmp/python_overrides.txt
 
-ADD ./.install_utils /.install_utils
-RUN useradd -ms /bin/bash -u ${UID} -G sudo ${USER} && groupadd -fg ${GID} ${USER} \
-    && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-USER $USER
+# Install the rosdep dependencies of the workspace and the external repositories, so
+# new containers can build without internet. Last so package.xml changes only re-run this.
+COPY --from=manifests /manifests /tmp/rosdep/race_stack
+COPY .install_utils/dependencies.repos /tmp/dependencies.repos
+RUN <<'EOF'
+set -e
+apt-get update
+rosdep update
+mkdir -p /tmp/rosdep/deps
+vcs import --recursive /tmp/rosdep/deps < /tmp/dependencies.repos
+# python-transforms3d-pip was removed from rosdistro (transforms3d is installed via pip)
+rosdep install --from-paths /tmp/rosdep --ignore-src -y --skip-keys "python-transforms3d-pip"
+rm -rf /tmp/rosdep /tmp/dependencies.repos /root/.ros /var/lib/apt/lists/*
+EOF
 
-ADD .install_utils/bashrc/ /tmp/.install_utils/
-RUN echo "export USERNAME=$USER" >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_git >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_forzaeth >> /home/$USER/.bashrc
+# Bashrc: source ROS and workspaces, display, git branch in terminal
+COPY .install_utils/bashrc /tmp/bashrc
+RUN cat /tmp/bashrc >> /home/${USER}/.bashrc && rm /tmp/bashrc
 
-USER root
-# Clean up
-RUN rm -rf /tmp/.install_utils
+# Create mount points for persistent volumes (extensions, home storage, colcon workspace)
+RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist /ws/src /ws/build /ws/install /ws/log \
+    && chown -R ${UID}:${GID} /home/${USER}/.vscode-server /home/${USER}/.persist /ws
 
-USER $USER
-WORKDIR /home/$USER/ws
+# Set runtime environment
+USER ${USER}
+WORKDIR /ws
 CMD ["/bin/bash"]

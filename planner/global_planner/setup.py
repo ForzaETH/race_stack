@@ -19,7 +19,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='nicolas.baumann@pbl.ee.ethz.ch',
+    maintainer_email='contact@forzaeth.ch',
     description='The global planner package',
     license='MIT',
     tests_require=['pytest'],

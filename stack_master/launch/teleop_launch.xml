@@ -18,5 +18,6 @@
         <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
         <arg name="vesc_config" value="$(var vesc_config)" />
         <arg name="sensors_config" value="$(var sensors_config)" />
+        <arg name="camera_config" value="$(find-pkg-share stack_master)/config/camera/$(env VIO_CAMERA_MODEL d435)_config.yaml" />
     </include>
 </launch>

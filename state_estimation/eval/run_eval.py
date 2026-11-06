@@ -144,13 +144,14 @@ def bag_static_tf(bag):
 def save_configs(out, car, bag):
     """Copy the configs the run was made with into <out>/config/{ekf,slam,vio,tf,sensors}.
     tf/: static_transforms.yaml (what the run used) and the bag's /tf_static for comparison."""
+    camera = os.environ.get('VIO_CAMERA_MODEL', 'd435')
     groups = {
         'ekf': [REPO / 'state_estimation/config/ekf.yaml'],
         'slam': [*sorted((REPO / 'stack_master/config/slam').glob('*.lua')),
                  *sorted((REPO / f'stack_master/config/{car}/slam').glob('*.lua'))],
         'vio': [REPO / 'state_estimation/config/vio_config.json',
-                REPO / f'state_estimation/config/d435_calib_{car}.json',
-                REPO / 'stack_master/config/camera/d435_config.yaml'],
+                REPO / f'state_estimation/config/{camera}_calib_{car}.json',
+                REPO / f'stack_master/config/camera/{camera}_config.yaml'],
         'tf': [REPO / f'stack_master/config/{car}/static_transforms.yaml'],
         'sensors': [REPO / 'stack_master/config/sensors.yaml', REPO / f'stack_master/config/{car}/imu.yaml',
                     REPO / f'stack_master/config/{car}/vesc.yaml'],
@@ -179,7 +180,7 @@ def main():
     ap.add_argument('bag', help='bag directory recorded on the car (ros2 bag record -a)')
     ap.add_argument('--gt-bag', metavar='BAG',
                     help='second bag with the ground truth (recorded on the mocap PC); clocks are aligned in the analysis')
-    ap.add_argument('--map', default='latest', help='map name in stack_master/maps (default: latest)')
+    ap.add_argument('--map', default='latest', help='map name in $MAPS_DIR (default: latest)')
     ap.add_argument('--car', default=os.environ.get('RACECAR_VERSION'), help='racecar_version of the bag (default: $RACECAR_VERSION)')
     ap.add_argument('--name', help='label appended to the result folder name')
     a = ap.parse_args()
@@ -214,7 +215,7 @@ def main():
     procs, record, play = [], None, None
     try:
         procs = [run(['ros2', 'launch', 'state_estimation', 'state_estimation_launch.xml', f'racecar_version:={a.car}',
-                      'mapping_bool:=False', f'map_name:={a.map}', 'use_sim_time:=True', f'use_vio:={str(use_vio).lower()}'],
+                      'mapping_bool:=False', f'map:={a.map}', 'use_sim_time:=True', f'use_vio:={str(use_vio).lower()}'],
                      stdout=open(out / 'logs' / 'launch.log', 'w'), stderr=subprocess.STDOUT),
                  run(['ros2', 'run', 'vesc_ackermann', 'vesc_to_odom_node', '--ros-args',
                       '--params-file', str(REPO / f'stack_master/config/{a.car}/vesc.yaml'), '-p', 'use_sim_time:=true'],

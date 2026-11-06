@@ -8,7 +8,9 @@ import cv2
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from scipy import interpolate, spatial
 from skimage.morphology import skeletonize
+import trajectory_planning_helpers.spline_approximation as tph_spline_approximation
 
 import rclpy
 from stack_master.qos import LATCHED_QOS
@@ -30,8 +32,15 @@ from .global_planner_utils import extract_centerline, \
     write_centerline, \
     publish_track_bounds, \
     create_wpnts_markers, \
-    compare_direction, \
-    get_data_path
+    compare_direction
+
+
+def _dist_to_p(t_glob, path, p):
+    # scipy >= 1.11 rejects the (2, 1) shape that splev returns for a 1-element t_glob
+    return spatial.distance.euclidean(p, np.ravel(interpolate.splev(t_glob, path)))
+
+
+tph_spline_approximation.dist_to_p = _dist_to_p
 
 
 class GlobalPlannerNode(Node):
@@ -41,7 +50,8 @@ class GlobalPlannerNode(Node):
         super().__init__('global_planner_node', allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
 
-        self.map_name = self.get_parameter('map_name').value
+        self.map_dir = Path(self.get_parameter('map_path').value)
+        self.map_name = self.map_dir.name
         self.reverse_mapping = self.get_parameter('reverse_mapping').value
         self.show_plots = self.get_parameter('show_plots').value
         self.safety_width = self.get_parameter('safety_width').value
@@ -87,11 +97,10 @@ class GlobalPlannerNode(Node):
     def load_and_plot_map(self):
         """Loads the map from disk, applies filtering and plots it."""
         self.get_logger().info(f"Loading map: {self.map_name}")
-        img_path = os.path.join(get_data_path("maps/" + self.map_name), self.map_name + '.png')
-        self.map_dir = get_data_path('maps/' + self.map_name)
+        img_path = os.path.join(self.map_dir, self.map_name + '.png')
         self.filtered_map = cv2.flip(cv2.imread(img_path, 0), 0)
         skeleton = skeletonize(self.filtered_map, method='lee')
-        map_info = yaml.safe_load(open(os.path.join(get_data_path("maps/" + self.map_name), self.map_name + '.yaml'), 'r'))
+        map_info = yaml.safe_load(open(os.path.join(self.map_dir, self.map_name + '.yaml'), 'r'))
         self.map_resolution = map_info['resolution']
         self.map_origin = Point()
         self.map_origin.x = map_info['origin'][0]
