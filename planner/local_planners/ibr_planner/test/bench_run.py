@@ -185,6 +185,15 @@ def main():
         cfg = yaml.safe_load(f)
     folder = Path(args.config).stem + ("_pilot" if args.pilot else "")
     results = ROOT / "bench_results" / folder
+
+    import fcntl
+    results.mkdir(parents=True, exist_ok=True)
+    lock = open(results / ".lock", "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        raise SystemExit(f"another bench_run.py is already writing to {results}")
+
     races = list_races(cfg, args.pilot)
 
     def out_dir(r):

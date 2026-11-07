@@ -513,6 +513,31 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /opp/ibr/markers
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Mirror Defender
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /opp/mirror/markers
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Ego IBR/MPC
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ego/ibr/markers
+      Value: true
+
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

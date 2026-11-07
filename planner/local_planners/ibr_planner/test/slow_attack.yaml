@@ -1,0 +1,13 @@
+# Slow motion: 1 vs 4 sweeps without the latency, 8 pairings x 4 maps x 12 spawns
+maps: [spa, baku, glc_ot_ez, GLC_smile_small]
+pilot_maps: [spa, baku, glc_ot_ez, GLC_smile_small]
+attackers: [ibr1, ibr4]
+defenders: [gb, mpc, ibr1, ibr4]
+attacker_speed: 2.4     # [m/s]
+defender_speed: 2.0     # [m/s]
+n_positions: 33         # the full benchmark's evenly spaced start positions
+every: 8
+use_positions: 4
+gaps_s: [1, 2, 3]       # starting gap in seconds of the defender's speed
+t_max: 30               # [s] race length limit
+time_scale: 0.25        # sim runs at quarter speed, so IBR gets 400 ms per 0.1 s tick

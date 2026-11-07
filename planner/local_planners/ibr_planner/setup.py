@@ -29,7 +29,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'ibr_planner = ibr_planner.ibr_planner:main'
+            'ibr_planner = ibr_planner.ibr_planner:main',
+            'mirror_planner = ibr_planner.mirror_planner:main',
         ],
     },
 )

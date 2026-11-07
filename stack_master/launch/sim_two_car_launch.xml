@@ -1,7 +1,7 @@
 <launch>
   <arg name="map_name" default="latest" />
   <arg name="ego_planner" default="spliner" description="spliner / ibr / none" />
-  <arg name="opp_planner" default="spliner"    description="spliner / ibr / gb / none" />
+  <arg name="opp_planner" default="spliner"    description="spliner / ibr / mpc / gb / mirror / none" />
   <arg name="ego_ctrl" default="PP" />
   <arg name="opp_ctrl" default="PP" />
   <arg name="opponent_source" default="perception" description="gt / perception" />

@@ -42,7 +42,7 @@
       <arg name="time_scale" value="$(var time_scale)" />
     </include>
 
-    <group unless="$(eval '\'$(var planner)\' in [\'gb\', \'ibr\',  \'mpc\']')">
+    <group unless="$(eval '\'$(var planner)\' in [\'gb\', \'ibr\',  \'mpc\', \'mirror\']')">
       <include file="$(find-pkg-share state_machine)/launch/state_machine_launch.xml">
         <arg name="mode" value="head_to_head" />
       </include>
@@ -88,6 +88,16 @@
 
 
 
+      </node>
+    </group>
+    <group if="$(eval '\'$(var planner)\' == \'mirror\'')">
+      <!-- reactive mirroring defender; named state_machine: the controller queries state_machine/rate_hz -->
+      <node pkg="ibr_planner" exec="mirror_planner" name="state_machine" output="screen">
+        <param name="record_path" value="$(var record_path)" />
+        <param name="opp_ns" value="$(var opp_ns)" />
+        <param name="rate_hz" value="$(eval '10.0 * $(var time_scale)')" />
+        <param name="speed_scale" value="$(var speed_scale)" />
+        <param name="speed_limit" value="$(var speed_limit)" />
       </node>
     </group>
   </group>
