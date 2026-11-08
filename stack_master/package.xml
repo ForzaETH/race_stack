@@ -13,8 +13,6 @@
   <depend>geometry_msgs</depend>
   <depend>python3-yaml</depend>
 
-  <test_depend>python3-pytest</test_depend>
-
   <export>
     <build_type>ament_python</build_type>
   </export>

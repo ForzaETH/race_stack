@@ -17,7 +17,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='TODO: Package description',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'frenet_converter_demo = frenet_conversion.frenet_converter_demo_node:main',

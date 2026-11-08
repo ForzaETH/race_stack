@@ -21,7 +21,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The local_planner package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'local_planner = local_planner.local_planner:main', # runs main in local_planner.py

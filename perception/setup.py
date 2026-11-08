@@ -20,7 +20,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The perception package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'tracking = perception.tracking:main',

@@ -21,7 +21,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='Opponent publisher',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'collision_detector = opponent_publisher.collision_detector:main',

@@ -17,7 +17,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The controller for sysid experiments',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
         ],

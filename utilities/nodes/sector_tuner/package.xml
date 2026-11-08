@@ -7,11 +7,6 @@
   <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
-
   <exec_depend>stack_master</exec_depend>
   <exec_depend>pbl_config</exec_depend>
 

@@ -21,7 +21,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The state_machine package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'state_machine = state_machine.state_machine:main', # runs main in state_machine.py

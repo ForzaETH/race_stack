@@ -29,7 +29,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The package to rule them all: Launch files and Configs',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'global_parameter_node = stack_master.global_parameter_node:main',

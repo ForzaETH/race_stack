@@ -20,7 +20,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The spline planner package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'spline_planner = spline_planner.spline_planner:main',

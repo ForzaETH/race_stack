@@ -20,7 +20,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='Republishing odometry in frenet frame',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'frenet_odom_republisher_node = frenet_odom_republisher.frenet_odom_republisher_node:main'

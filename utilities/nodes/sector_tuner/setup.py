@@ -17,7 +17,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='TODO: Package description',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'sector_tuner = sector_tuner.sector_tuner:main',

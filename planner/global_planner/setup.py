@@ -22,7 +22,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The global planner package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'global_planner = global_planner.global_planner_node:main',

@@ -17,5 +17,4 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='Pydantic-validated config loaders (car, pacejka tire, linear tire) for the race stack',
     license='MIT',
-    tests_require=['pytest'],
 )

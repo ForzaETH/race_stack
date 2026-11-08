@@ -20,7 +20,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The lap_analyser package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'lap_analyser = lap_analyser.lap_analyser:main', # runs main in lap_analyser.py

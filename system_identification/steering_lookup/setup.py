@@ -33,7 +33,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='The steering_lookup library',
     license='MIT',
-    tests_require=['pytest'],
     #entry_points={
         #'console_scripts': [
             #'controller = controller.map_node:main',

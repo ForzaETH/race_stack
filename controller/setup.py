@@ -20,7 +20,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='Controller runs whatever f110 controller is desired',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'controller = controller.controller_manager:main',

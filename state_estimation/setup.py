@@ -21,7 +21,6 @@ setup(
     maintainer_email='contact@forzaeth.ch',
     description='Handles Localisation and Fusion of sensors for localisation, including the EKF and UKF state estimation nodes',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'carstate_node = state_estimation.carstate_node:main',
