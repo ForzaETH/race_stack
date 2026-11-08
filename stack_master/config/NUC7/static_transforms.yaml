@@ -1,0 +1,29 @@
+# Static transforms of NUC7: where the sensors sit relative to base_link (rear axle centre, on the ground).
+# Remeasure after remounting hardware. xyz in metres, rpy in radians (or quat as [x, y, z, w]).
+transforms:
+  - {
+      parent: base_link,
+      child: laser,
+      xyz: [0.258, 0.0, 0.127],
+      rpy: [0.0, 0.0, 0.0],
+    }
+  - {
+      parent: base_link,
+      child: imu,
+      xyz: [0.07, 0.0, 0.05],
+      quat: [0.0, 0.0, -0.7071068, 0.7071068],
+    }
+  # RealSense D435 (VIO), remeasure on a mount change
+  - {
+      parent: base_link,
+      child: camera_link,
+      xyz: [0.262377, 0.043761, 0.120451],
+      quat: [-0.0003105, 0.0140676, 0.0045111, 0.9998908],
+    }
+  # D455 camera_link -> IMU body (factory)
+  - {
+      parent: camera_link,
+      child: camera_imu,
+      xyz: [-0.016020, -0.030220, 0.007400],
+      quat: [-0.5, 0.5, -0.5, 0.5],
+    }

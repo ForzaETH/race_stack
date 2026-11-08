@@ -27,7 +27,7 @@ To launch:
 Inputs:
 ```
 Subscriber("perception/obstacles", ObstacleArray, self.od_cb)
-Subscriber("/car_state/odom_frenet", Odometry, self.odom_cb)
+Subscriber("/car_state/frenet/odom", Odometry, self.odom_cb)
 ```
 
 Outputs:

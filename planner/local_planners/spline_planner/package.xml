@@ -16,6 +16,8 @@
   <exec_depend>frenet_conversion</exec_depend>
   <depend>rclpy</depend>
 
+  <exec_depend>stack_master</exec_depend>
+
   <export>
     <build_type>ament_python</build_type>
   </export>

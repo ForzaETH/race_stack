@@ -1,0 +1,36 @@
+x-common-build-settings: &common-build-settings
+  context: .
+  pull: false
+
+
+x-user-args: &user-args
+  USER: ${USER}
+  UID: ${HOST_UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
+  GID: ${HOST_GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
+  USE_VIO: ${USE_VIO:-false} # true: build librealsense + basalt_ros into the image 
+
+services:
+  jet:
+    build:
+      <<: *common-build-settings
+      dockerfile: ./.devcontainer/Dockerfile
+      args:
+        <<: *user-args
+        IMAGE: dustynv/ros:humble-ros-base-l4t-r36.3.0
+        PLATFORM: jet
+
+  x86:
+    build:
+      <<: *common-build-settings
+      dockerfile: ./.devcontainer/Dockerfile
+      args:
+        <<: *user-args
+        PLATFORM: x86
+
+  arm:
+    build:
+      <<: *common-build-settings
+      dockerfile: ./.devcontainer/Dockerfile
+      args:
+        <<: *user-args
+        PLATFORM: arm

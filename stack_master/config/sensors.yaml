@@ -8,7 +8,7 @@ urg_node:
     serial_baud: 115200
     laser_frame_id: "laser"
     calibrate_time: false
-    default_user_latency: 0.0
+    default_user_latency: -0.015  # stamp is ~end of sweep, cartographer wants ~middle: fitted offline (EKF RPE rot 1.9 -> 0.9 deg at -12.5..-17.5 ms)
     diagnostics_tolerance: 0.05
     diagnostics_window_time: 5.0
     error_limit: 4

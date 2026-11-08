@@ -9,14 +9,15 @@ import yaml
 import cv2
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
 
 import rclpy
+import tf2_ros
 from rclpy.node import Node
-from nav_msgs.msg import OccupancyGrid, Odometry
+from rclpy.time import Time
+from nav_msgs.msg import OccupancyGrid
 from cartographer_ros_msgs.srv import FinishTrajectory, WriteState
 from tf_transformations import euler_from_quaternion
 
@@ -43,8 +44,16 @@ class MappingNode(Node):
         self.map_origin = None
         self.map_occupancy_grid = None
         self.pose_valid = False
+        self.initial_position = None
+
+        # Pose comes from TF, not from an odometry topic, so whatever SLAM is
+        # publishing map->base_link defines the start pose written into the map.
+        self.map_frame = 'map'
+        self.base_frame = 'base_link'
         
         self.fig = None
+        # No DISPLAY: matplotlib falls back to Agg, plot windows cannot be shown
+        self.headless = matplotlib.get_backend().lower() == 'agg'
         
         self._tty = open('/dev/tty', 'r')
         self._old_settings = termios.tcgetattr(self._tty)
@@ -52,7 +61,9 @@ class MappingNode(Node):
         self.finish_trajectory_client = self.create_client(FinishTrajectory, '/finish_trajectory')
         self.write_state_client = self.create_client(WriteState, '/write_state')
         self.create_subscription(OccupancyGrid, '/map', self.map_cb, 10)
-        self.create_subscription(Odometry, '/car_state/odom', self.pose_cb, 10)
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         
         self.create_timer(1 / self.rate, self.loop)
 
@@ -78,33 +89,37 @@ class MappingNode(Node):
         plt.show(block=False)
         plt.pause(2)  # only update the plot every 2 seconds
         
-    def pose_cb(self, msg: Odometry) -> None:
+    def latch_initial_pose(self) -> None:
         """
-        Update the current pose of the robot.
+        Latch the start pose from the map -> base_link transform, once it exists.
 
-        Args:
-            msg (Odometry): The odometry message containing the position and orientation.
+        Called every loop until it succeeds; the first transform available is the
+        one saved as the map's ``initial_pose``.
 
         Returns:
             None
         """
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
-        theta = euler_from_quaternion([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,
-                                       msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])[2]
+        if self.pose_valid:
+            return
+        try:
+            tf_msg = self.tf_buffer.lookup_transform(
+                self.map_frame, self.base_frame, Time())
+        except tf2_ros.TransformException as e:
+            self.get_logger().log(
+                f"Waiting for the {self.map_frame}->{self.base_frame} transform: {e}",
+                severity=rclpy.logging.LoggingSeverity.WARN,
+                once=True,
+            )
+            return
 
-        if not self.pose_valid:
-            self.pose_valid = True
-            self.initial_position = (x, y, theta)
+        t = tf_msg.transform.translation
+        q = tf_msg.transform.rotation
+        theta = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        self.initial_position = (t.x, t.y, theta)
+        self.pose_valid = True
+        self.get_logger().info(
+            f"Initial pose latched from TF: x={t.x:.3f} y={t.y:.3f} theta={theta:.3f}")
 
-        # self.current_position = (x, y, theta)
-
-        # if self.lap_count == 0:
-        #     if self.cent_driven is None:
-        #         self.cent_driven = np.array([self.current_position])
-        #     else:
-        #         self.cent_driven = np.append(self.cent_driven, [self.current_position], axis=0)
-            
     def map_cb(self, msg: OccupancyGrid) -> None:
         """
         Updates the map with the given OccupancyGrid message.
@@ -151,6 +166,12 @@ class MappingNode(Node):
             return
         self.get_logger().info(f"Saving Map '{self.map_name}'...")
 
+        if self.initial_position is None:
+            self.get_logger().warn(
+                f"No {self.map_frame}->{self.base_frame} transform was ever seen; "
+                "saving the map with initial_pose (0, 0, 0).")
+            self.initial_position = (0.0, 0.0, 0.0)
+
         _check_default_map(self.map_name, self.map_dir, get_data_path('maps/backup'), self.get_logger().warn)
         os.makedirs(self.map_dir)
  
@@ -180,23 +201,27 @@ class MappingNode(Node):
         """Main Loop"""
         
         self.get_logger().log(
-            "Mapping active. Press 'y' to save the map or use the button on the plot.",
+            "Mapping active. Press 'y' to save the map" +
+            (" (headless, no plot)." if self.headless else " or use the button on the plot."),
             severity=rclpy.logging.LoggingSeverity.INFO,
             once=True,
         )
-        try:
-            if self.fig is None:
-                self.fig, (self.ax1, self.axfinish) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]})
-            self.fig.suptitle('Filtered map')
-            self.btn_compute = Button(self.axfinish, 'Map ready? Click to save!')
-            self.btn_compute.on_clicked(self.save_map)
-            self.plot()
-        except Exception as e:
-            self.get_logger().log(
-                "Could not create a plot, press 'y' to save the map without a plot. Error: " + str(e),
-                severity=rclpy.logging.LoggingSeverity.WARN,
-                once=True,
-            )
+        self.latch_initial_pose()
+
+        if not self.headless:
+            try:
+                if self.fig is None:
+                    self.fig, (self.ax1, self.axfinish) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]})
+                    self.fig.suptitle('Filtered map')
+                    self.btn_compute = Button(self.axfinish, 'Map ready? Click to save!')
+                    self.btn_compute.on_clicked(self.save_map)
+                self.plot()
+            except Exception as e:
+                self.get_logger().log(
+                    "Could not create a plot, press 'y' to save the map without a plot. Error: " + str(e),
+                    severity=rclpy.logging.LoggingSeverity.WARN,
+                    once=True,
+                )
         
         key = self.get_key()
         if key and key == '\x03':  # Ctrl-C
