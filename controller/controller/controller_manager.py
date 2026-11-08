@@ -252,7 +252,7 @@ class Controller(Node):
 
         # get wheelbase
         if self.sim:
-            config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'car_model.yaml')
+            config_path = os.path.join(stack_master_path, 'config', self.racecar_version, 'sim_params.yaml')
             with open(config_path, 'r') as f:
                 car_params = yaml.safe_load(f)
                 self.wheelbase = car_params['lr'] + car_params['lf']
@@ -424,6 +424,16 @@ class Controller(Node):
         rot_euler = rot.as_euler('xyz', degrees=False)
         theta = rot_euler[2]
         self.position_in_map = np.array([x, y, theta])[np.newaxis]
+
+    def car_state_cb(self, data: PoseStamped):
+        x = data.pose.position.x
+        y = data.pose.position.y
+        rot = Rotation.from_quat([data.pose.orientation.x, data.pose.orientation.y,
+                                  data.pose.orientation.z, data.pose.orientation.w])
+        rot_euler = rot.as_euler('xyz', degrees=False)
+        theta = rot_euler[2]
+        self.position_in_map = np.array([x, y, theta])[np.newaxis]
+
 
     def local_waypoint_cb(self, data: WpntArray):
         self.waypoint_list_in_map = []
@@ -650,7 +660,7 @@ class Controller(Node):
         self.lookahead_pub.publish(lookahead_marker)
 
     def visualize_trailing_opponent(self):
-        if(self.state == "TRAILING" and (self.opponent is not None)):
+        if(self.state == "StateType.TRAILING" and (self.opponent is not None)):
             on = True
         else:
             on = False

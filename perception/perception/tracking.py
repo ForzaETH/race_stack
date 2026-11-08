@@ -465,8 +465,6 @@ class StaticDynamic(Node):
             Odometry, 'car_state/frenet/odom', self.carStateCallback, 10)
         self.cs_odom_sub = self.create_subscription(
             Odometry, 'car_state/odom', self.carStateGlobCallback, 10)
-        self.tf_buffer = Buffer(rclpy.duration.Duration(seconds=5))
-        self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
         self.scan_sub = self.create_subscription(
             LaserScan, 'scan', self.scansCallback, 10)
 
@@ -596,6 +594,18 @@ class StaticDynamic(Node):
         if self.last_car_s is None:
             self.last_car_s = data.pose.pose.position.x
 
+    def carStateGlobCallback(self, data: Odometry) -> None:
+        """Update the car state in Cartesian coordinates."""
+        self.car_position = np.array(
+            [data.pose.pose.position.x, data.pose.pose.position.y])
+
+        car_yaw = euler_from_quaternion([data.pose.pose.orientation.x,
+                                        data.pose.pose.orientation.y,
+                                        data.pose.pose.orientation.z,
+                                        data.pose.pose.orientation.w])[2]
+
+        self.car_orientation = np.array([np.cos(car_yaw), np.sin(car_yaw)])
+
     def update_car_pose(self) -> None:
         """Update the car state in Cartesian coordinates from TF (map -> car_state/base_link)."""
         try:
@@ -627,7 +637,7 @@ class StaticDynamic(Node):
         if not self._initialized_track_bounds:
             return
 
-        self.update_car_pose()
+        
         meas_obstacles_copy = self.meas_obstacles.copy()
         car_s_copy = self.car_s
         car_position_copy = np.copy(self.car_position)  # type: ignore

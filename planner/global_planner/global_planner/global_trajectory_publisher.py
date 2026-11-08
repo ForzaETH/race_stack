@@ -82,6 +82,8 @@ class GlobalRepublisher(Node):
 
         # latched, so publishing once is enough
         self.global_republisher()
+        self.create_timer(10, self.global_republisher)  # also reach non-latched subscribers
+
 
     def glb_wpnts_cb(self, msg):
         self.glb_wpnts = msg
