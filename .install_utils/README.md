@@ -5,11 +5,7 @@
 If using [Visual Studio Code](https://code.visualstudio.com/), install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension (and the [WSL](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl) extension on Windows).
 
 ### Ubuntu
-Although the stack should be installable on most Linux distributions, the provided instructions are intended for Ubuntu.
-
-Download [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) and follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/).
-
-Install the required packages (git, make):
+Although the stack should be installable on most Linux distributions, the provided instructions are intended for Ubuntu. Download [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) and follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/). Install the required packages (git, make):
 ```bash
 sudo apt update
 sudo apt install git make
@@ -23,11 +19,7 @@ Download [Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-inst
 Homebrew installs the Xcode Command Line Tools, which include the required packages (git, make).
 
 ### Windows
-Install Ubuntu through the [Windows Subsystem for Linux](https://apps.microsoft.com/detail/9pdxgncfsczv?ocid=webpdpshare) (WSL2).
-
-Download and set up Docker Desktop for [Windows](https://docs.docker.com/desktop/setup/install/windows-install/). Enable WSL integration by accessing the Docker dashboard and navigating to **Settings > Resources > WSL Integration** and selecting Ubuntu, and then clicking on **Apply & Restart**.
-
-Using a WSL terminal instance, install the required packages (git, make):
+Install Ubuntu through the [Windows Subsystem for Linux](https://apps.microsoft.com/detail/9pdxgncfsczv?ocid=webpdpshare) (WSL2). Download and set up Docker Desktop for [Windows](https://docs.docker.com/desktop/setup/install/windows-install/). Enable WSL integration by accessing the Docker dashboard and navigating to **Settings > Resources > WSL Integration** and selecting Ubuntu, and then clicking on **Apply & Restart**. Using a WSL terminal instance, install the required packages (git, make):
 ```bash
 sudo apt update
 sudo apt install git make
@@ -60,13 +52,7 @@ make setup
 ```
 This asks for the ROS domain ID, the racecar version and whether VIO is used, and writes them to the `.env` file together with the base image and per-user ports. It also creates the `race_stack_deps`, `race_stack_maps` and `race_stack_bags` folders next to the repository, holding the external repositories, maps and bags.
 
-If using Visual Studio Code with Dev Containers, open the folder in the application and type `CTRL + SHIFT + P` and select `Dev Containers: Rebuild and Reopen in Container`. On newer versions of Docker and Docker Compose you might need to disable the Docker Buildx bake filesystem entitlement check. Make sure to restart Visual Studio Code so it picks up the new environment variable:
-```bash
-echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.profile
-echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.bashrc
-```
-
-If not using Visual Studio Code, build the images, start the containers and open a shell with:
+If using Visual Studio Code with Dev Containers, open the folder in the application and type `CTRL + SHIFT + P` and select `Dev Containers: Rebuild and Reopen in Container`. If not using Visual Studio Code, build the images, start the containers and open a shell with:
 ```bash
 make launch
 ```
@@ -83,7 +69,14 @@ The structure of the deployed containers is defined in the [docker-compose.yaml]
 VIO (visual-inertial odometry) is built into the main race stack container only if `USE_VIO=true` is set in the `.env` file during setup. It is recommended to leave this set to false unless VIO is needed, as the install process can be long.
 
 ## GUI Forwarding
-The race stack requires GUI forwarding for some functionalities. This is being deprecated as it can be fragile, in favour of Foxglove / Lichtblick connecting to `ws://<host>:8765`.
+The race stack requires GUI forwarding for some functionalities. This is being deprecated as it can be fragile, in favour of Foxglove / Lichtblick connecting to `ws://<host>:<FOXGLOVE_PORT>`.
+
+Each user on a machine gets their own ports, written to the `.env` file by `make setup` and based on the user ID (`id -u`):
+
+| Port | Value | UID 1000 (first Linux user) | UID 501 (first MacOS user) |
+|---|---|---|---|
+| `FOXGLOVE_PORT` | 8765 + UID % 1000 | 8765 | 9266 |
+| `NOVNC_WEB_PORT` | 20000 + UID | 21000 | 20501 |
 
 The display is selected each time the container is opened, based on the session opening it:
 
@@ -104,4 +97,4 @@ make x11
 ```
 When using Visual Studio Code, set `ForwardX11 yes` for the car in `~/.ssh/config` so the display is forwarded when opening the container; if it is not picked up, run `make x11` as above.
 
-noVNC is available at [http://localhost:20501](http://localhost:20501). Visual Studio Code forwards port 20501 when connected to a car, so its applications are shown at the same address. Without Visual Studio Code, forward the port with `ssh -L 20501:localhost:20501 <username>@<car_ip>`.
+noVNC is available at `http://localhost:<NOVNC_WEB_PORT>`, e.g. [http://localhost:21000](http://localhost:21000) for UID 1000. When connected to a car, the port is the one of your user on the car (`grep NOVNC_WEB_PORT .env` there). Visual Studio Code forwards it, so its applications are shown at the same address. Without Visual Studio Code, forward the port with `ssh -L <NOVNC_WEB_PORT>:localhost:<NOVNC_WEB_PORT> <username>@<car_ip>`.
