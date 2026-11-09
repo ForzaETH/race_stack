@@ -11,18 +11,18 @@
     ],
     "service": "race_stack",
     "runServices": [
-        "race_stack"
-    ],
-    "forwardPorts": [
-        20501
+        "race_stack",
+        "foxglove_bridge",
+        "novnc"
     ],
     "portsAttributes": {
-        "20501": {
-            "label": "noVNC"
+        "20000-65535": {
+            "label": "noVNC (20000 + UID)",
+            "onAutoForward": "silent"
         }
     },
     "otherPortsAttributes": {
-        "onAutoForward": "ignore"
+        "onAutoForward": "notify"
     }, 
     "workspaceFolder": "/ws",
     "remoteUser": "race_crew",

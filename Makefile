@@ -22,7 +22,7 @@ BUILD_STACK := docker build -f .devcontainer/Dockerfile -t $(STACK_IMAGE) --buil
 	--build-arg USE_VIO=$(USE_VIO) --build-arg UID=$(HOST_UID) --build-arg GID=$(HOST_GID) .
 BUILD_NOVNC := docker build -t $(NOVNC_IMAGE) https://github.com/ForzaETH/remote-novnc.git\#main
 
-.PHONY: setup images launch rebuild x11 x11-refresh help
+.PHONY: setup images novnc-ports launch rebuild x11 x11-refresh help
 
 help:
 	@echo "Usage: make setup"
@@ -47,7 +47,12 @@ setup:
 		printf "Which RealSense camera model? (d435/d455) [d435]: " && read camera_model && echo "VIO_CAMERA_MODEL=$${camera_model:-d435}" >> .env; \
 	fi
 	@echo "HOST_UID=$$(id -u)" >> .env
+	@# Each user has their own Foxglove bridge, so users sharing a machine need different ports
+	@default_port=$$((8765 + $$(id -u) % 1000)); \
+	printf "Enter FOXGLOVE_PORT for your Foxglove bridge [$$default_port]: " && read foxglove_port && \
+	echo "FOXGLOVE_PORT=$${foxglove_port:-$$default_port}" >> .env
 	@echo "HOST_GID=$$(id -g)" >> .env
+	@$(MAKE) -s novnc-ports
 
 	@echo "Selecting base image..."
 	@if [ -f /etc/nv_tegra_release ]; then \
@@ -68,8 +73,16 @@ images:
 	@$(BUILD_STACK) || { docker image inspect $(STACK_IMAGE) >/dev/null 2>&1 \
 		&& echo "WARNING: image build failed (no internet?), using the existing $(STACK_IMAGE)"; }
 	@docker image inspect $(NOVNC_IMAGE) >/dev/null 2>&1 || $(BUILD_NOVNC)
+	@$(MAKE) -s novnc-ports
 	@# One per machine, shared by all users: started if needed, never replaced
-	@docker compose -p race_stack_shared up -d --no-recreate zenoh_router foxglove_bridge novnc
+	@docker compose -p race_stack_shared up -d --no-recreate zenoh_router
+
+# Each user has their own noVNC on display :HOST_UID; the image derives its ports from that number
+# and compose cannot do arithmetic, so they are written to .env (also for a .env from before this)
+novnc-ports:
+	@[ -f .env ] || exit 0; uid=$$(sed -n 's/^HOST_UID=//p' .env); uid=$${uid:-1000}; \
+	grep -q '^NOVNC_X11_PORT=' .env || echo "NOVNC_X11_PORT=$$((6000 + uid))" >> .env; \
+	grep -q '^NOVNC_WEB_PORT=' .env || echo "NOVNC_WEB_PORT=$$((20000 + uid))" >> .env
 
 launch: x11-refresh
 	@[ -f .env ] || { echo "No .env found, run 'make setup' first."; exit 1; }
@@ -100,4 +113,4 @@ x11-refresh:
 		xauth nlist $$DISPLAY 2>/dev/null | sed -e 's/^..../ffff/' | xauth -f $(XAUTH_DIR)/xauth nmerge - 2>/dev/null || true; \
 	fi
 	@# Sessions without a display (MacOS, ssh without X forwarding) use the noVNC display
-	@if [ "$$(uname -s)" = Linux ] && [ -n "$$DISPLAY" ]; then echo "$$DISPLAY"; else echo ":501"; fi > $(XAUTH_DIR)/display
+	@if [ "$$(uname -s)" = Linux ] && [ -n "$$DISPLAY" ]; then echo "$$DISPLAY"; else echo ":$(HOST_UID)"; fi > $(XAUTH_DIR)/display

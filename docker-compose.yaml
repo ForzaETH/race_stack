@@ -29,7 +29,7 @@ services:
       - ../race_stack_bags:/ws/bags:rw
       - ws:/ws
     environment:
-      - DISPLAY=${DISPLAY:-:501}
+      - DISPLAY=${DISPLAY:-:${HOST_UID:-1000}}
       - XAUTHORITY=/tmp/.docker_xauth/xauth
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - ROS_LOCALHOST_ONLY=0
@@ -59,14 +59,11 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
-  # Foxglove bridge (ws://<host>:8765)
+  # Foxglove bridge (ws://<host>:<FOXGLOVE_PORT>)
   foxglove_bridge:
-    profiles: [shared]
     image: race_stack:humble_${HOST_UID:-1000}
     pull_policy: never
-    depends_on:
-      - zenoh_router
-    container_name: forzaeth_foxglove_bridge
+    container_name: forzaeth_foxglove_bridge_${HOST_UID:-1000}
     env_file:
       - .env
     network_mode: host
@@ -78,25 +75,24 @@ services:
     command: >
       bash -c "source /opt/ros/humble/setup.bash
       && if [ -f /ws/install/setup.bash ]; then source /ws/install/setup.bash; fi
-      && exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml address:=${FOXGLOVE_ADDRESS:-0.0.0.0}"
+      && exec ros2 launch foxglove_bridge foxglove_bridge_launch.xml address:=${FOXGLOVE_ADDRESS:-0.0.0.0} port:=${FOXGLOVE_PORT:-8765}"
     environment:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
-  # Virtual desktop for visualisations (RVIZ), used by sessions without a display
+  # Virtual desktop for visualisations (RVIZ), used by sessions without a display.
   novnc:
-    profiles: [shared]
     image: forzaeth_novnc:latest
     pull_policy: never
-    container_name: forzaeth_novnc
+    container_name: forzaeth_novnc_${HOST_UID:-1000}
     restart: unless-stopped
     tmpfs:
       - /tmp
     environment:
-      - USER_ID=501
+      - USER_ID=${HOST_UID:-1000}
     ports:
-      - "127.0.0.1:6501:6501"
-      - "127.0.0.1:20501:20501"
+      - "127.0.0.1:${NOVNC_X11_PORT:-7000}:${NOVNC_X11_PORT:-7000}"
+      - "127.0.0.1:${NOVNC_WEB_PORT:-21000}:${NOVNC_WEB_PORT:-21000}"
     command:
       - bash
       - -c
