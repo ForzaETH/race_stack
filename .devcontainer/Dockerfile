@@ -1,84 +1,36 @@
-# Base image is ros:humble-ros-base or 
-# nvcr.io/nvidia/l4t-jetpack:r36.4.0 on Jetson
+# syntax=docker/dockerfile:1
+# Base image is ros:humble-ros-base or l4t-jetpack:r36.4.0 on Jetson
 ARG BASE_IMAGE=ros:humble-ros-base
-ARG USE_VIO=false
-ARG USER=race_crew
-ARG UID=1000
-ARG GID=1000
+ARG USE_VIO=false USER=race_crew UID=1000 GID=1000
 
-# ---------- base: ROS + user ----------
-FROM ${BASE_IMAGE} AS base
-ARG USER UID GID
+FROM ${BASE_IMAGE}
+ARG USE_VIO USER UID GID
 ARG DEBIAN_FRONTEND=noninteractive
 SHELL [ "/bin/bash", "-c" ]
 ENV ROS_DISTRO=humble LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-RUN <<'EOF'
-set -eo pipefail
-apt-get update
-apt-get install -y --no-install-recommends curl ca-certificates gnupg lsb-release sudo
+# Install ROS 2 (on Jetson)
+COPY .install_utils/install_ros.sh /tmp/
+RUN bash /tmp/install_ros.sh && rm /tmp/install_ros.sh
 
-# Keep only Ubuntu's 4.5 OpenCV (for Jetson)
-if dpkg-query -W libopencv >/dev/null 2>&1; then
-    apt-get purge -y libopencv libopencv-dev libopencv-python libopencv-samples nvidia-opencv nvidia-opencv-dev \
-        opencv-licenses opencv-samples-data
-fi
+# Create user with matching UID/GID with serial and USB access
+RUN groupadd -fg ${GID} ${USER} \
+    && useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev,video ${USER} \
+    && echo "${USER} ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
+    && echo 'Defaults env_keep += "DEBIAN_FRONTEND"' >> /etc/sudoers.d/${USER} \
+    && chmod 0440 /etc/sudoers.d/${USER}
 
-# Install ROS 2 Humble if the image doesn't come with it. This is needed for the base image for Nvidia Jetsons.
-if [ ! -f /opt/ros/humble/setup.bash ]; then
-    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \
-        > /etc/apt/sources.list.d/ros2.list
-    apt-get update
-    apt-get install -y --no-install-recommends ros-humble-ros-base build-essential git python3-rosdep \
-        python3-colcon-common-extensions python3-colcon-mixin
-    rosdep init
-fi
-rm -rf /var/lib/apt/lists/*
-EOF
-
-# Create user with matching UID/GID so bind-mounted files stay owned by
-# the host user. Also give access to serial (VESC) and USB devices.
-RUN <<'EOF'
-set -e
-groupadd -fg ${GID} ${USER}
-useradd --no-log-init -ms /bin/bash -u ${UID} -g ${GID} -G sudo,dialout,plugdev,video ${USER}
-echo "${USER} ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER}
-echo 'Defaults env_keep += "DEBIAN_FRONTEND"' >> /etc/sudoers.d/${USER}
-chmod 0440 /etc/sudoers.d/${USER}
-EOF
-
-# ---------- vio-false / vio-true: selected by USE_VIO ----------
-# Placed before the requirements so changing those does not rebuild Basalt.
-FROM base AS vio-false
-
-FROM base AS vio-true
-ARG DEBIAN_FRONTEND=noninteractive
-
-# Install Realsense and build Basalt
+# Install RealSense and build Basalt, only if USE_VIO=true
 COPY .install_utils/install_vio.sh .install_utils/basalt.repos /tmp/
-RUN bash /tmp/install_vio.sh && rm /tmp/install_vio.sh /tmp/basalt.repos
-
-# ---------- manifests: only the package.xml files ----------
-# Editing other files in .install_utils re-runs this stage, but not the rosdep step that uses its output.
-FROM base AS manifests
-COPY . /ctx
-RUN mkdir /manifests && cd /ctx && find . -name package.xml -exec cp --parents {} /manifests/ \;
-
-# ---------- final: requirements + shell ----------
-FROM vio-${USE_VIO} AS final
-ARG USER UID GID
-ARG DEBIAN_FRONTEND=noninteractive
+RUN if [[ "$USE_VIO" == "true" ]]; then bash /tmp/install_vio.sh; fi \
+    && rm -f /tmp/install_vio.sh /tmp/basalt.repos
 
 # Install system (apt) dependencies
 COPY .install_utils/requirements/linux_req.txt /tmp/linux_req.txt
-RUN <<'EOF'
-set -e
-apt-get update
-xargs apt-get install -y < /tmp/linux_req.txt
-rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
-EOF
+RUN apt-get update && xargs apt-get install -y < /tmp/linux_req.txt \
+    && rm -rf /var/lib/apt/lists/* /tmp/linux_req.txt
 
+# Install uv for python
 COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /bin/
 
 # Install PyTorch with CUDA and torchvision, on Jetson only
@@ -90,27 +42,20 @@ COPY .install_utils/requirements/python_req.txt .install_utils/requirements/pyth
 RUN uv pip install --system --no-cache -r /tmp/python_req.txt --override /tmp/python_overrides.txt \
     && rm /tmp/python_req.txt /tmp/python_overrides.txt
 
-# Install the rosdep dependencies of the workspace and the external repositories, so
-# new containers can build without internet. Last so package.xml changes only re-run this.
-COPY --from=manifests /manifests /tmp/rosdep/race_stack
+# Install rosdep dependencies
+COPY --parents ./**/package.xml /tmp/rosdep/race_stack/
 COPY .install_utils/dependencies.repos /tmp/dependencies.repos
-RUN <<'EOF'
-set -e
-apt-get update
-rosdep update
-mkdir -p /tmp/rosdep/deps
-vcs import --recursive /tmp/rosdep/deps < /tmp/dependencies.repos
-# python-transforms3d-pip was removed from rosdistro (transforms3d is installed via pip)
-rosdep install --from-paths /tmp/rosdep --ignore-src -y --skip-keys "python-transforms3d-pip"
-rm -rf /tmp/rosdep /tmp/dependencies.repos /root/.ros /var/lib/apt/lists/*
-EOF
+RUN apt-get update && rosdep update && mkdir -p /tmp/rosdep/deps \
+    && vcs import --recursive /tmp/rosdep/deps < /tmp/dependencies.repos \
+    && rosdep install --from-paths /tmp/rosdep --ignore-src -y --skip-keys "python-transforms3d-pip" \
+    && rm -rf /tmp/rosdep /tmp/dependencies.repos /root/.ros /var/lib/apt/lists/*
 
-# Bashrc: source ROS and workspaces, display, git branch in terminal
+# Source ROS and workspaces, display and git completion in terminal
 COPY .install_utils/bashrc /tmp/bashrc
 RUN cat /tmp/bashrc >> /home/${USER}/.bashrc && rm /tmp/bashrc
 
 # Create mount points for persistent volumes (extensions, home storage, colcon workspace)
-RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist /ws/src /ws/build /ws/install /ws/log \
+RUN mkdir -p /home/${USER}/.vscode-server/extensions /home/${USER}/.persist /ws \
     && chown -R ${UID}:${GID} /home/${USER}/.vscode-server /home/${USER}/.persist /ws
 
 # Set runtime environment
