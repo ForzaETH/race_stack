@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Colcon Build",
+            "detail": "Build the workspace, or only the given packages and their dependencies",
+            "type": "shell",
+            "command": "pkgs='${input:packages}'; colcon build ${pkgs:+--packages-up-to $pkgs}",
+            "options": { "cwd": "/ws" },
+            "problemMatcher": ["$gcc"],
+            "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "Colcon Clean",
+            "detail": "Clean the workspace, or only the given packages",
+            "type": "shell",
+            "command": "pkgs='${input:packages}'; if [ -n \"$pkgs\" ]; then colcon clean packages --yes --packages-select $pkgs; else colcon clean workspace --yes; fi",
+            "options": { "cwd": "/ws" },
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "packages",
+            "type": "promptString",
+            "description": "Packages, separated by spaces (leave empty for all)",
+            "default": ""
+        }
+    ]
+}

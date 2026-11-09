@@ -32,6 +32,10 @@ done
 sudo chmod 666 /dev/input/js0 2>/dev/null || true
 sudo chmod 666 /dev/input/event* 2>/dev/null || true
 
+# Link the tasks into the .vscode folder
+mkdir -p /ws/.vscode
+[ -e /ws/.vscode/tasks.json ] || ln -s /ws/src/race_stack/.devcontainer/tasks.json /ws/.vscode/tasks.json
+
 # Build workspace
 cd /ws
 colcon build --symlink-install --cmake-force-configure --cmake-args -DCMAKE_BUILD_TYPE=Release
