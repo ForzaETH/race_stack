@@ -9,10 +9,10 @@ Although the stack should be installable on most Linux distributions, the provid
 
 Download [Docker Engine](https://docs.docker.com/engine/install/ubuntu/) and follow the [post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/).
 
-Install the required packages (git, wget, make):
+Install the required packages (git, make):
 ```bash
 sudo apt update
-sudo apt install git wget make
+sudo apt install git make
 ```
 
 ### MacOS
@@ -40,10 +40,10 @@ Install [Docker Engine](https://docs.nvidia.com/jetson/orin-nano-devkit/user-gui
 docker info | grep -i runtime  # should list nvidia
 ```
 
-Install the required packages (git, wget, make):
+Install the required packages (git, make):
 ```bash
 sudo apt update
-sudo apt install git wget make
+sudo apt install git make
 ```
 
 ## Installation steps
@@ -58,7 +58,7 @@ Run the setup:
 ```bash
 make setup
 ```
-This creates the `race_stack_deps`, `race_stack_maps` and `race_stack_bags` folders next to the repository, holding the external repositories, maps and bags.
+This asks for the ROS domain ID, the racecar version and whether VIO is used, and writes them to the `.env` file together with the base image and per-user ports. It also creates the `race_stack_deps`, `race_stack_maps` and `race_stack_bags` folders next to the repository, holding the external repositories, maps and bags.
 
 If using Visual Studio Code with Dev Containers, open the folder in the application and type `CTRL + SHIFT + P` and select `Dev Containers: Rebuild and Reopen in Container`. On newer versions of Docker and Docker Compose you might need to disable the Docker Buildx bake filesystem entitlement check. Make sure to restart Visual Studio Code so it picks up the new environment variable:
 ```bash
@@ -66,10 +66,11 @@ echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.profile
 echo 'export BUILDX_BAKE_ENTITLEMENTS_FS=0' >> ~/.bashrc
 ```
 
-If not using Visual Studio Code, the containers can be built with:
+If not using Visual Studio Code, build the images, start the containers and open a shell with:
 ```bash
 make launch
 ```
+`make rebuild` does the same with a fresh container. On the first start of a container, the external repositories are cloned into `race_stack_deps` and the workspace is built. Without internet, the existing images and repositories are used.
 
 ## Structure
 The structure of the deployed containers is defined in the [docker-compose.yaml](../docker-compose.yaml). Four containers are deployed:
