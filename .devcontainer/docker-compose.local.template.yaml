@@ -10,12 +10,12 @@ services:
   race_stack:
     volumes:
       # Keep every VS Code extension installed inside the container across rebuilds.
-      - vscode-extensions:/home/race_crew/.vscode-server/extensions
+      - vscode-extensions:/home/${USER}/.vscode-server/extensions
       # General-purpose persistent home storage
-      - persist:/home/race_crew/.persist
+      - persist:/home/${USER}/.persist
     # environment:
     #   # Example: keep Claude Code login and chat history across rebuilds
-    #   - CLAUDE_CONFIG_DIR=/home/race_crew/.persist/claude
+    #   - CLAUDE_CONFIG_DIR=/home/${USER}/.persist/claude
 
 # Named per host user, so users sharing a machine never share volumes
 volumes:

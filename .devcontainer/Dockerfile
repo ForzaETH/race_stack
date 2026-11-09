@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Base image is ros:humble-ros-base or l4t-jetpack:r36.4.0 on Jetson
 ARG BASE_IMAGE=ros:humble-ros-base
-ARG USE_VIO=false USER=race_crew UID=1000 GID=1000
+ARG USE_VIO=false USER UID=1000 GID=1000
 
 FROM ${BASE_IMAGE}
 ARG USE_VIO USER UID GID

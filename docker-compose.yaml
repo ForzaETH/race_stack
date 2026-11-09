@@ -18,7 +18,7 @@ services:
     init: true
     stdin_open: true
     tty: true
-    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/race_crew/.vscode-server /home/race_crew/.persist; sudo chown $$(id -u):$$(id -g) /ws; exec tail -f /dev/null"
+    command: bash -c "sudo chown -R $$(id -u):$$(id -g) /home/${USER}/.vscode-server /home/${USER}/.persist; sudo chown $$(id -u):$$(id -g) /ws; exec tail -f /dev/null"
     volumes:
       - /dev:/dev:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -40,6 +40,7 @@ services:
       - RCUTILS_COLORIZED_OUTPUT=1
       - TERM=xterm-256color
       - PYTHONPYCACHEPREFIX=/tmp/pycache
+      - PYTHONWARNINGS=ignore:Unbuilt egg:UserWarning
       - CMAKE_EXPORT_COMPILE_COMMANDS=ON
       - COLCON_DEFAULTS_FILE=/ws/src/race_stack/.install_utils/colcon_defaults.yaml
 

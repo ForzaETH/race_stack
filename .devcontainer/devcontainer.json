@@ -25,7 +25,7 @@
         "onAutoForward": "notify"
     }, 
     "workspaceFolder": "/ws",
-    "remoteUser": "race_crew",
+    "remoteUser": "${localEnv:USER}",
     "customizations": {
         "vscode": {
             "extensions": [
