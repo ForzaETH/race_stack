@@ -2,8 +2,8 @@
     "name": "ForzaETH Race Stack",
     "initializeCommand": {
         "local-compose": "test -f .devcontainer/docker-compose.local.yaml || cp .devcontainer/docker-compose.local.template.yaml .devcontainer/docker-compose.local.yaml",
-        "x11": "make -s x11-refresh",
-        "images": "make -s images"
+        "x11": "make -s x11",
+        "images": "docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build || echo 'WARNING: image build failed (no internet?), using the existing images'; docker compose -p race_stack_shared up -d --no-recreate zenoh_router"
     },
     "dockerComposeFile": [
         "../docker-compose.yaml",
@@ -25,7 +25,7 @@
         "onAutoForward": "notify"
     }, 
     "workspaceFolder": "/ws",
-    "remoteUser": "race_crew",
+    "remoteUser": "${localEnv:USER}",
     "customizations": {
         "vscode": {
             "extensions": [

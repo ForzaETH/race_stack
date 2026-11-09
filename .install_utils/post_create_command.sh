@@ -3,7 +3,7 @@
 # Stop at error
 set -e
 
-# Source ROS here too, as make launch runs this script without the .bashrc that VS Code loads
+# Source ROS
 source /opt/ros/$ROS_DISTRO/setup.bash
 
 # env_keep in sudoers passes DEBIAN_FRONTEND through rosdep's sudo apt-get
