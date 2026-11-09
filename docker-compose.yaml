@@ -64,6 +64,8 @@ services:
     image: race_stack:humble_${HOST_UID:-1000}
     pull_policy: never
     container_name: forzaeth_foxglove_bridge_${HOST_UID:-1000}
+    depends_on:
+      - race_stack
     env_file:
       - .env
     network_mode: host
