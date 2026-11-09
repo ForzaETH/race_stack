@@ -91,11 +91,7 @@ class ImuToBase(Node):
             C = np.array(getattr(msg, name)).reshape(3, 3)
             if fallback and not C.any():
                 C = np.eye(3) * self.get_parameter(fallback).value ** 2
-            if name == 'orientation_covariance' and C[0, 0] == -1:
-                transformed = C
-            else:
-                transformed = R @ C @ R.T
-            setattr(out, name, transformed.ravel().tolist())
+            setattr(out, name, (R @ C @ R.T).ravel().tolist())
 
         self.pub.publish(out)
 
