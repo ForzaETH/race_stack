@@ -6,7 +6,7 @@ CONTAINER := forzaeth_devcontainer_$(HOST_UID)
 LOCAL_COMPOSE := .devcontainer/docker-compose.local.yaml
 XAUTH_DIR := $(HOME)/.docker_xauth
 
-.PHONY: setup launch rebuild x11 help
+.PHONY: setup prepare launch rebuild x11 help
 
 help:
 	@echo "make setup    Prepare the host folders and .env (once per machine)"
@@ -44,21 +44,24 @@ setup:
 	@echo "Setup complete! Open VS Code, type CTRL + SHIFT + P and select 'Reopen in Container'."
 	@echo "====================================================================================="
 
-launch: x11
+# This is also used by VSCode
+prepare: x11
 	@[ -f $(LOCAL_COMPOSE) ] || cp .devcontainer/docker-compose.local.template.yaml $(LOCAL_COMPOSE)
 	@# Build when online, else keep using the existing images
 	@docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build \
 		|| echo "WARNING: image build failed (no internet?), using the existing images"
-	@# Zenoh router: one per machine, shared by all users; started if needed, never replaced
+	@# Zenoh router (shared by users)
 	@docker compose -p race_stack_shared up -d --no-recreate zenoh_router
+
+launch: prepare
 	@docker compose -f docker-compose.yaml -f $(LOCAL_COMPOSE) up -d $(UP_FLAGS)
 	@# Once per new container, like VS Code; the marker is in the container, so it is gone when that is recreated
 	@docker exec $(CONTAINER) test -f /tmp/.post_create_done \
 		|| docker exec -it $(CONTAINER) bash /ws/src/race_stack/.install_utils/post_create_command.sh
 	@docker exec -it $(CONTAINER) bash
 
-rebuild: UP_FLAGS := --force-recreate
-rebuild: launch
+build: UP_FLAGS := --force-recreate
+build: launch
 
 # Display access for GUI applications, both locally (xhost) and over ssh -X (xauth)
 x11:
