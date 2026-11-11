@@ -13,6 +13,7 @@
   <test_depend>python3-pytest</test_depend>
 
   <exec_depend>stack_master</exec_depend>
+  <exec_depend>pbl_config</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>

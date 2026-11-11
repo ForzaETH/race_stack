@@ -7,12 +7,12 @@ import yaml
 import cv2
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from skimage.morphology import skeletonize
 
 import rclpy
 from stack_master.qos import LATCHED_QOS
+from pbl_config import load_car_config_ros
 from rclpy.node import Node
 from ament_index_python.packages import get_package_share_directory
 from visualization_msgs.msg import MarkerArray
@@ -47,12 +47,18 @@ class GlobalPlannerNode(Node):
         self.show_plots = self.get_parameter('show_plots').value
         self.safety_width = self.get_parameter('safety_width').value
         self.safety_width_sp = self.get_parameter('safety_width_sp').value
+        self.racecar_version = self.get_parameter('racecar_version').value
 
-        
         self.map_resolution = None
         self.watershed = True
         self.map_info_str = ""
         self.input_path = os.path.join(get_package_share_directory('stack_master'), 'config', 'global_planner')
+        # car-specific part of the optimizer's veh_params, the rest stays in racecar_f110.ini
+        car = load_car_config_ros(self.racecar_version)
+        if car is None:
+            raise ValueError(f'Invalid config/{self.racecar_version}/car_model.yaml, see errors above')
+        self.veh_params = {'mass': car.m, 'v_max': car.v_max, 'curvlim': 1.0 / car.min_radius_curv_m}
+        self.get_logger().info(f'{self.racecar_version} vehicle params: {self.veh_params}')
         
         self.global_waypoints_pub = self.create_publisher(WpntArray, '/global_waypoints', LATCHED_QOS)
         self.global_waypoints_sp_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', LATCHED_QOS)
@@ -106,6 +112,10 @@ class GlobalPlannerNode(Node):
         else:
             self.initial_position = map_info['initial_pose']
         self.skeleton = skeleton
+        if matplotlib.get_backend().lower() == 'agg':
+            self.get_logger().info("No display, skipping the map and optimizer plots.")
+            self.show_plots = False
+            return
         try:
             f, (ax0, ax1) = plt.subplots(2, 1)
             f.suptitle(f"Map [{self.map_name}]: Filtered map versus morphological skeleton")
@@ -215,8 +225,8 @@ class GlobalPlannerNode(Node):
         self.get_logger().info('Start Global Trajectory optimization with iterative minimum curvature...')
         try:
             global_trajectory_iqp, bound_r_iqp, bound_l_iqp, est_t_iqp = trajectory_optimizer(
-                input_path=self.input_path, track_name=iqp_centerline_path, curv_opt_type='mincurv_iqp', safety_width=self.safety_width, plot=(
-                    self.show_plots and not self.map_editor_mode))
+                input_path=self.input_path, veh_params=self.veh_params, track_name=iqp_centerline_path, curv_opt_type='mincurv_iqp', safety_width=self.safety_width, plot=(
+                    self.show_plots))
         except RuntimeError as e:
             self.get_logger().warn(f"Error during iterative minimum curvature optimization, error: {e}")
             self.get_logger().info('Try again later!')
@@ -252,7 +262,7 @@ class GlobalPlannerNode(Node):
         # Compute centerline trajectory: same preprocessing and velocity profile as the optimized lines, no optimization
         ################################################################################################################
         global_trajectory_cl, *_ = trajectory_optimizer(
-            input_path=self.input_path, track_name=iqp_centerline_path, curv_opt_type='centerline',
+            input_path=self.input_path, veh_params=self.veh_params, track_name=iqp_centerline_path, curv_opt_type='centerline',
             safety_width=self.safety_width, plot=False)
         d_right_cl, d_left_cl = dist_to_bounds(trajectory=global_trajectory_cl,
                                                bound_r=bound_r_iqp,
@@ -274,11 +284,11 @@ class GlobalPlannerNode(Node):
         self.get_logger().info('Start reverse Global Trajectory optimization with shortest path...')
 
         self.get_logger().info('Start Global Trajectory optimization with iterative minimum curvature for overtaking...')
-        global_trajectory_iqp_ot, *_ = trajectory_optimizer(input_path=self.input_path,
+        global_trajectory_iqp_ot, *_ = trajectory_optimizer(input_path=self.input_path, veh_params=self.veh_params,
                                                             track_name=iqp_centerline_path,
                                                             curv_opt_type='mincurv_iqp',
                                                             safety_width=self.safety_width_sp,
-                                                            plot=(self.show_plots and not self.map_editor_mode))
+                                                            plot=(self.show_plots))
 
         # use new iqp path as centerline
         new_cent_with_dist = add_dist_to_cent(centerline_smooth=global_trajectory_iqp_ot[:, 1:3],
@@ -296,8 +306,8 @@ class GlobalPlannerNode(Node):
         # to use iqp as new centerline, set trackname='map_centerline_2', otherwise use track_name='map_centerline'
         # is a bit faster but cuts corner a bit more
         global_trajectory_sp, bound_r_sp, bound_l_sp, est_t_sp = trajectory_optimizer(
-            input_path=self.input_path, track_name=sp_centerline_path, curv_opt_type='shortest_path', safety_width=self.safety_width_sp, plot=(
-                self.show_plots and not self.map_editor_mode))
+            input_path=self.input_path, veh_params=self.veh_params, track_name=sp_centerline_path, curv_opt_type='shortest_path', safety_width=self.safety_width_sp, plot=(
+                self.show_plots))
 
         self.est_lap_time = Float32()  # variable which will be published and used in l1_param_optimizer
         self.est_lap_time.data = est_t_sp

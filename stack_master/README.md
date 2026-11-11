@@ -36,9 +36,12 @@ Then you can run the global planner:
 ros2 launch stack_master planner_launch.xml map_name:=<map name of choice>
 ```
  - `<map_name_of_choice` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
+ - `racecar_version:=NUCx` defaults to `$RACECAR_VERSION`. Mass, `v_max` and the curvature limit (`1 / min_radius_curv_m`) come from `config/<racecar_version>/car_model.yaml` (required), everything else from `config/global_planner/racecar_f110.ini`.
 
 A GUI will popup showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
 Be careful as once a sector is chosen it cannot be further subdivided. 
+
+Without a display (no `DISPLAY` set) the plots are skipped and a single sector over the whole track is written for both speed scaling and overtaking. Add `headless:=true` to also skip rviz.
 
 ### Base System
 ```shell
