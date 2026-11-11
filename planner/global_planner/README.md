@@ -19,7 +19,7 @@ The Global Planner package is a ROS2 package designed to generate a global traje
 ## Input/Output Topic Signature
 This node subscribes to:
 - `/map`: Subscribes to the occupancy grid of the map.
-- `/car_state/pose`: Reads the car's pose
+- TF `map -> base_link`: Reads the car's pose
     
 The node publishes to:
 - `/global_waypoints`: Publishes global waypoints.

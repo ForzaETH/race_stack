@@ -1,9 +1,10 @@
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from geometry_msgs.msg import PointStamped
 from f110_msgs.msg import ObstacleArray, Obstacle, WpntArray, OpponentTrajectory, OppWpnt
 from visualization_msgs.msg import Marker, MarkerArray
-from nav_msgs.msg import Odometry, OccupancyGrid
+from nav_msgs.msg import OccupancyGrid
 import numpy as np
 from frenet_conversion.frenet_converter import FrenetConverter
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
@@ -56,9 +57,8 @@ class ObstaclePublisher(Node):
         
 
         # Subscriptions and Publishers
-        self.odom_subscriber = self.create_subscription(Odometry, '/car_state/odom_frenet', self.odom_cb, 10)
-        self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, 10)
-        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, 10)
+        self.waypoints_subscriber = self.create_subscription(WpntArray, self.waypoints_topic, self.waypoints_cb, LATCHED_QOS)
+        self.global_waypoints_subscriber = self.create_subscription(WpntArray, '/global_waypoints', self.global_waypoints_cb, LATCHED_QOS)
         
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RELIABLE,
@@ -104,10 +104,6 @@ class ObstaclePublisher(Node):
     def waypoints_cb(self, data: WpntArray):
         self.wpnts = data.wpnts[:-1]
 
-    def odom_cb(self, data: Odometry):
-        """ Odometry callback to track the car's state."""
-        self.car_odom = data
-        
     def map_cb(self, data):
         if self.first_map:
             self.original_map = OccupancyGrid()

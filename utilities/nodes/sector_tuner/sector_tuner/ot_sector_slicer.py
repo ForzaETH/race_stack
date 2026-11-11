@@ -1,11 +1,13 @@
 import yaml, os, subprocess, time
 import rclpy
+from stack_master.qos import LATCHED_QOS
 from rclpy.node import Node
 from f110_msgs.msg import WpntArray
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
 from pathlib import Path
 from visualization_msgs.msg import MarkerArray
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from matplotlib.patches import Arrow
@@ -34,9 +36,9 @@ class OvertakingSectorSlicer(Node):
         self.glob_slider_s = 0
         self.sector_pnts = [0] #Sector always has tostart at 0
 
-        self.wpnt_sub = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, 10)
-        self.wpnt_sub_sp = self.create_subscription(WpntArray, '/global_waypoints/shortest_path', self.glb_sp_wpnts_cb, 10)
-        self.bounds_sub = self.create_subscription(MarkerArray, '/trackbounds/markers', self.bounds_cb, 10)
+        self.wpnt_sub = self.create_subscription(WpntArray, '/global_waypoints', self.glb_wpnts_cb, LATCHED_QOS)
+        self.wpnt_sub_sp = self.create_subscription(WpntArray, '/global_waypoints/shortest_path', self.glb_sp_wpnts_cb, LATCHED_QOS)
+        self.bounds_sub = self.create_subscription(MarkerArray, '/trackbounds/markers', self.bounds_cb, LATCHED_QOS)
         
         timer_period = 0.5  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
@@ -65,10 +67,10 @@ class OvertakingSectorSlicer(Node):
         
         #Select Sectors via the GUI
         self.sector_gui()
-        self.get_logger().info('Selected Overtaking Sector IDXs: '+str(self.sector_pnts))
-
-        #Write sectors to yaml
-        self.sectors_to_yaml()
+        if self.sector_pnts is not None:   # None: headless and the yaml already exists, keep it
+            self.get_logger().info('Selected Overtaking Sector IDXs: '+str(self.sector_pnts))
+            #Write sectors to yaml
+            self.sectors_to_yaml()
         #Indicate that the task is done and execution of the node can be stopped
         self.future.set_result(None)
 
@@ -86,6 +88,15 @@ class OvertakingSectorSlicer(Node):
         s = np.array(s)
         x = np.array(x)
         y = np.array(y)
+
+        if matplotlib.get_backend().lower() == 'agg':
+            if os.path.exists(os.path.join(self.yaml_dir, 'ot_sectors.yaml')):
+                self.get_logger().warn("No display, keeping the existing ot_sectors.yaml.")
+                self.sector_pnts = None
+            else:
+                self.get_logger().warn("No display, writing a single sector over the whole track.")
+                self.sector_pnts = [0, len(s)]
+            return
 
         # plot raceline without sector points
         fig, (ax1, axslider, axselect, axfinish) = plt.subplots(4, 1, gridspec_kw={'height_ratios': [5, 1, 1, 1]})

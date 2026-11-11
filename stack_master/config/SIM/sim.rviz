@@ -83,17 +83,17 @@ Visualization Manager:
     - Class: rviz_common/Group
       Displays:
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Centerline
           Namespaces:
             {}
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /centerline_waypoints/markers
-          Value: true
+          Value: false
         - Class: rviz_default_plugins/MarkerArray
           Enabled: true
           Name: Global Waypoints
@@ -101,14 +101,38 @@ Visualization Manager:
             {}
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /global_waypoints/markers
           Value: true
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Lattice Viz
+          Namespaces:
+            {}
+          Topic:
+            Depth: 5
+            Durability Policy: Transient Local
+            History Policy: Keep Last
+            Reliability Policy: Best Effort
+            Value: /lattice_viz
+          Value: false
+        - Class: rviz_default_plugins/MarkerArray
+          Enabled: false
+          Name: Track Bounds
+          Namespaces:
+            {}
+          Topic:
+            Depth: 5
+            Durability Policy: Transient Local
+            History Policy: Keep Last
+            Reliability Policy: Best Effort
+            Value: /trackbounds/markers
+          Value: false
+        - Class: rviz_default_plugins/MarkerArray
+          Enabled: false
+          Name: Overtaking Waypoints
           Namespaces:
             {}
           Topic:
@@ -141,15 +165,15 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /global_waypoints/overtaking/markers
-          Value: true
+          Value: false
         - Class: rviz_default_plugins/MarkerArray
-          Enabled: true
+          Enabled: false
           Name: Shortest Path
           Namespaces:
             {}
           Topic:
             Depth: 5
-            Durability Policy: Volatile
+            Durability Policy: Transient Local
             History Policy: Keep Last
             Reliability Policy: Best Effort
             Value: /global_waypoints/shortest_path/markers
@@ -170,7 +194,7 @@ Visualization Manager:
           Color: 255; 255; 255
           Color Transformer: FlatColor
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: false
           Max Color: 255; 255; 255
           Max Intensity: 4096
@@ -191,7 +215,7 @@ Visualization Manager:
             Value: /scan
           Use Fixed Frame: true
           Use rainbow: true
-          Value: true
+          Value: false
         - Alpha: 1
           Class: rviz_default_plugins/RobotModel
           Collision Enabled: false
@@ -599,10 +623,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5397963523864746
+      Scale: 31.058486938476562
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 4.733580589294434
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 1.2561830282211304
+      Y: 2.806946039199829
     Saved: ~
 Window Geometry:
   Displays:

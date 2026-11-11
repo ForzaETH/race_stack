@@ -1,0 +1,14 @@
+/**/local_planner:  # any namespace, e.g. the sim opponent
+  ros__parameters:
+    rate_hz: 40  # [hz]
+    n_loc_wpnts: 80  # number of local waypoints published, 1 waypoint every 0.1 meter
+
+    base_frame: 'car_state/base_link'  # TF frame of the car -> overridden by launch arg for the sim opponent
+    raceline: 'mincurv'  # line to track: mincurv, shortest_path, centerline (frenet + sector scaling always on mincurv) -> overridden by launch arg
+    ot_planner: 'frenet'  # choose between: frenet, spliner, predictive_spliner, graph_based
+
+    gb_ego_width_m: 0.4  # [m], distance from gb path for rejoining -> dynamically overridden from state_machine
+
+    splini_ttl: 2.  # [s] ttl counter for validity of spliner waypoints -> dynamically overridden from state_machine
+    pred_splini_ttl: 0.2  # [s] ttl counter for validity of predictive spliner waypoints
+    splini_hyst_timer_sec: 0.2  # [s] time we have to wait between switching sides -> dynamically overridden from state_machine

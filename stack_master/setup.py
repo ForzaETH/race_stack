@@ -10,6 +10,12 @@ map_subfolders = []
 for map_dir in os.listdir('maps'):
     map_subfolders.append((os.path.join('share', package_name, 'maps', map_dir), glob('maps/{}/*'.format(map_dir), recursive=True)))
 
+#handle the config folder, which nests arbitrarily deep (e.g. config/NUC5/pacejka/<floor>/archive/*.yaml)
+config_subfolders = []
+for root, _, files in os.walk('config'):
+    if files:
+        config_subfolders.append((os.path.join('share', package_name, root), [os.path.join(root, f) for f in files]))
+
 setup(
     name=package_name,
     version='0.0.0',
@@ -44,6 +50,7 @@ setup(
     entry_points={
         'console_scripts': [
             'global_parameter_node = stack_master.global_parameter_node:main',
+            'static_tf_publisher = stack_master.static_tf_publisher:main',
         ],
     },
 )

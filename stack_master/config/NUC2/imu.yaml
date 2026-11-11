@@ -1,0 +1,7 @@
+# VESC IMU calibration, used by imu_to_base_node (state_estimation_launch.xml)
+imu_to_base:
+  ros__parameters:
+    # constant gyro offset [x, y, z] in rad/s, in the IMU's own frame; subtracted before rotating into base_link.
+    # Temperature dependent, re-measure when the odom frame starts drifting at standstill.
+    gyro_bias: [0.0, 0.0, 0.0]  # not measured yet: average /sensors/imu/raw angular_velocity over ~1 min at standstill
+    gyro_scale: 1.0
