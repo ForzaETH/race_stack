@@ -1,0 +1,17 @@
+/**/spline_planner:
+  ros__parameters:
+    pre_apex_0: 4.0
+    pre_apex_1: 3.0
+    pre_apex_2: 1.5
+    post_apex_0: 2.0
+    post_apex_1: 3.0
+    post_apex_2: 4.0
+    evasion_dist: 0.35
+    obs_traj_tresh: 0.4  # keep >= lateral_width_gb_m, otherwise the car gets stuck trailing
+    spline_bound_mindist: 0.15
+    fixed_pred_time: 0.15
+    kd_obs_pred: 1.0
+
+/**/state_machine:
+  ros__parameters:
+    lateral_width_gb_m: 0.4

@@ -1,6 +1,8 @@
 <launch>
+    <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx': params from config/&lt;version&gt;/overtaking_params.yaml" />
 
     <node pkg="spline_planner" exec="spline_planner" name="spline_planner" output="screen">
+        <param from="$(find-pkg-share stack_master)/config/$(var racecar_version)/overtaking_params.yaml" />
     </node>
 
 </launch>

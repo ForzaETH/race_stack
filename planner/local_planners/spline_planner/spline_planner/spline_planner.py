@@ -116,6 +116,8 @@ class ObstacleSpliner(Node):
         ]
 
         self.declare_all_parameters(param_dicts=param_dicts)
+        # Apply the values from the launch param file (declare_parameter alone does not update the attributes above)
+        self.dyn_param_cb(self.get_parameters([param_dict['name'] for param_dict in param_dicts]))
         self.add_on_set_parameters_callback(self.dyn_param_cb)
 
         if self.measuring:

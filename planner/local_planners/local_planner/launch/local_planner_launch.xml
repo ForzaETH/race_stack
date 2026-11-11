@@ -1,6 +1,7 @@
 <launch>
     <arg name="sim_opp" default="False" description="True to remap topics to the simulated opponent ones" />
     <arg name="raceline" default="mincurv" description="'mincurv' / 'shortest_path' / 'centerline'" />
+    <arg name="ot_planner" default="spliner" description="'spliner' (frenet / graph_based / predictive_spliner planners are not ported to ROS2) -> must match the overtake planner that is launched" />
     <let name="base_frame" value="car_state/base_link" />
     <let name="base_frame" value="opp_racecar/base_link" if="$(var sim_opp)" />
     <group>
@@ -12,6 +13,7 @@
             <param from="$(find-pkg-share stack_master)/config/local_planner_params.yaml"/>
             <param name="raceline" value="$(var raceline)" />
             <param name="base_frame" value="$(var base_frame)" />
+            <param name="ot_planner" value="$(var ot_planner)" />
         </node>
     </group>
 </launch>

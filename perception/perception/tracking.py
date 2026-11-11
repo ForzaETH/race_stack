@@ -453,9 +453,6 @@ class StaticDynamic(Node):
         
         self.opponent_obstacle = Opponent_state()
 
-        # ------------ Initialize main logic loop ------------
-        self.timer = self.create_timer(1/self.update_rate, self.loop)
-
         # ------------ Subscribers ------------
         self.obs_sub = self.create_subscription(
             ObstacleArray, '/perception/detection/raw_obstacles', self.obstacleCallback, 10)
@@ -478,7 +475,11 @@ class StaticDynamic(Node):
         if self.measuring:
             self.latency_pub = self.create_publisher(
                 Float32, '/perception/tracking/latency', 10)
-            
+
+        # ------------ Initialize main logic loop ------------
+        # Created last: the TF listener spins this node in its own thread, so the timer can fire before __init__ ends
+        self.timer = self.create_timer(1/self.update_rate, self.loop)
+
         self.get_logger().info('[Tracking]: Tracking initialized')
             
     def delcare_dyn_parameters(self, param_dicts: List[dict]):
