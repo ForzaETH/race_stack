@@ -1,8 +1,8 @@
-m: 3.39
-lf: 0.168
-lr: 0.167
-wheelbase: 0.335 # this is not a free parameter, it is lf + lr
-width_m: 0.228
+m: 2.7
+lf: 0.133
+lr: 0.125
+wheelbase: 0.258 # this is not a free parameter, it is lf + lr
+width_m: 0.2
 
 Iz: 0.05797
 h_cg: 0.014
