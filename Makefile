@@ -60,8 +60,8 @@ launch: prepare
 		|| docker exec -it $(CONTAINER) bash /ws/src/race_stack/.install_utils/post_create_command.sh
 	@docker exec -it $(CONTAINER) bash
 
-rebuild: UP_FLAGS := --force-recreate
-rebuild: launch
+build: UP_FLAGS := --force-recreate
+build: launch
 
 # Display access for GUI applications, both locally (xhost) and over ssh -X (xauth)
 x11:
