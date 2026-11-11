@@ -88,6 +88,9 @@ services:
     image: forzaeth_novnc:latest
     pull_policy: never
     container_name: forzaeth_novnc_${HOST_UID:-1000}
+    ipc: host
+    security_opt:
+      - seccomp=unconfined
     restart: unless-stopped
     tmpfs:
       - /tmp
