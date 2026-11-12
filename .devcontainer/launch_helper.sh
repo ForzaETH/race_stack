@@ -22,7 +22,8 @@ if [ $EXIT_CODE -eq 0 ]; then
         docker compose -f "$COMPOSE_FILE" exec "$SERVICE_NAME" /bin/bash
     elif [ "$CONTAINER_STATUS" == "exited" ]; then
         echo "Container is stopped. Restarting..."
-        docker compose -f "$COMPOSE_FILE" start "$SERVICE_NAME" novnc
+        docker compose -f "$COMPOSE_FILE" start "$SERVICE_NAME"
+        docker compose -f "$COMPOSE_FILE" up -d --no-recreate novnc
     fi
     echo "Done. To attach: docker compose exec $SERVICE_NAME /bin/bash"
 else
