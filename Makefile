@@ -2,14 +2,10 @@
 # NOTE: this is not a traditional Makefile, but a script-like structure
 # Usage: make [target]
 
-# Configurable variables (edit as needed)
-CACHE_DIR := ../race_stack_cache/humble
-
 # Phony targets
 .PHONY: \
 	help \
 	default_setup \
-	setup_cache \
 	build \
 	launch\
 	export_env
@@ -21,7 +17,7 @@ help: ## Show available targets and their descriptions
 	@grep -E '^[a-zA-Z_-]+:.*?## ' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 # HIGH-LEVEL TARGETS
-default_setup: export_env edit-json-arm check-registry setup_cache build ## Setup the race_stack on a new computer, with the simulator
+default_setup: export_env edit-json-arm check-registry build ## Setup the race_stack on a new computer, with the simulator
 # LEAF TARGETS
 export_env:
 	@echo "Exporting environment variables to .env file..."
@@ -31,14 +27,6 @@ export_env:
 	@echo "HOST_UID=$(shell id -u)" >> .env
 	@echo "HOST_GID=$(shell id -g)" >> .env
 	@if [ "$$(uname -s)" = "Darwin" ]; then echo "CONTAINER_DISPLAY=:1800" >> .env; fi
-
-setup_cache: ## Create cache folder structure
-	@echo "Creating ros cache directories..."
-	mkdir -p $(CACHE_DIR)/build \
-		$(CACHE_DIR)/install \
-		$(CACHE_DIR)/log
-	@echo "Cache directories ready at $(CACHE_DIR)"
-
 
 build: ## Build the base workspace
 	@echo "Detecting system architecture..."
