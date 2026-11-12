@@ -19,7 +19,7 @@ x-common-settings: &common-settings
     - ../race_stack_cache/humble/logs:/home/${USER}/ws/logs:rw
     - .vscode:/home/${USER}/ws/.vscode:rw
   environment:
-    - DISPLAY=${DISPLAY:-:1800} # Fallback to NoVNC
+    - DISPLAY=${CONTAINER_DISPLAY:-${DISPLAY:-:1800}} # Fallback to NoVNC
     - XAUTHORITY=/tmp/.Xauthority
     - USER=${USER}
     - USERNAME=${USER}
