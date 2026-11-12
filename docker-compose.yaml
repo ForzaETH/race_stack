@@ -13,10 +13,8 @@ x-common-settings: &common-settings
     - /dev:/dev:rw
     - $HOME/.Xauthority:/tmp/.Xauthority
     - /tmp/.X11-unix:/tmp/.X11-unix
+    - ws:/home/${USER}/ws:rw
     - ./:/home/${USER}/ws/src/race_stack:rw
-    - ../race_stack_cache/humble/build:/home/${USER}/ws/build:rw
-    - ../race_stack_cache/humble/install:/home/${USER}/ws/install:rw
-    - ../race_stack_cache/humble/logs:/home/${USER}/ws/logs:rw
     - .vscode:/home/${USER}/ws/.vscode:rw
   environment:
     - DISPLAY=${CONTAINER_DISPLAY:-${DISPLAY:-:1800}} # Fallback to NoVNC
@@ -78,3 +76,9 @@ services:
       - |
         echo '<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&resize=scale">' > /usr/share/novnc/index.html
         exec /start_vnc.sh
+
+# Volume for build cache. Docker storage instead of host mounted
+# avoids corruption issues on VMs (MacOS). Also faster.
+volumes:
+  ws:
+    name: race_stack_ws_${USER}
