@@ -16,13 +16,6 @@ EXIT_CODE=$?
 docker ps --filter name=forzaeth_novnc_ --format '{{.Names}}' | grep -vx "forzaeth_novnc_$USER" | xargs -r docker stop
 
 if [ $EXIT_CODE -eq 0 ]; then
-    # Warn if the current container is stale
-    CONTAINER_IMAGE=$(docker inspect -f '{{.Image}}' "$CONTAINER_NAME")
-    CURRENT_IMAGE=$(docker image inspect -f '{{.Id}}' "race_stack:humble_${SERVICE_NAME}_$USER" 2>/dev/null)
-    if [ -n "$CURRENT_IMAGE" ] && [ "$CONTAINER_IMAGE" != "$CURRENT_IMAGE" ] || \
-       ! docker inspect -f '{{range .Mounts}}{{.Name}} {{end}}' "$CONTAINER_NAME" | grep -qw "race_stack_ws_$USER"; then
-        echo -e "\033[33mWarning: container is stale (older image or missing workspace volume). Run 'make relaunch' to recreate it.\033[0m"
-    fi
     if [ "$CONTAINER_STATUS" == "running" ]; then
         echo "Container is already running."
         docker compose -f "$COMPOSE_FILE" up -d novnc
