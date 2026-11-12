@@ -8,7 +8,6 @@
 	default_setup \
 	build \
 	launch\
-	relaunch \
 	export_env
 
 help: ## Show available targets and their descriptions
@@ -59,16 +58,6 @@ launch:
 		exit 1; \
 	fi; \
 	.devcontainer/launch_helper.sh $$SERVICE_NAME
-
-relaunch: ## Recreate the container to apply a new image or volume configl
-	@case "$$(uname -m)" in \
-		x86_64) s=x86;; \
-		aarch64) s=jet;; \
-		arm64) s=arm;; \
-		*) echo "Unsupported architecture: $$(uname -m)"; exit 1;; \
-	esac; \
-	docker compose -f docker-compose.yaml rm -sf $$s
-	@$(MAKE) --no-print-directory launch
 
 edit-json-arm:
 	@echo "If on an ARM based device, please edit devcontainer.json as follows"
