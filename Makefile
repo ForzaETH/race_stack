@@ -27,7 +27,7 @@ export_env:
 	@echo "HOST_UID=$(shell id -u)" >> .env
 	@echo "HOST_GID=$(shell id -g)" >> .env
 	@if [ "$$(uname -s)" = "Darwin" ]; then echo "CONTAINER_DISPLAY=:1800" >> .env; fi
-	
+
 build: ## Build the base workspace
 	@echo "Detecting system architecture..."
 	@if [ "$$(uname -m)" = "x86_64" ]; then \
