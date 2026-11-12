@@ -11,3 +11,6 @@ else
     xhost +local:$USER
 fi
 
+# noVNC uses fixed ports, so stop the noVNC another user left running
+docker ps --filter name=forzaeth_novnc_ --format '{{.Names}}' | grep -vx "forzaeth_novnc_$USER" | xargs -r docker stop
+

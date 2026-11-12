@@ -42,13 +42,13 @@ build: ## Build the base workspace
 	@echo "Detecting system architecture..."
 	@if [ "$$(uname -m)" = "x86_64" ]; then \
 		echo "Building for x86 architecture..."; \
-		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build x86; \
+		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build x86 novnc; \
 	elif [ "$$(uname -m)" = "aarch64" ]; then \
 		echo "Building for Jetson ARM architecture..."; \
-		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build jet; \
+		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build jet novnc; \
 	elif [ "$$(uname -m)" = "arm64" ]; then \
 		echo "Building for Apple ARM architecture..."; \
-		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build arm; \
+		docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build arm novnc; \
 	else \
 		echo "Unsupported architecture: $$(uname -m)"; \
 		exit 1; \
@@ -63,8 +63,6 @@ launch:
 		export SERVICE_NAME="jet"; \
 	elif [ "$$(uname -m)" = "arm64" ]; then \
 		export SERVICE_NAME="arm"; \
-		export DISPLAY=:501; \
-		echo "Setting DISPLAY to :501 for Apple Silicon..."; \
 	else \
 		echo "Unsupported architecture: $$(uname -m)"; \
 		exit 1; \
@@ -74,7 +72,6 @@ launch:
 edit-json-arm:
 	@echo "If on an ARM based device, please edit devcontainer.json as follows"
 	@echo "Edit the service and runServices to end with arm and not x86"
-	@echo "Change display from '\$${localEnv:DISPLAY}' to ':501'"
 	@printf "Have you updated it if needed?  (y/N): " && read ans && [ "$$ans" = "y" -o "$$ans" = "Y" ] || (echo "Aborted."; exit 1)
 	@echo "✅ Proceeding with build..."
 

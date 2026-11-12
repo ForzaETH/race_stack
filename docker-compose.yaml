@@ -19,7 +19,7 @@ x-common-settings: &common-settings
     - ../race_stack_cache/humble/logs:/home/${USER}/ws/logs:rw
     - .vscode:/home/${USER}/ws/.vscode:rw
   environment:
-    - DISPLAY=${DISPLAY}
+    - DISPLAY=${DISPLAY:-:1800} # Fallback to NoVNC
     - XAUTHORITY=/tmp/.Xauthority
     - USER=${USER}
     - USERNAME=${USER}
@@ -53,3 +53,28 @@ services:
     container_name: forzaeth_devcontainer_arm_$USER
     image: race_stack:humble_arm_$USER
     <<: *common-settings
+
+  # NoVNC container also as a service to always have a access to a GUI
+  # Fixed ports and UID work as long as multiple instances are not run
+  # at the same time. Container however is per user.
+  novnc:
+    image: forzaeth_novnc:latest
+    pull_policy: never
+    container_name: forzaeth_novnc_$USER
+    ipc: host
+    security_opt:
+      - seccomp=unconfined
+    restart: "no" # kill the container at reboot
+    tmpfs:
+      - /tmp
+    environment:
+      - USER_ID=1800 # Chosen to not clash on any OS
+    ports:
+      - "127.0.0.1:7800:7800"
+      - "127.0.0.1:21800:21800"
+    command:
+      - bash
+      - -c
+      - |
+        echo '<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&resize=scale">' > /usr/share/novnc/index.html
+        exec /start_vnc.sh
