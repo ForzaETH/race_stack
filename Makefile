@@ -30,6 +30,8 @@ export_env:
 	@printf "Use VIO (RealSense + Basalt)? [false]: " && read use_vio && echo "USE_VIO=$${use_vio:-false}" >> .env
 	@echo "HOST_UID=$(shell id -u)" >> .env
 	@echo "HOST_GID=$(shell id -g)" >> .env
+	@if [ "$$(uname -s)" = "Darwin" ]; then echo "CONTAINER_DISPLAY=:1800" >> .env; fi
+
 setup_cache: ## Create cache folder structure
 	@echo "Creating ros cache directories..."
 	mkdir -p $(CACHE_DIR)/build \
