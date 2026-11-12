@@ -34,3 +34,6 @@ services:
       args:
         <<: *user-args
         PLATFORM: arm
+  
+  novnc:
+    build: https://github.com/ForzaETH/remote-novnc.git#main
