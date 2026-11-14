@@ -1,56 +1,37 @@
 # per-user project, otherwise compose matches containers of other users by service name and recreates them
 name: race_stack_${USER}
 
-x-common-settings: &common-settings
-  network_mode: host
-  ipc: host
-  privileged: true
-  shm_size: "1gb"
-  stdin_open: true
-  tty: true
-  command: tail -f /dev/null
-  volumes:
-    - /dev:/dev:rw
-    - $HOME/.Xauthority:/tmp/.Xauthority
-    - /tmp/.X11-unix:/tmp/.X11-unix
-    - ws:/home/${USER}/ws:rw
-    - ./:/home/${USER}/ws/src/race_stack:rw
-    - .vscode:/home/${USER}/ws/.vscode:rw
-  environment:
-    - DISPLAY=${CONTAINER_DISPLAY:-${DISPLAY:-:1800}} # Fallback to NoVNC
-    - XAUTHORITY=/tmp/.Xauthority
-    - USER=${USER}
-    - USERNAME=${USER}
-    - ROS_LOCALHOST_ONLY=0
-    - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
-    - RCUTILS_COLORIZED_OUTPUT=1
-    - TERM=xterm-256color
-    - RMW_IMPLEMENTATION=rmw_zenoh_cpp
-    - RACECAR_VERSION=${RACECAR_VERSION:-NUC5}
-    - USE_VIO=${USE_VIO:-false}
-
 services:
-  jet:
-    container_name: forzaeth_devcontainer_jet_$USER
-    image: race_stack:humble_jet_$USER
-    <<: *common-settings
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-  x86:
-    container_name: forzaeth_devcontainer_x86_$USER
-    image: race_stack:humble_x86_$USER
-    <<: *common-settings
-  arm:
-    container_name: forzaeth_devcontainer_arm_$USER
-    image: race_stack:humble_arm_$USER
-    <<: *common-settings
+  race_stack:
+    container_name: forzaeth_devcontainer_$USER
+    image: race_stack:humble_$USER
+    runtime: ${DOCKER_RUNTIME:-runc}
+    network_mode: host
+    ipc: host
+    privileged: true
+    shm_size: "1gb"
+    stdin_open: true
+    tty: true
+    command: tail -f /dev/null
+    volumes:
+      - /dev:/dev:rw
+      - $HOME/.Xauthority:/tmp/.Xauthority
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ws:/home/${USER}/ws:rw
+      - ./:/home/${USER}/ws/src/race_stack:rw
+      - .vscode:/home/${USER}/ws/.vscode:rw
+    environment:
+      - DISPLAY=${CONTAINER_DISPLAY:-${DISPLAY:-:1800}} # Fallback to NoVNC
+      - XAUTHORITY=/tmp/.Xauthority
+      - USER=${USER}
+      - USERNAME=${USER}
+      - ROS_LOCALHOST_ONLY=0
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-48}
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - TERM=xterm-256color
+      - RMW_IMPLEMENTATION=rmw_zenoh_cpp
+      - RACECAR_VERSION=${RACECAR_VERSION:-NUC5}
+      - USE_VIO=${USE_VIO:-false}
 
   # NoVNC container also as a service to always have a access to a GUI
   # Fixed ports and UID work as long as multiple instances are not run
