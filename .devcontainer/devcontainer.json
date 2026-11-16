@@ -1,9 +1,9 @@
 {
     "name": "ForzaETH Race Stack Humble",
     "dockerComposeFile": "../docker-compose.yaml",
-    "service": "x86",
+    "service": "arm",
     "runServices": [
-        "x86",
+        "arm",
         "novnc"
     ],
     "forwardPorts": [

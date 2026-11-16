@@ -36,6 +36,7 @@ RUN if [[ "$PLATFORM" == "jet" ]]; then \
 
 RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req.txt
 ADD ./.install_utils/python_req.txt /tmp/.install_utils/python_req.txt
+RUN pip3 install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
 RUN pip3 install --index-url https://pypi.org/simple -r /tmp/.install_utils/python_req.txt || true
 
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3-dev && \
