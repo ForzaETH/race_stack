@@ -11,7 +11,7 @@ services:
     privileged: true
     group_add:
       - video # Jetson GPU nodes
-      - ${RENDER_GID:-video}
+      - ${RENDER_GID:-44} # host render GID; fallback 44 = video (must differ textually from entry above)
     shm_size: "1gb"
     stdin_open: true
     tty: true
