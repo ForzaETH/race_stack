@@ -11,6 +11,7 @@ services:
     privileged: true
     group_add:
       - video # Jetson GPU nodes
+      - ${RENDER_GID:-video}
     shm_size: "1gb"
     stdin_open: true
     tty: true

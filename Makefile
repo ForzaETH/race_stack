@@ -27,6 +27,7 @@ export_env: ## Write the .env file (asks for settings, detects the platform)
 	@echo "HOST_UID=$(shell id -u)" >> .env
 	@echo "HOST_GID=$(shell id -g)" >> .env
 	@if [ "$$(uname -s)" = "Darwin" ]; then echo "CONTAINER_DISPLAY=:1800" >> .env; fi
+	@if [ -e /dev/dri/renderD128 ]; then echo "RENDER_GID=$$(stat -c %g /dev/dri/renderD128)" >> .env; fi
 	@case "$$(uname -m)" in \
 		x86_64) 	echo "PLATFORM=x86" >> .env ;; \
 		arm64)		echo "PLATFORM=arm" >> .env ;; \
