@@ -1,0 +1,8 @@
+<launch>
+    <arg name="sim" default="False" />
+
+    <node pkg="prediction" exec="opponent_prediction" name="opponent_prediction" output="screen">
+        <param name="use_sim_time" value="$(var sim)" />
+    </node>
+
+</launch>

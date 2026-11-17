@@ -1,0 +1,85 @@
+opponent_prediction:
+  d_noise_std:
+    type: double
+    default_value: 0.09
+    description: "Lateral sensor noise of the perception (std) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  vs_noise_std:
+    type: double
+    default_value: 1.0
+    description: "Speed sensor noise of the perception (std) [m/s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  min_gap:
+    type: double
+    default_value: 0.5
+    description: "Detections closer ahead of us are phantoms of our own car [m]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  max_gap:
+    type: double
+    default_value: 6.0
+    description: "The opponent is the closest dynamic obstacle ahead of us within this distance [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  ds_min:
+    type: double
+    default_value: 0.2
+    description: "Thinning: minimum progress between stored samples [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  laps_kept:
+    type: int
+    default_value: 2
+    description: "Complete laps kept besides the current one"
+    read_only: true
+    validation:
+      gt_eq<>: [0]
+  fit_period:
+    type: double
+    default_value: 2.0
+    description: "Period of the fit timer [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  min_new:
+    type: int
+    default_value: 50
+    description: "New samples needed before refitting"
+    read_only: true
+    validation:
+      gt<>: [0]
+  fit_threads:
+    type: int
+    default_value: 2
+    description: "CPU threads used by torch for fitting"
+    read_only: true
+    validation:
+      gt<>: [0]
+  n_std:
+    type: double
+    default_value: 2.0
+    description: "Width of the published speed band and marker band [std]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  z_max:
+    type: double
+    default_value: 3.0
+    description: "Consistency check: a detection further from the prediction than this is off [std]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  n_off_max:
+    type: int
+    default_value: 10
+    description: "Consistency check: off detections in a row before the opponent counts as off its trajectory"
+    read_only: true
+    validation:
+      gt<>: [0]
