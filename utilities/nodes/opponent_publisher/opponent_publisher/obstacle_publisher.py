@@ -87,7 +87,8 @@ class ObstaclePublisher(Node):
         dynamic_obstacle.id = 1
         dynamic_obstacle.d_right = -0.1
         dynamic_obstacle.d_left = 0.1
-        dynamic_obstacle.is_actually_a_gap = False
+        dynamic_obstacle.is_actually_a_gap = True
+        dynamic_obstacle.is_visible = True
         
         return dynamic_obstacle
     
