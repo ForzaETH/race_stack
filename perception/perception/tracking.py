@@ -542,7 +542,7 @@ class StaticDynamic(Node):
             elif param_name == 'vs_reset':
                 self.vs_reset = param.value
             elif param_name == 'aggro_multi':
-                self.aggro_multi = param.value
+                self.aggro_multiplier = param.value
             elif param_name == 'debug_mode':
                 self.debug_mode = param.value
             elif param_name == 'publish_static':

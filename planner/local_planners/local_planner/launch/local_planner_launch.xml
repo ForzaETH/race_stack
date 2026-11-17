@@ -8,6 +8,7 @@
         <set_remap from="/global_waypoints_scaled" to="/opp_racecar/global_waypoints_scaled" if="$(var sim_opp)" />
         <set_remap from="/local_waypoints" to="/opp_racecar/local_waypoints" if="$(var sim_opp)" />
         <set_remap from="/local_waypoints/markers" to="/opp_racecar/local_waypoints/markers" if="$(var sim_opp)" />
+        <set_remap from="/planner/avoidance/otwpnts" to="/opp_racecar/planner/avoidance/otwpnts" if="$(var sim_opp)" />
         <node pkg="local_planner" name="local_planner" exec="local_planner" output="screen">
             <param from="$(find-pkg-share stack_master)/config/local_planner_params.yaml"/>
             <param name="raceline" value="$(var raceline)" />
