@@ -1,0 +1,36 @@
+<launch>
+    <!-- Standalone: starts the VESC driver, the joystick and VIO itself. Do NOT run base_system with it.
+         Drives the car: constant motor current, then brake. Hold the deadman to start.
+         Record a bag meanwhile -->
+    <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'NUCx'" />
+    <arg name="param_file" default="$(find-pkg-share longitudinal_sysid_ros)/config/current_step.yaml" />
+    <let name="car_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)" />
+
+    <node pkg="joy_linux" exec="joy_linux_node" name="joy">
+        <param from="$(var car_config)/joy_teleop.yaml" />
+    </node>
+
+    <node pkg="vesc_driver" exec="vesc_driver_node" name="vesc_driver_node" output="screen">
+        <param from="$(var car_config)/vesc.yaml" />
+        <!-- after vesc.yaml: overrides its command_timeout with a shorter one -->
+        <param from="$(var param_file)" />
+    </node>
+
+    <!-- VIO, for the speed of the car on /basalt/odom: sensor transforms, RealSense camera, Basalt.
+         Same nodes as base_system with USE_VIO=true -->
+    <include file="$(find-pkg-share stack_master)/launch/static_transforms_launch.xml">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+    </include>
+    <node pkg="realsense2_camera" exec="realsense2_camera_node" name="camera" namespace="camera" output="screen">
+        <param from="$(find-pkg-share stack_master)/config/camera/d435_config.yaml" />
+    </node>
+    <include file="$(find-pkg-share state_estimation)/launch/vio_composed.launch.py">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+    </include>
+
+    <node pkg="longitudinal_sysid_ros" exec="current_step_node" name="current_step" output="screen">
+        <!-- for steering_angle_to_servo_offset, the centred servo position -->
+        <param from="$(var car_config)/vesc.yaml" />
+        <param from="$(var param_file)" />
+    </node>
+</launch>

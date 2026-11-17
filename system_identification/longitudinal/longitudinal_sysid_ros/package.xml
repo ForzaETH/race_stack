@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>longitudinal_sysid_ros</name>
+  <version>0.1.0</version>
+  <description>Longitudinal identification experiments that command the VESC directly</description>
+  <maintainer email="edoardo.ghignone@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>joy_linux</exec_depend>
+  <exec_depend>vesc_driver</exec_depend>
+  <exec_depend>stack_master</exec_depend>
+  <exec_depend>state_estimation</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
