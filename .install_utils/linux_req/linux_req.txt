@@ -1,5 +1,7 @@
+vim
 wget
 jq
+ccache
 x11-apps
 python3-pip
 python3-colcon-clean

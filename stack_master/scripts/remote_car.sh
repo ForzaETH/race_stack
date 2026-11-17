@@ -4,6 +4,7 @@ declare -A machines=(
     [nuc1]="192.168.192.1"
     [nuc2]="192.168.192.4"
     [NUC6]="nuc6.robo.pbl"
+    [NUC7]="nuc7.robo.pbl"
 )
 
 set_local() {

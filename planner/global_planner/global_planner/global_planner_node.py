@@ -12,8 +12,8 @@ from skimage.morphology import skeletonize
 
 import rclpy
 from stack_master.qos import LATCHED_QOS
-from pbl_config import load_car_config_ros
 from rclpy.node import Node
+from forza_config_ros import load_car_config_ros
 from ament_index_python.packages import get_package_share_directory
 from visualization_msgs.msg import MarkerArray
 from geometry_msgs.msg import Point
@@ -45,20 +45,20 @@ class GlobalPlannerNode(Node):
         self.map_name = self.get_parameter('map_name').value
         self.reverse_mapping = self.get_parameter('reverse_mapping').value
         self.show_plots = self.get_parameter('show_plots').value
-        self.safety_width = self.get_parameter('safety_width').value
-        self.safety_width_sp = self.get_parameter('safety_width_sp').value
-        self.racecar_version = self.get_parameter('racecar_version').value
+        racecar_version = self.get_parameter('racecar_version').value
+        car = load_car_config_ros(racecar_version)
+        # full width the trajectory keeps free: half the car plus the margin on each side
+        self.safety_width = car.width_m + 2 * self.get_parameter('safety_margin').value
+        self.safety_width_sp = car.width_m + 2 * self.get_parameter('safety_margin_sp').value
+        self.veh_params = {'mass': car.m, 'width': car.width_m, 'v_max': car.v_max,
+                           'curvlim': 1 / car.min_radius_curv_m}
+        self.get_logger().info(f"Vehicle parameters of {racecar_version}: {self.veh_params}, "
+                               f"safety width {self.safety_width:.3f} m (shortest path {self.safety_width_sp:.3f} m)")
 
         self.map_resolution = None
         self.watershed = True
         self.map_info_str = ""
         self.input_path = os.path.join(get_package_share_directory('stack_master'), 'config', 'global_planner')
-        # car-specific part of the optimizer's veh_params, the rest stays in racecar_f110.ini
-        car = load_car_config_ros(self.racecar_version)
-        if car is None:
-            raise ValueError(f'Invalid config/{self.racecar_version}/car_model.yaml, see errors above')
-        self.veh_params = {'mass': car.m, 'v_max': car.v_max, 'curvlim': 1.0 / car.min_radius_curv_m}
-        self.get_logger().info(f'{self.racecar_version} vehicle params: {self.veh_params}')
         
         self.global_waypoints_pub = self.create_publisher(WpntArray, '/global_waypoints', LATCHED_QOS)
         self.global_waypoints_sp_pub = self.create_publisher(WpntArray, '/global_waypoints/shortest_path', LATCHED_QOS)

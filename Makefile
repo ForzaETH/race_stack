@@ -38,6 +38,10 @@ export_env: ## Write the .env file (asks for settings, detects the platform)
 	esac
 
 build: ## Build the base workspace
+	@# a .env from an older export_env silently builds with the x86 defaults
+	@for k in ROS_DOMAIN_ID RACECAR_VERSION USE_VIO HOST_UID HOST_GID PLATFORM; do \
+		grep -qs "^$$k=" .env || { echo "ERROR: $$k missing from .env, run 'make export_env'"; exit 1; }; \
+	done
 	@platform=$$(grep -s '^PLATFORM=' .env | cut -d= -f2); echo "Building for $${platform:-x86} platform..."
 	@docker compose -f docker-compose.yaml -f .devcontainer/docker-compose.build.yaml build race_stack novnc
 	@echo "Base workspace built successfully."

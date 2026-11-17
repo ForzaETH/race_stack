@@ -463,6 +463,9 @@ class StaticDynamic(Node):
             WpntArray, '/global_waypoints', self.pathCallback, LATCHED_QOS)
         self.cs_frenet = self.create_subscription(
             Odometry, '/car_state/frenet/odom', self.carStateCallback, 10)
+        self.odom_sub = self.create_subscription(
+            Odometry, '/state_estimation/odom', self.odomCallback, 10)
+        self.odom = None
         self.tf_buffer = Buffer(rclpy.duration.Duration(seconds=5))
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
         self.scan_sub = self.create_subscription(
@@ -594,17 +597,27 @@ class StaticDynamic(Node):
         if self.last_car_s is None:
             self.last_car_s = data.pose.pose.position.x
 
+    def odomCallback(self, data: Odometry) -> None:
+        self.odom = data
+
     def update_car_pose(self) -> None:
-        """Update the car state in Cartesian coordinates from TF (map -> car_state/base_link)."""
+        """Update the car state in Cartesian coordinates from the odometry, moved into map."""
+        if self.odom is None:
+            return
+        # only map->odom from TF: the whole map->base_link chain lags behind by the localization latency
         try:
-            tf = self.tf_buffer.lookup_transform('map', 'car_state/base_link', rclpy.time.Time())
+            tf = self.tf_buffer.lookup_transform('map', self.odom.header.frame_id, rclpy.time.Time())
         except Exception as e:
-            self.get_logger().warn(f"map->car_state/base_link lookup failed: {e}", throttle_duration_sec=1.0)
+            self.get_logger().warn(f"map->{self.odom.header.frame_id} lookup failed: {e}", throttle_duration_sec=1.0)
             return
         t = tf.transform.translation
         q = tf.transform.rotation
-        self.car_position = np.array([t.x, t.y])
-        car_yaw = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        yaw0 = euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
+        p = self.odom.pose.pose.position
+        q = self.odom.pose.pose.orientation
+        self.car_position = np.array([t.x + np.cos(yaw0) * p.x - np.sin(yaw0) * p.y,
+                                      t.y + np.sin(yaw0) * p.x + np.cos(yaw0) * p.y])
+        car_yaw = yaw0 + euler_from_quaternion([q.x, q.y, q.z, q.w])[2]
         self.car_orientation = np.array([np.cos(car_yaw), np.sin(car_yaw)])
 
     def scansCallback(self, data: LaserScan) -> None:
