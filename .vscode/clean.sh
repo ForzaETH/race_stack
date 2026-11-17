@@ -1,13 +1,12 @@
 #!/bin/bash
 set -e
 
-if [ -z "$1" ]; then
-    TARGET="workspace"
-else
-    TARGET="packages --packages-up-to $1"
-fi
+BASES="--build-base $HOME/ws/build --install-base $HOME/ws/install --log-base $HOME/ws/log"
 
-colcon clean \
-    $TARGET --yes \
-    --build-base ~/ws/build --install-base ~/ws/install --log-base ~/ws/log \
-    --clean-ignore .gitkeep f110_gym
+if [ -z "$1" ]; then
+    # file-filter mode: keeps .gitkeep at the base roots and the f110_gym build, leaves empty dirs behind
+    colcon clean workspace --yes $BASES --clean-ignore .gitkeep f110_gym
+else
+    # no filter: whole build/install dirs of the selected packages are removed
+    colcon clean packages --yes $BASES --packages-select "$@" --packages-skip f110_gym
+fi

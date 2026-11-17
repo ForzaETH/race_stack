@@ -12,6 +12,11 @@ tqdm
 transforms3d>0.4
 pydantic
 
+# State estimation evaluation (state_estimation/eval)
+rosbags>=0.10.0
+evo==1.21.0
+eth-colors-pbl
+
 # Gym requirements
 gymnasium==0.29.1
 numpy==1.22.0

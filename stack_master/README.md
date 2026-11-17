@@ -13,6 +13,8 @@ If you now want to connect to this host (e.g. to stream topics to RViz on anothe
 ### Parameters
 There are two important parameters when running the base system or mapping:
  - racecar_version: This sets car related parameters such as TFs, lookup tables or Pacejka Parameters. By default this is written to the `.env` file in the installation progress.
+ Everything that differs between cars lives in `stack_master/config/RACECAR_VERSION/`, e.g. the sensor mounting transforms in `static_transforms.yaml` (published by `static_transforms_launch.xml` for base system, mapping and simulator alike).
+ - use_vio: Launches the RealSense D455 camera and Basalt VIO. Defaults to the `USE_VIO` value in the `.env` file (set during installation); only works if the container was built with `USE_VIO=true`.
  - map_name: This is the name of the map that you want to use / create. Every map is saved in `stack_master/maps/MAP_NAME/`. However, by default a map called `latest` is used.
 
 ### Mapping (on the real car)
@@ -34,9 +36,12 @@ Then you can run the global planner:
 ros2 launch stack_master planner_launch.xml map_name:=<map name of choice>
 ```
  - `<map_name_of_choice` must be the name of any prerecorded map. If it is ommited the map called `latest` will be used.
+ - `racecar_version:=NUCx` defaults to `$RACECAR_VERSION`. Mass, `v_max` and the curvature limit (`1 / min_radius_curv_m`) come from `config/<racecar_version>/car_model.yaml` (required), everything else from `config/global_planner/racecar_f110.ini`.
 
 A GUI will popup showing you the map and the extracted centerline. If you are satisfied you can close it to start the global raceline generation. If you have no monitor it starts automatically. Then two GUIs will be shown, and within them a slider can be used to select the velocity scaling and overtaking sectors. 
 Be careful as once a sector is chosen it cannot be further subdivided. 
+
+Without a display (no `DISPLAY` set) the plots are skipped and a single sector over the whole track is written for both speed scaling and overtaking. Add `headless:=true` to also skip rviz.
 
 ### Base System
 ```shell

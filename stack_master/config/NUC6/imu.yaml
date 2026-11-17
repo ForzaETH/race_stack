@@ -1,0 +1,7 @@
+# VESC IMU calibration, used by imu_to_base_node (state_estimation_launch.xml)
+imu_to_base:
+  ros__parameters:
+    # constant gyro offset [x, y, z] in rad/s, in the IMU's own frame; subtracted before rotating into base_link.
+    gyro_bias: [0.0007, 0.0012, -0.0053] # measured on bags/standstill, 2026-11-03 (58 s at rest)
+    # scale factor on the gyro rate = reference net yaw / integrated (bias-corrected) gyro yaw
+    gyro_scale: 1.0048

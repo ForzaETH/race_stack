@@ -1,10 +1,17 @@
 <!-- -*- mode: XML -*- -->
 <launch>
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
+    <arg name="use_vio" default="$(env USE_VIO false)" description="Launch the RealSense D455 camera (set via USE_VIO in .env)" />
 
     <let name="joy_teleop_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
     <let name="vesc_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
     <let name="sensors_config" value="$(find-pkg-share stack_master)/config/sensors.yaml" />
+
+    <!-- static transforms (sensor mounts, car_state aliases) -->
+    <include file="$(find-pkg-share stack_master)/launch/static_transforms_launch.xml">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+        <arg name="sim" value="False" />
+    </include>
 
     <!-- launch teleop -->
     <include file="$(find-pkg-share f1tenth_stack)/launch/bringup_launch.py">

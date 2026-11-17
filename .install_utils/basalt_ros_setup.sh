@@ -15,6 +15,7 @@ if [ -f /etc/nv_tegra_release ] || grep -qiE "nvidia|tegra" /proc/device-tree/mo
 	echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" > /etc/apt/sources.list.d/ros2.list
 fi
 
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 BASALT_WS=/opt/basalt_ws
 
 apt update
@@ -31,33 +32,39 @@ fi
 apt install -y \
     python3-vcstool \
     ccache \
-    libbz2-dev \
     libtbb-dev \
-    libboost-all-dev \
-    libgl1-mesa-dev \
-    libglu1-mesa-dev \
-    libglew-dev \
-    liblz4-dev \
-    python3-numpy \
+    libfmt-dev \
     ros-humble-ament-cmake-clang-format \
     $OPENCV_PKGS
 
 mkdir -p "$BASALT_WS/src"
 cd "$BASALT_WS"
-# one worker: basalt clones inside basalt_wrapper, so the order of the file matters
-vcs import --recursive --workers 1 < "$(dirname "$0")/basalt.repos"
 
-# One package at a time, with as many compile jobs as cores and available RAM allow
-# (~2 GB per Eigen-heavy basalt TU): full parallelism otherwise freezes the host.
-MEM_JOBS=$(( $(awk '/MemAvailable/ {print $2}' /proc/meminfo) / (2 * 1024 * 1024) ))
-JOBS=$(( MEM_JOBS < $(nproc) ? MEM_JOBS : $(nproc) ))
-JOBS=$(( JOBS > 0 ? JOBS : 1 ))
-echo "Building basalt with $JOBS parallel jobs"
+vcs import --shallow --workers 1 < "$SCRIPT_DIR/basalt.repos"
+
+# Only the submodules the VIO library needs
+BASALT_SRC="$BASALT_WS/src/basalt_wrapper/basalt"
+git -C "$BASALT_SRC" submodule update --init --depth 1 \
+    thirdparty/basalt-headers thirdparty/magic_enum
+# basalt-headers pins Eigen 3.4.0 on gitlab.com, which often rejects requests
+# under load; fetch the identical commit from the GitHub mirror instead.
+git -c url."https://github.com/eigen-mirror/eigen.git".insteadOf="https://gitlab.com/libeigen/eigen.git" \
+    -C "$BASALT_SRC/thirdparty/basalt-headers" submodule update --init --depth 1 \
+    thirdparty/eigen thirdparty/Sophus thirdparty/cereal
+
 
 if [ -f /opt/ros/${ROS_DISTRO}/install/setup.bash ]; then
   source /opt/ros/${ROS_DISTRO}/install/setup.bash
 else
   source /opt/ros/${ROS_DISTRO}/setup.bash
 fi
+# One package at a time, with as many compile jobs as cores and available RAM allow
+# (~2 GB per Eigen-heavy basalt TU): full parallelism otherwise freezes the host.
+MEM_JOBS=$(( $(awk '/MemAvailable/ {print $2}' /proc/meminfo) / (2 * 1024 * 1024) ))
+JOBS=$(( MEM_JOBS < $(nproc) ? MEM_JOBS : $(nproc) ))
+JOBS=$(( JOBS > 0 ? JOBS : 1 ))
+echo "Building basalt with $JOBS parallel jobs"
 MAKEFLAGS="-j$JOBS" colcon build --merge-install --symlink-install --executor sequential \
-    --cmake-args -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    --cmake-args -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    -DCMAKE_DISABLE_FIND_PACKAGE_realsense2=ON \
+    -DJUST_INSTALL_CEREAL=ON  # basalt_ros' T265 tool needs a library the trimmed basalt no longer has; cereal's sandbox/docs need Boost

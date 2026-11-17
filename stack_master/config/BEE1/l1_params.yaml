@@ -1,0 +1,38 @@
+controller:
+  ros__parameters:
+    t_clip_min: 0.9
+    t_clip_max: 5
+    m_l1: 0.55
+    q_l1: -0.03
+    speed_lookahead: 0.25
+    lat_err_coeff: 1
+    # acc_scaler_for_steer_safe: 1.2
+    # dec_scaler_for_steer_safe: 0.9 
+    # acc_scaler_for_steer_aggressive: 1.1
+    acc_scaler_for_steer: 1.2
+    dec_scaler_for_steer: 0.9 
+
+    start_scale_speed: 7.0
+    end_scale_speed: 8.0
+    downscale_factor: 0.2
+
+    # increasing this to 0.20 AT MOST can make the car faster on the laptime but cut more corners
+    speed_lookahead_for_steer: 0.0 # safe/agg 0.0/0.175
+
+    ## Acceleration Based Velocity Controller Parameters
+    vel_accel_mode: False
+    vel_ctr_p_gain: 8
+    vel_ctr_i_gain: 0
+    vel_ctr_d_gain: 0.5
+
+
+    ## Trailing Controller Parameters
+    allow_accel_trailing: False
+    trailing_mode: True #True = Distance, False = Time
+    prioritize_dyn: True
+    trailing_gap: 1.5 # Distance in meters or gap in seconds, depending on mode
+    trailing_p_gain: 1
+    trailing_i_gain: 0.000
+    trailing_d_gain: 0.2
+    blind_trailing_speed: 1.5
+

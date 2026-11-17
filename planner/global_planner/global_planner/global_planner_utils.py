@@ -51,8 +51,7 @@ def extract_centerline(skeleton, cent_length: float, map_resolution: float) -> n
     IOError
         If no closed contour is found in the skeletonized image.
     ValueError
-        If all found contours do not have a similar line length as the centerline (can only happen if `map_editor_mode`
-        is True).
+        If all found contours do not have a similar line length as the centerline.
 
     """
     # get contours from skeleton

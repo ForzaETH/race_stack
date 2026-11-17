@@ -1,0 +1,16 @@
+services:
+  race_stack:
+    build:
+      context: .
+      pull: false
+      dockerfile: ./.devcontainer/Dockerfile
+      args:
+        USER: ${USER}
+        UID: ${HOST_UID} # user id must be saved to an environment variable, can be done with `export UID=$(id -u)`
+        GID: ${HOST_GID} # group id must be saved to an environment variable, can be done with `export GID=$(id -g)`
+        USE_VIO: ${USE_VIO:-false} # true: build librealsense + basalt_ros into the image 
+        IMAGE: ${BASE_IMAGE:-ros:humble}
+        PLATFORM: ${PLATFORM:-x86}
+  
+  novnc:
+    build: https://github.com/ForzaETH/remote-novnc.git#main

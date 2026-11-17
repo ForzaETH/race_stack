@@ -1,5 +1,6 @@
 ARG IMAGE=ros:humble
 FROM ${IMAGE}
+ARG USE_VIO=false
 ARG PLATFORM=arm
 
 SHELL [ "/bin/bash", "-c" ]
@@ -12,13 +13,15 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
 ADD ./.install_utils/basalt_ros_setup.sh ./.install_utils/basalt.repos /.install_utils/
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/ccache \
-    chmod +x /.install_utils/basalt_ros_setup.sh && \
-    CCACHE_DIR=/ccache CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    /.install_utils/basalt_ros_setup.sh
+    if [[ "$USE_VIO" == "true" ]]; then \
+      chmod +x /.install_utils/basalt_ros_setup.sh && \
+      CCACHE_DIR=/ccache CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+      /.install_utils/basalt_ros_setup.sh; \
+    fi
 
 ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh
+    if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
 
 
 ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt

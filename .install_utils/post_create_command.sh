@@ -6,7 +6,8 @@ sudo chown -R $USER:$USER ~/ws/
 
 # Install dependencies
 rosdep update &&
-    rosdep install --from-paths /home/$USERNAME/ws/src --ignore-src -y
+    rosdep install --from-paths /home/$USERNAME/ws/src --ignore-src -y \
+        --skip-keys python-transforms3d-pip
 
 # Setup race_stack
 bash ~/ws/src/race_stack/.install_utils/f110_sim_setup.sh || echo "Failed to setup f110_sim"

@@ -1,0 +1,68 @@
+<!-- -*- mode: XML -*- -->
+<launch>
+    <!-- Replays raw sensor data from a bag and runs the state estimation on top of it, with RViz,
+         to look at EKF / cartographer / VIO changes. No car drivers, no simulator.
+         Only raw sensor topics are played; everything derived (/tf, /imu, /odom, /basalt/odom,
+         /state_estimation/odom, /map, ...) is recomputed by the live nodes.
+         Headless version with plots and metrics: state_estimation/eval/run_eval.py -->
+    <arg name="bag" description="Path to the bag directory (recorded with ros2 bag record -a)" />
+    <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'NUCx' the bag was recorded on" />
+    <arg name="map_name" default="latest" description="Map name in stack_master/maps (localization mode)" />
+    <arg name="mapping" default="False" description="True: cartographer mapping instead of localization" />
+    <arg name="run_vio" default="$(env USE_VIO false)" description="True: run Basalt on the bagged camera images. False: use the bagged /basalt/odom" />
+    <arg name="viz_flow" default="False" />
+    <arg name="rate" default="1.0" description="Playback rate" />
+    <arg name="start_offset" default="0.0" description="Seconds to skip at the start of the bag" />
+    <arg name="delay" default="3.0" description="Seconds to wait before playing, so the nodes are up" />
+    <arg name="static_tf_from_bag" default="True" description="True: play /tf_static as recorded (exact reproduction). False: mounts from static_transforms.yaml (for tuning them) + RealSense tree from the bag" />
+    <arg name="vesc_odom_from_bag" default="True" description="True: play /odom as recorded. False: recompute it with vesc_to_odom_node from the raw VESC state and vesc.yaml (for tuning speed_to_erpm_gain)" />
+    <arg name="rviz" default="True" description="Start RViz with stack_master/viz/head_to_head.rviz" />
+
+    <set_parameter name="use_sim_time" value="true" />
+
+    <group unless="$(var static_tf_from_bag)">
+        <!-- sensor mounts from the config, so static_transforms.yaml can be tuned -->
+        <include file="$(find-pkg-share stack_master)/launch/static_transforms_launch.xml">
+            <arg name="racecar_version" value="$(var racecar_version)" />
+            <arg name="sim" value="False" />
+        </include>
+        <!-- RealSense internal TF tree (camera_link -> ... -> camera_imu_optical_frame) from the bag,
+             the driver that normally publishes it is not running. Needs `pip install rosbags`. -->
+        <node if="$(var run_vio)" pkg="state_estimation" exec="bag_static_tf_node" name="bag_static_tf" output="screen">
+            <param name="bag" value="$(var bag)" />
+            <param name="frame_regex" value="^camera_" />
+        </node>
+    </group>
+
+    <!-- /odom from the raw VESC state, so vesc.yaml (speed_to_erpm_gain) and vesc_to_odom changes apply -->
+    <node unless="$(var vesc_odom_from_bag)" pkg="vesc_ackermann" exec="vesc_to_odom_node" name="vesc_to_odom_node">
+        <param from="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
+    </node>
+
+    <!-- EKF + cartographer (+ VIO) -->
+    <include file="$(find-pkg-share state_estimation)/launch/state_estimation_launch.xml">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+        <arg name="mapping_bool" value="$(var mapping)" />
+        <arg name="map_name" value="$(var map_name)" />
+        <arg name="use_sim_time" value="True" />
+        <arg name="use_vio" value="$(var run_vio)" />
+        <arg name="viz_flow" value="$(var viz_flow)" />
+    </include>
+
+    <!-- rviz config from the src folder (not installed), so saving in RViz edits the repo file -->
+    <node if="$(var rviz)" pkg="rviz2" exec="rviz2" name="rviz2"
+        args="-d $(find-pkg-prefix stack_master)/../../src/race_stack/stack_master/viz/head_to_head.rviz" />
+
+    <!-- only raw sensor topics. A substitution is one argv token, so the optional topics are
+         single tokens; /unused is simply not in the bag. Keep in sync with state_estimation/eval/run_eval.py -->
+    <let name="tf_static_topic" value="/tf_static" if="$(var static_tf_from_bag)" />
+    <let name="tf_static_topic" value="/unused" unless="$(var static_tf_from_bag)" />
+    <let name="odom_topic" value="/odom" if="$(var vesc_odom_from_bag)" />
+    <let name="odom_topic" value="/sensors/core" unless="$(var vesc_odom_from_bag)" />
+    <let name="servo_topic" value="/unused" if="$(var vesc_odom_from_bag)" />
+    <let name="servo_topic" value="/sensors/servo_position_command" unless="$(var vesc_odom_from_bag)" />
+    <executable if="$(var run_vio)" output="screen"
+        cmd="ros2 bag play $(var bag) --clock 500 --rate $(var rate) --start-offset $(var start_offset) --delay $(var delay) --topics $(var tf_static_topic) $(var odom_topic) $(var servo_topic) /scan /sensors/imu/raw /camera/camera/imu /camera/camera/infra1/image_rect_raw /camera/camera/infra2/image_rect_raw" />
+    <executable unless="$(var run_vio)" output="screen"
+        cmd="ros2 bag play $(var bag) --clock 500 --rate $(var rate) --start-offset $(var start_offset) --delay $(var delay) --topics $(var tf_static_topic) $(var odom_topic) $(var servo_topic) /scan /sensors/imu/raw /basalt/odom" />
+</launch>

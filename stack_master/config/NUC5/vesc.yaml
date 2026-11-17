@@ -49,6 +49,8 @@ vesc_driver_node:
   ros__parameters:
     # Stop and centre if either final actuator stream becomes stale.
     command_timeout: 0.2
+    # IMU polling period in seconds (0.005 = 200Hz); telemetry stays at 50Hz.
+    imu_poll_period: 0.005
 
 vesc_to_odom_node:
   ros__parameters:

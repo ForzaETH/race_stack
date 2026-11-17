@@ -9,7 +9,6 @@ import yaml
 import cv2
 import numpy as np
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
@@ -53,6 +52,8 @@ class MappingNode(Node):
         self.base_frame = 'base_link'
         
         self.fig = None
+        # No DISPLAY: matplotlib falls back to Agg, plot windows cannot be shown
+        self.headless = matplotlib.get_backend().lower() == 'agg'
         
         self._tty = open('/dev/tty', 'r')
         self._old_settings = termios.tcgetattr(self._tty)
@@ -200,25 +201,27 @@ class MappingNode(Node):
         """Main Loop"""
         
         self.get_logger().log(
-            "Mapping active. Press 'y' to save the map or use the button on the plot.",
+            "Mapping active. Press 'y' to save the map" +
+            (" (headless, no plot)." if self.headless else " or use the button on the plot."),
             severity=rclpy.logging.LoggingSeverity.INFO,
             once=True,
         )
         self.latch_initial_pose()
 
-        try:
-            if self.fig is None:
-                self.fig, (self.ax1, self.axfinish) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]})
-            self.fig.suptitle('Filtered map')
-            self.btn_compute = Button(self.axfinish, 'Map ready? Click to save!')
-            self.btn_compute.on_clicked(self.save_map)
-            self.plot()
-        except Exception as e:
-            self.get_logger().log(
-                "Could not create a plot, press 'y' to save the map without a plot. Error: " + str(e),
-                severity=rclpy.logging.LoggingSeverity.WARN,
-                once=True,
-            )
+        if not self.headless:
+            try:
+                if self.fig is None:
+                    self.fig, (self.ax1, self.axfinish) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [5, 1]})
+                    self.fig.suptitle('Filtered map')
+                    self.btn_compute = Button(self.axfinish, 'Map ready? Click to save!')
+                    self.btn_compute.on_clicked(self.save_map)
+                self.plot()
+            except Exception as e:
+                self.get_logger().log(
+                    "Could not create a plot, press 'y' to save the map without a plot. Error: " + str(e),
+                    severity=rclpy.logging.LoggingSeverity.WARN,
+                    once=True,
+                )
         
         key = self.get_key()
         if key and key == '\x03':  # Ctrl-C
