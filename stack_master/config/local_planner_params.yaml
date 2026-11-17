@@ -5,7 +5,7 @@
 
     base_frame: 'car_state/base_link'  # TF frame of the car -> overridden by launch arg for the sim opponent
     raceline: 'mincurv'  # line to track: mincurv, shortest_path, centerline (frenet + sector scaling always on mincurv) -> overridden by launch arg
-    ot_planner: 'frenet'  # choose between: frenet, spliner, predictive_spliner, graph_based
+    ot_planner: 'spliner'  # only 'spliner' is available in ROS2 (frenet / graph_based / predictive_spliner planners are not ported)
 
     gb_ego_width_m: 0.4  # [m], distance from gb path for rejoining -> dynamically overridden from state_machine
 

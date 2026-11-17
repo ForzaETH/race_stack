@@ -89,9 +89,7 @@ class Detect(Node):
         """
         Initialize the node, subscribe to topics, and create publishers and service proxies
         """
-        super().__init__('detection',
-                         allow_undeclared_parameters=True,
-                         automatically_declare_parameters_from_overrides=True)  # type: ignore
+        super().__init__('detection', allow_undeclared_parameters=True)  # type: ignore
 
         self.converter = None
 
@@ -162,6 +160,7 @@ class Detect(Node):
                         'default' : self.boundaries_inflation,
                         'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=2.0, step=0.1)])}]
         self.delcare_dyn_parameters(param_dicts)
+        self.dyn_param_cb(self.get_parameters([param_dict['name'] for param_dict in param_dicts]))
         self.add_on_set_parameters_callback(self.dyn_param_cb)
         
         # --- variables ---
@@ -651,9 +650,22 @@ class Detect(Node):
                                                         source_frame=self.scans.header.frame_id, 
                                                         time=self.scans.header.stamp, 
                                                         timeout=rclpy.duration.Duration(seconds=0.03))
-        except Exception as e:
-            self.get_logger().warn(f"Could not transform between 'map' and '{scans.header.frame_id}': {e}")
-            transform = None
+        except Exception:
+            # The map->laser chain (cartographer map->odom) often lags the scan stamp by a few ms.
+            # Fall back to the latest available transform instead of dropping the whole scan.
+            try:
+                transform = self.tf_buffer.lookup_transform(target_frame='map',
+                                                            source_frame=scans.header.frame_id,
+                                                            time=rclpy.time.Time())
+                # A stale transform misplaces the walls and creates ghost obstacles, so only accept a small lag
+                tf_lag = (rclpy.time.Time.from_msg(scans.header.stamp)
+                          - rclpy.time.Time.from_msg(transform.header.stamp)).nanoseconds * 1e-9
+                if abs(tf_lag) > 0.05:
+                    raise RuntimeError(f"latest transform is {tf_lag:.3f} s away from the scan stamp")
+            except Exception as e:
+                self.get_logger().warn(f"Could not transform between 'map' and '{scans.header.frame_id}': {e}",
+                                       throttle_duration_sec=1.0)
+                transform = None
 
         objects_pointcloud_list = self.scans2ObsPointCloud(scans=scans, car_s=car_s, t=transform)
         current_obstacles = self.obsPointClouds2obsArray(objects_pointcloud_list)

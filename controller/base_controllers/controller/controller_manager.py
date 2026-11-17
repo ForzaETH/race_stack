@@ -487,8 +487,8 @@ class Controller(Node):
         self.waypoint_safety_counter += 1
         if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
             self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
-            speed = 0
-            steering_angle = 0
+            speed = 0.0
+            steering_angle = 0.0
         self.map_controller.flag1 = False
 
         # Publish PID data of the Trailing controller for tuning
@@ -520,8 +520,8 @@ class Controller(Node):
         self.waypoint_safety_counter += 1
         if self.waypoint_safety_counter >= self.rate / self.state_machine_rate * 10:  # we can use the same waypoints for 5 cycles
             self.get_logger().warning("[controller_manager] Received no local wpnts. STOPPING!!")
-            speed = 0
-            steering_angle = 0
+            speed = 0.0
+            steering_angle = 0.0
         self.pp_controller.flag1 = False
 
         # Publish PID data of the Trailing controller for tuning

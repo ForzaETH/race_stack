@@ -1,7 +1,7 @@
 <launch>
     <arg name="racecar_version" default="NUC2" />
     <arg name="overtake_mode" default="spliner" />
-    <!--  spliner / graph_based -->
+    <!--  spliner (graph_based / frenet / predictive_spliner planners are not ported to ROS2) -->
     <arg name="ctrl_algo" default="MAP"/>
     <!-- MAP / PP -->
     <arg name="measure" default="False" />
@@ -29,7 +29,9 @@
     </include>
 
     <!-- LOCAL PLANNER -->
-    <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml" />
+    <include file="$(find-pkg-share local_planner)/launch/local_planner_launch.xml">
+        <arg name="ot_planner" value="$(var overtake_mode)"/>
+    </include>
 
 
 </launch>

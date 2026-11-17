@@ -1,6 +1,7 @@
 <launch>
 
     <node pkg="spline_planner" exec="spline_planner" name="spline_planner" output="screen">
+        <param from="$(find-pkg-share stack_master)/config/overtaking_params.yaml" />
     </node>
 
 </launch>

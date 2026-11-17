@@ -286,9 +286,7 @@ class StaticDynamic(Node):
         """
         Initialize the node, subscribe to topics, and create publishers and service proxies.
         """
-        super().__init__('tracking',
-                         allow_undeclared_parameters=True,
-                         automatically_declare_parameters_from_overrides=True)  # type: ignore
+        super().__init__('tracking', allow_undeclared_parameters=True)  # type: ignore
 
         # ------------ Tunable Parameters ------------
         self.declare_parameter("rate", 40, descriptor=ParameterDescriptor(
@@ -449,12 +447,11 @@ class StaticDynamic(Node):
                         'default' : self.noMemoryMode,
                         'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)}]
         self.delcare_dyn_parameters(param_dicts)
+        # Apply the values from the launch param file (declare_parameter alone does not update the attributes above)
+        self.dyn_param_cb(self.get_parameters([param_dict['name'] for param_dict in param_dicts]))
         self.add_on_set_parameters_callback(self.dyn_param_cb)
         
         self.opponent_obstacle = Opponent_state()
-
-        # ------------ Initialize main logic loop ------------
-        self.timer = self.create_timer(1/self.update_rate, self.loop)
 
         # ------------ Subscribers ------------
         self.obs_sub = self.create_subscription(
@@ -481,7 +478,11 @@ class StaticDynamic(Node):
         if self.measuring:
             self.latency_pub = self.create_publisher(
                 Float32, '/perception/tracking/latency', 10)
-            
+
+        # ------------ Initialize main logic loop ------------
+        # Created last: the TF listener spins this node in its own thread, so the timer can fire before __init__ ends
+        self.timer = self.create_timer(1/self.update_rate, self.loop)
+
         self.get_logger().info('[Tracking]: Tracking initialized')
             
     def delcare_dyn_parameters(self, param_dicts: List[dict]):
@@ -541,7 +542,7 @@ class StaticDynamic(Node):
             elif param_name == 'vs_reset':
                 self.vs_reset = param.value
             elif param_name == 'aggro_multi':
-                self.aggro_multi = param.value
+                self.aggro_multiplier = param.value
             elif param_name == 'debug_mode':
                 self.debug_mode = param.value
             elif param_name == 'publish_static':

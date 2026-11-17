@@ -116,6 +116,8 @@ class ObstacleSpliner(Node):
         ]
 
         self.declare_all_parameters(param_dicts=param_dicts)
+        # Apply the values from the launch param file (declare_parameter alone does not update the attributes above)
+        self.dyn_param_cb(self.get_parameters([param_dict['name'] for param_dict in param_dicts]))
         self.add_on_set_parameters_callback(self.dyn_param_cb)
 
         if self.measuring:
@@ -168,27 +170,24 @@ class ObstacleSpliner(Node):
             elif param_name == 'kd_obs_pred':
                 self.kd_obs_pred = param.value
         
-        # Ensure ascending order for spline parameters
-        if self.pre_apex_1 < self.pre_apex_0:
+        # Ensure strictly ascending order for spline parameters
+        min_gap = 0.1
+        if self.pre_apex_1 > self.pre_apex_2 - min_gap:
             self.get_logger().info("Adjusting pre_apex_1 to ensure ascending order.")
-            self.pre_apex_1 = self.pre_apex_0
+            self.pre_apex_1 = self.pre_apex_2 - min_gap
 
-        if self.pre_apex_2 < self.pre_apex_1:
-            self.get_logger().info("Adjusting pre_apex_2 to ensure ascending order.")
-            self.pre_apex_2 = self.pre_apex_1
+        if self.pre_apex_0 > self.pre_apex_1 - min_gap:
+            self.get_logger().info("Adjusting pre_apex_0 to ensure ascending order.")
+            self.pre_apex_0 = self.pre_apex_1 - min_gap
 
-        if self.post_apex_0 < self.pre_apex_2:
-            self.get_logger().info("Adjusting post_apex_0 to ensure ascending order.")
-            self.post_apex_0 = self.pre_apex_2
-
-        if self.post_apex_1 < self.post_apex_0:
+        if self.post_apex_1 < self.post_apex_0 + min_gap:
             self.get_logger().info("Adjusting post_apex_1 to ensure ascending order.")
-            self.post_apex_1 = self.post_apex_0
+            self.post_apex_1 = self.post_apex_0 + min_gap
 
-        if self.post_apex_2 < self.post_apex_1:
+        if self.post_apex_2 < self.post_apex_1 + min_gap:
             self.get_logger().info("Adjusting post_apex_2 to ensure ascending order.")
-            self.post_apex_2 = self.post_apex_1
-        
+            self.post_apex_2 = self.post_apex_1 + min_gap
+
         spline_params = [
             self.pre_apex_0,
             self.pre_apex_1,
