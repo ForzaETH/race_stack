@@ -58,17 +58,15 @@ ADD ./controller/forzaeth_mpc/install/install_acados.sh /tmp/install_acados.sh
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=cache,target=/ccache \
     CCACHE_DIR=/ccache CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    bash /tmp/install_acados.sh /acados && rm /tmp/install_acados.sh
+    bash /tmp/install_acados.sh /acados && rm /tmp/install_acados.sh && \
+    echo /acados/lib > /etc/ld.so.conf.d/acados.conf && ldconfig
 ENV ACADOS_SOURCE_DIR=/acados
-ENV LD_LIBRARY_PATH=/acados/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
 # On-Track-SysID with its on_track extra (torch); needs the submodule checked out.
-# On x86 take torch from the CPU index first, so pip does not pull the CUDA wheels.
 # Torch gets its own layer, so edits to the submodule do not reinstall it.
-# torch>=2.11 requires a setuptools newer than the 58.2.0 that ROS humble needs.
+ADD ./.install_utils/torch_setup.sh /tmp/torch_setup.sh
 RUN --mount=type=cache,target=/root/.cache/pip \
-    if [[ "$(uname -m)" == "x86_64" ]]; then TORCH_INDEX="--index-url https://download.pytorch.org/whl/cpu"; fi && \
-    pip3 install "torch<2.11" $TORCH_INDEX
+    bash /tmp/torch_setup.sh && rm /tmp/torch_setup.sh
 ADD ./system_identification/lateral/on_track_sysid /tmp/on_track_sysid
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3 install "/tmp/on_track_sysid[on_track]" && rm -rf /tmp/on_track_sysid
