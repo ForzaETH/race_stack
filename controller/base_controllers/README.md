@@ -4,6 +4,7 @@
 This controller package implements the following controllers:
 - [MAP controller](#model--and-acceleration-based-pursuit-map-controller)
 - [Pure Pursuit controller](#pure-pursuit-pp-controller)
+- [MPC controllers (STMPC, KMPC)](#mpc-controllers-stmpc-kmpc)
 - [Follow the Gap controller](#follow-the-gap-ftg-controller)
 
 The `controller_manager` implemented in `controller_manager.py` initializes the needed controllers. It runs at a specified loop rate where in each cycle the next control inputs are calculated via the choosen controller.
@@ -166,6 +167,31 @@ ros2 launch controller controller_launch.xml mode:=PP
 ```
 
 However we suggest to use the launch files present in the `stack_master package`.
+
+
+# MPC controllers (STMPC, KMPC)
+
+The algorithms live in the [`forzaeth_mpc`](../forzaeth_mpc) submodule. `controller_manager.py` only wraps them. They need acados, so they are imported only when `mode` is `STMPC` or `KMPC`.
+
+- `STMPC`: single-track MPC with the Pacejka tires of `config/<racecar_version>/pacejka/<floor>/default.yaml`. If the solver fails, the MAP controller takes over for that cycle.
+- `KMPC`: kinematic bicycle MPC. No tire model.
+
+## Parameters
+Both read `car_model.yaml` and the trailing parameters of `l1_params.yaml` from `stack_master/config/<racecar_version>/`, plus:
+- `single_track_mpc_params.yaml` (STMPC) or `kinematic_mpc_params.yaml` (KMPC): weights, constraints and horizon.
+- `delta_min` / `delta_max` must equal `steering_min` / `steering_max` in the car's `vesc.yaml`. Otherwise the MPC plans steering angles that the actuation manager clips. `stack_master/test/test_configs.py` checks this.
+- `config/DEFAULT/single_track_mpc_dyn_params.yaml` / `kinematic_mpc_dyn_params.yaml`: the parameters that can be tuned online (e.g. with `rqt_reconfigure`) and their ranges. The starting values come from the car's config.
+
+On first start acados generates and compiles the solver in `~/.ros/forzaeth_mpc/<mode>/`. This takes a while.
+
+## Topics
+- `/mpc_controller/states`: predicted states over the horizon.
+- `/mpc_controller/horizon_cost`: solver cost (STMPC only).
+
+## Basic Use
+```
+ros2 launch stack_master time_trials_launch.xml ctrl_algo:=STMPC
+```
 
 
 # Follow The Gap (FTG) controller

@@ -74,12 +74,17 @@ It is possible to add a steerable opponent to the simulation by changing the fol
     # opponent parameters
     num_agent: 2
 
-    # opp starting pose on map
+    # opp spawn distance along the raceline ahead of the ego [m]
+    opp_spawn_s: 5.0
+
+    # opp starting pose on map (fallback until the raceline arrives)
     sx1: 2.0
     sy1: 0.5
     stheta1: 0.0
 ```
-and then launching the the simulator normally, eg:
+Once the global raceline is published, the opponent is placed on it `opp_spawn_s` meters ahead of the ego. `sx1`/`sy1`/`stheta1` are only used until then. At most one opponent is supported (`num_agent` is 1 or 2).
+
+Then launch the simulator normally, eg:
 ```shell
 ros2 launch stack_master base_system_launch.xml map_name:=glc_ot_ez sim:=true
 ```

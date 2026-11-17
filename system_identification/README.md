@@ -30,7 +30,7 @@ rosdep install --from-paths ~/ws/src --ignore-src -y   # torch (python3-torch), 
    ```
 3. Drive normally. The node collects `data_duration` (default 50 s) of samples above 1 m/s from `/state_estimation/odom` and `/drive`.
 4. Wait for training to finish. The node then writes the tires and the LUT, and exits.
-5. Check the fit plots in `pacejka/<floor>/data/`, then commit the new config.
+5. Check the fit plots in `pacejka/<floor>/data/`. `LUT/` and `pacejka/` are git-ignored, so results stay local to the car. To share a result as a new default, add it explicitly: `git add -f <file>`.
 
 Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a recorded bag instead, start `base_system` and run the launch file with `use_sim_time:=true`. Then replay the bag with `ros2 bag play <bag> --clock`.
 
