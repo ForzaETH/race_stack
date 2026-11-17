@@ -286,9 +286,7 @@ class StaticDynamic(Node):
         """
         Initialize the node, subscribe to topics, and create publishers and service proxies.
         """
-        super().__init__('tracking',
-                         allow_undeclared_parameters=True,
-                         automatically_declare_parameters_from_overrides=True)  # type: ignore
+        super().__init__('tracking', allow_undeclared_parameters=True)  # type: ignore
 
         # ------------ Tunable Parameters ------------
         self.declare_parameter("rate", 40, descriptor=ParameterDescriptor(
@@ -449,6 +447,8 @@ class StaticDynamic(Node):
                         'default' : self.noMemoryMode,
                         'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_BOOL)}]
         self.delcare_dyn_parameters(param_dicts)
+        # Apply the values from the launch param file (declare_parameter alone does not update the attributes above)
+        self.dyn_param_cb(self.get_parameters([param_dict['name'] for param_dict in param_dicts]))
         self.add_on_set_parameters_callback(self.dyn_param_cb)
         
         self.opponent_obstacle = Opponent_state()

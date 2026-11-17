@@ -89,9 +89,7 @@ class Detect(Node):
         """
         Initialize the node, subscribe to topics, and create publishers and service proxies
         """
-        super().__init__('detection',
-                         allow_undeclared_parameters=True,
-                         automatically_declare_parameters_from_overrides=True)  # type: ignore
+        super().__init__('detection', allow_undeclared_parameters=True)  # type: ignore
 
         self.converter = None
 
@@ -162,6 +160,7 @@ class Detect(Node):
                         'default' : self.boundaries_inflation,
                         'descriptor' : ParameterDescriptor(type=ParameterType.PARAMETER_DOUBLE, floating_point_range=[FloatingPointRange(from_value=0.0, to_value=2.0, step=0.1)])}]
         self.delcare_dyn_parameters(param_dicts)
+        self.dyn_param_cb(self.get_parameters([param_dict['name'] for param_dict in param_dicts]))
         self.add_on_set_parameters_callback(self.dyn_param_cb)
         
         # --- variables ---
