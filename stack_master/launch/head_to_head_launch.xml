@@ -1,6 +1,5 @@
 <launch>
-    <arg name="racecar_version" default="$(env RACECAR_VERSION)" />
-    <arg name="LU_table" default="NUC2_hangar_pacejka" />
+    <arg name="racecar_version" default="NUC2" />
     <arg name="overtake_mode" default="spliner" />
     <!--  spliner (graph_based / frenet / predictive_spliner planners are not ported to ROS2) -->
     <arg name="ctrl_algo" default="MAP"/>

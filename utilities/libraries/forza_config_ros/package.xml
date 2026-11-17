@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>forza_config_ros</name>
+  <version>0.1.0</version>
+  <description>ROS 2 layer of forza_config: car config lookup in stack_master, remote parameters</description>
+  <maintainer email="edoardo.ghignone@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <license>MIT</license>
+
+  <depend>rclpy</depend>
+  <depend>ament_index_python</depend>
+  <depend>rcl_interfaces</depend>
+  <exec_depend>forza_config</exec_depend>
+  <exec_depend>stack_master</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

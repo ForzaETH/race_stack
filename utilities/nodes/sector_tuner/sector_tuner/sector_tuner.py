@@ -2,7 +2,7 @@ import copy
 import os
 import yaml
 import rclpy
-from pbl_config import get_remote_parameter
+from forza_config_ros import get_remote_parameter
 from stack_master.qos import LATCHED_QOS
 from rcl_interfaces.msg import ParameterType, ParameterDescriptor, FloatingPointRange
 from rclpy.node import Node
@@ -21,9 +21,9 @@ class SectorTuner(Node):
         super().__init__('sector_tuner',
                          allow_undeclared_parameters=True,
                          automatically_declare_parameters_from_overrides=True)
-        
+
         self.vis_timer = self.create_timer(1.0, self.marker_callback)
-        
+
         # sectors params
         self.glb_wpnts_og = None
         self.glb_wpnts_scaled = None
