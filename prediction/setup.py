@@ -1,5 +1,4 @@
 import os
-import sys
 from contextlib import redirect_stdout
 from glob import glob
 
@@ -8,10 +7,8 @@ from setuptools import find_packages, setup
 
 package_name = 'prediction'
 
-# Generate the parameter module into the source tree (gitignored), so find_packages picks it up
-# (its progress print goes to stderr: colcon parses setup.py's stdout)
-here = os.path.dirname(os.path.abspath(__file__))
-with redirect_stdout(sys.stderr):
+here = os.path.dirname(os.path.realpath(__file__))
+with open(os.devnull, 'w') as devnull, redirect_stdout(devnull):
     generate_parameter_module(
         os.path.join(here, 'opponent_prediction', 'parameters_codegen.py'),
         os.path.join(here, 'config', 'opponent_prediction_parameters.yaml'))
