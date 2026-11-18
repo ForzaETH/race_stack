@@ -37,10 +37,10 @@
 # py
 *.pyc
 
-#vscode
+# vscode
 .vscode
 
-#maps
+# maps
 stack_master/maps/*
 !stack_master/maps/GLC_smile_small
 stack_master/maps/GLC_smile_small/speed_scaling.yaml
@@ -49,8 +49,9 @@ stack_master/maps/GLC_smile_small/ot_sectors.yaml
 stack_master/maps/hangar_1905_v0/speed_scaling.yaml
 stack_master/maps/hangar_1905_v0/ot_sectors.yaml
 
-#sysid
-sysid_bags/
+# config
+stack_master/config/*/LUT/
+stack_master/config/*/pacejka/
 
 #todo: what's up with maps -> external map folder?
 .vscode/build

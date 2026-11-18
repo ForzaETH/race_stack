@@ -1,0 +1,11 @@
+<launch>
+    <!-- Needs base_system running (global_parameters with racecar_version and floor) and a controller
+         driving the car, or a bag replay with use_sim_time:=true -->
+    <arg name="param_file" default="$(find-pkg-share lateral_sysid_ros)/config/on_track.yaml" />
+    <arg name="use_sim_time" default="false" />
+
+    <node pkg="lateral_sysid_ros" exec="on_track_node" name="on_track_sysid" output="screen">
+        <param from="$(var param_file)" />
+        <param name="use_sim_time" value="$(var use_sim_time)" />
+    </node>
+</launch>

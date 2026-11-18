@@ -1,21 +1,27 @@
 ARG IMAGE=ros:humble
 FROM ${IMAGE}
 ARG USE_VIO=false
+ARG PLATFORM=arm
 
 SHELL [ "/bin/bash", "-c" ]
 ARG DEBIAN_FRONTEND=noninteractive
 
-ADD ./.install_utils/basalt.repos /.install_utils/basalt.repos
-ADD ./.install_utils/basalt_ros_setup.sh /.install_utils/basalt_ros_setup.sh
-RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/basalt_ros_setup.sh && /.install_utils/basalt_ros_setup.sh; fi
+# Keep downloaded .debs, so the apt cache mounts below survive rebuilds
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 
-ARG PLATFORM=arm
-ARG USER
-ARG UID
-ARG GID
+ADD ./.install_utils/basalt_ros_setup.sh ./.install_utils/basalt.repos /.install_utils/
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/ccache \
+    if [[ "$USE_VIO" == "true" ]]; then \
+      chmod +x /.install_utils/basalt_ros_setup.sh && \
+      CCACHE_DIR=/ccache CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+      /.install_utils/basalt_ros_setup.sh; \
+    fi
 
 ADD ./.install_utils/realsense_setup.sh /.install_utils/realsense_setup.sh
-RUN if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    if [[ "$USE_VIO" == "true" ]]; then chmod +x /.install_utils/realsense_setup.sh && /.install_utils/realsense_setup.sh; fi
 
 
 ADD ./.install_utils/linux_req/linux_req.txt /.install_utils/linux_req.txt
@@ -34,17 +40,42 @@ RUN if [[ "$PLATFORM" == "jet" ]]; then \
       rm -rf /tmp/ocvdummy /tmp/libopencv-dev_4.8.1_all.deb; \
     fi
 
-RUN apt-get update && xargs apt-get install -y < /.install_utils/linux_req.txt
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    apt-get update && xargs apt-get install -y < /.install_utils/linux_req.txt
 ADD ./.install_utils/python_req.txt /tmp/.install_utils/python_req.txt
-RUN pip3 install --index-url https://download.pytorch.org/whl/cpu torch==2.14.1
-RUN pip3 install --index-url https://pypi.org/simple -r /tmp/.install_utils/python_req.txt || true
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install --index-url https://pypi.org/simple -r /tmp/.install_utils/python_req.txt || echo "WARNING: pip install of python_req.txt failed, some Python packages may be missing"
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3-dev && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip \
+    apt-get update && apt-get install -y --no-install-recommends build-essential python3-dev && \
     pip3 install --index-url https://pypi.org/simple "setuptools==58.2.0" wheel "cython<3" && \
     SETUPTOOLS_USE_DISTUTILS=stdlib \
     pip3 install --index-url https://pypi.org/simple --no-build-isolation "quadprog~=0.1.11"
 
-ADD ./.install_utils /.install_utils
+# acados for the MPC controllers (needs the controller/forzaeth_mpc submodule checked out)
+ADD ./controller/forzaeth_mpc/install/install_acados.sh /tmp/install_acados.sh
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/ccache \
+    CCACHE_DIR=/ccache CMAKE_C_COMPILER_LAUNCHER=ccache CMAKE_CXX_COMPILER_LAUNCHER=ccache \
+    bash /tmp/install_acados.sh /acados && rm /tmp/install_acados.sh && \
+    echo /acados/lib > /etc/ld.so.conf.d/acados.conf && ldconfig
+ENV ACADOS_SOURCE_DIR=/acados
+
+# On-Track-SysID with its on_track extra (torch); needs the submodule checked out.
+# Torch gets its own layer, so edits to the submodule do not reinstall it.
+ADD ./.install_utils/torch_setup.sh /tmp/torch_setup.sh
+RUN --mount=type=cache,target=/root/.cache/pip \
+    bash /tmp/torch_setup.sh && rm /tmp/torch_setup.sh
+ADD ./system_identification/lateral/on_track_sysid /tmp/on_track_sysid
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip3 install "/tmp/on_track_sysid[on_track]" && rm -rf /tmp/on_track_sysid
+
+# User args only here: every RUN after an ARG misses the cache when its value
+# changes, so declaring them earlier made each user rebuild basalt and acados.
+ARG USER
+ARG UID
+ARG GID
 RUN useradd -ms /bin/bash -u ${UID} -G sudo ${USER} && groupadd -fg ${GID} ${USER} \
     && echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 USER $USER

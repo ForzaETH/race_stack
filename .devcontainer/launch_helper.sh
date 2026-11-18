@@ -1,12 +1,7 @@
 #!/bin/bash
 COMPOSE_FILE="docker-compose.yaml"
-SERVICE_NAME="$1"
-CONTAINER_NAME="forzaeth_devcontainer_${SERVICE_NAME}_$USER"
-
-if [ -z "$SERVICE_NAME" ]; then
-    echo "Error: Service name not provided."
-    exit 1
-fi
+SERVICE_NAME="race_stack"
+CONTAINER_NAME="forzaeth_devcontainer_$USER"
 
 # Check if the container exists
 CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' "$CONTAINER_NAME" 2>/dev/null)

@@ -31,6 +31,7 @@ fi
 
 apt install -y \
     python3-vcstool \
+    ccache \
     libtbb-dev \
     libfmt-dev \
     ros-humble-ament-cmake-clang-format \
@@ -57,7 +58,13 @@ if [ -f /opt/ros/${ROS_DISTRO}/install/setup.bash ]; then
 else
   source /opt/ros/${ROS_DISTRO}/setup.bash
 fi
-colcon build --merge-install --symlink-install \
+# One package at a time, with as many compile jobs as cores and available RAM allow
+# (~2 GB per Eigen-heavy basalt TU): full parallelism otherwise freezes the host.
+MEM_JOBS=$(( $(awk '/MemAvailable/ {print $2}' /proc/meminfo) / (2 * 1024 * 1024) ))
+JOBS=$(( MEM_JOBS < $(nproc) ? MEM_JOBS : $(nproc) ))
+JOBS=$(( JOBS > 0 ? JOBS : 1 ))
+echo "Building basalt with $JOBS parallel jobs"
+MAKEFLAGS="-j$JOBS" colcon build --merge-install --symlink-install --executor sequential \
     --cmake-args -DCMAKE_CXX_FLAGS="-w" -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     -DCMAKE_DISABLE_FIND_PACKAGE_realsense2=ON \
     -DJUST_INSTALL_CEREAL=ON  # basalt_ros' T265 tool needs a library the trimmed basalt no longer has; cereal's sandbox/docs need Boost

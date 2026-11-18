@@ -660,8 +660,8 @@ class Detect(Node):
                 # A stale transform misplaces the walls and creates ghost obstacles, so only accept a small lag
                 tf_lag = (rclpy.time.Time.from_msg(scans.header.stamp)
                           - rclpy.time.Time.from_msg(transform.header.stamp)).nanoseconds * 1e-9
-                if tf_lag > 0.05:
-                    raise RuntimeError(f"latest transform is {tf_lag:.3f} s older than the scan")
+                if abs(tf_lag) > 0.05:
+                    raise RuntimeError(f"latest transform is {tf_lag:.3f} s away from the scan stamp")
             except Exception as e:
                 self.get_logger().warn(f"Could not transform between 'map' and '{scans.header.frame_id}': {e}",
                                        throttle_duration_sec=1.0)
