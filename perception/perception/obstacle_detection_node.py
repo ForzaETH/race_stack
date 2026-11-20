@@ -42,6 +42,8 @@ class ObstacleDetectionNode(Node):
         self.publish_rejected = self.declare_parameter("publish_rejected", False).get_parameter_value().bool_value
         self.opp_length = self.declare_parameter("opp_length", 0.55).get_parameter_value().double_value
         self.opp_width = self.declare_parameter("opp_width", 0.30).get_parameter_value().double_value
+        self.heading_search = np.radians(
+            self.declare_parameter("heading_search_deg", 15.0).get_parameter_value().double_value)
 
         # Static map built from the track bounds
         self.grid = self.track = self.wdist = None
@@ -59,6 +61,10 @@ class ObstacleDetectionNode(Node):
         self.create_subscription(MarkerArray, "/trackbounds/markers", self.bounds_cb, LATCHED_QOS)
         self.create_subscription(LaserScan, self.scan_topic, self.scan_cb, qos_profile_sensor_data)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
+
+        # Dynamic tracks from the tracker (s, d, vs, vd), used as heading prior for the box fit
+        self.tracked = []
+        self.create_subscription(ObstacleArray, "/perception/v2/obstacles", self.tracks_cb, 10)
 
         self.converter: FrenetConverter | None = None
 
@@ -165,8 +171,9 @@ class ObstacleDetectionNode(Node):
                 # Fit a car-sized box box to each group
                 pts = xy_map[members]
                 sensor = self.sensor_position(poses, dt[members], scan_duration)
-                heading = self.track_heading(pts.mean(axis=0))
-                center, yaw = od.fit_box(pts, sensor, heading, self.opp_length, self.opp_width)
+                heading = self.box_heading(pts.mean(axis=0))
+                center, yaw = od.fit_box(pts, sensor, heading, self.opp_length, self.opp_width,
+                                         search=self.heading_search)
                 boxes.append((center, yaw))
 
         # Publish the accepted points as well optionally the rejected ones
@@ -229,11 +236,26 @@ class ObstacleDetectionNode(Node):
         self.wp_psi = np.unwrap(psi)
         self.track_length = float(self.wp_s[-1])
 
-    def track_heading(self, xy: np.ndarray) -> float:
-        """Direction of the raceline at the point closest to xy (2,)."""
+    def tracks_cb(self, msg: ObstacleArray) -> None:
+        """Latest dynamic tracks from the tracker, used as heading prior for the box fit."""
+        self.tracked = [(o.s_center, o.d_center, o.vs, o.vd) for o in msg.obstacles if not o.is_static]
+
+    def box_heading(self, xy: np.ndarray) -> float:
+        """
+        Heading prior for the box fit at xy (2,): raceline direction, corrected by the direction of motion
+        of a nearby moving track (atan2(vd, vs)) if there is one.
+        """
         assert self.converter is not None
-        s = np.asarray(self.converter.get_frenet(np.array([xy[0]]), np.array([xy[1]])))[0, 0]
-        return float(np.interp(s % self.track_length, self.wp_s, self.wp_psi))
+        sd = np.asarray(self.converter.get_frenet(np.array([xy[0]]), np.array([xy[1]])))
+        s, d = sd[0, 0] % self.track_length, sd[1, 0]
+        heading = float(np.interp(s, self.wp_s, self.wp_psi))
+
+        for ts, td, vs, vd in self.tracked:
+            ds = (ts - s + self.track_length / 2) % self.track_length - self.track_length / 2
+            if np.hypot(ds, td - d) < 0.8 and np.hypot(vs, vd) > 0.5:
+                heading += float(np.arctan2(vd, vs))   # opponent's direction relative to the raceline
+                break
+        return heading
 
     def sensor_position(self, poses, dt, scan_duration) -> np.ndarray:
         """Laser position in the map frame at the mean beam time of a group."""
