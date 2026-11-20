@@ -156,7 +156,7 @@ def beams_to_map(xy, dt, scan_duration, map_odom, odom_laser_start, odom_laser_e
     return _se2_apply(_se2_compose(map_odom, odom_laser), xy)
 
 
-def segment_scan(idx, xy, r, angle_inc, lambda_=np.radians(10), sigma=0.03) -> np.ndarray:
+def segment_scan(idx, xy, r, angle_inc, lambda_=np.radians(10), sigma=0.03, max_missing=3) -> np.ndarray:
     """
     Segment id for each valid beam: a new segment starts wherever the gap to the previous beam exceeds
     a distance.
@@ -170,6 +170,8 @@ def segment_scan(idx, xy, r, angle_inc, lambda_=np.radians(10), sigma=0.03) -> n
     with np.errstate(divide="ignore", invalid="ignore"):
         d_max = r[:-1] * np.sin(dphi) / np.sin(lambda_ - dphi) + 3 * sigma
     brk = (dphi >= lambda_) | (gap > d_max)
+    # More than max_missing dropped beams in a row: always a new segment (d_max explodes as dphi -> lambda_)
+    brk |= np.diff(idx) > max_missing + 1
     return np.concatenate((np.zeros(1, int), np.cumsum(brk)))
 
 
@@ -178,6 +180,82 @@ def accept_segments(labels, point_ok) -> np.ndarray:
     bad = np.zeros(labels.max() + 1, bool) if len(labels) else np.zeros(0, bool)
     np.logical_or.at(bad, labels, ~point_ok)   # segment is bad if any point is bad
     return ~bad[labels]
+
+
+def group_segments(xy_map, labels, keep, max_gap=0.25) -> list[np.ndarray]:
+    """Combine kept segments closer than max_gap to each other; e.g. car side and rear face."""
+    groups = []
+    for seg in np.unique(labels[keep]):
+        members = np.flatnonzero(keep & (labels == seg))
+        merged = False
+        for i, group in enumerate(groups):
+            # Smallest disance between any point of this segment and any point in the group
+            gap = np.linalg.norm(xy_map[members][:, None, :] - xy_map[group][None, :, :], axis=2).min()
+            if gap < max_gap:
+                groups[i] = np.concatenate((group, members))
+                merged = True
+                break
+        if not merged:
+            groups.append(members)
+    return groups
+
+
+def plausible_group(xy_map, r, members, angle_inc, face_width=0.30, frac=0.3, min_pts=4, max_extent=0.75) -> bool:
+    """True if a group could be a car-sized obstacle."""
+    rng = np.median(r[members])
+
+    # Beams a car-wide face would cover at this range; require a fraction of them
+    expected = face_width / (rng * angle_inc)
+    if len(members) < max(min_pts, frac * expected):
+        return False
+
+    # Bounding-box diagonal must fit a car
+    pts = xy_map[members]
+    extent = np.linalg.norm(pts.max(axis=0) - pts.min(axis=0))
+    return bool(extent <= max_extent)
+
+
+def fit_box(pts, sensor, heading, length, width, search=np.radians(10), step=np.radians(1)) -> tuple[np.ndarray, float]:
+    """
+    Fixed size box on a group's points, placed so the faces visible from the sensor lie on the the
+    points Tries headings within +-search of the heading and keeps the best fit.
+    Returns the box centre and its heading.
+    """
+
+    best_cost, best_center, best_heading = np.inf, np.zeros(2), heading
+
+    for th in np.arange(heading - search, heading + search + 1e-9, step):
+        forward = np.array([np.cos(th), np.sin(th)])
+        left = np.array([-np.sin(th), np.cos(th)])
+
+        # Points and sensor in the box's axes
+        u, v = pts @ forward, pts @ left
+        su, sv = sensor @ forward, sensor @ left
+
+        # Along the car: put the visible end face on the points
+        if su < u.min():
+            u_c = u.min() + length / 2          # sensor behind: rear face visible
+        elif su > u.max():
+            u_c = u.max() - length / 2          # sensor ahead: front face visible
+        else:
+            u_c = (u.min() + u.max()) / 2       # sensor level with the car: only a side visible
+
+        # Across the car: same for the visible side
+        if sv < v.min():
+            v_c = v.min() + width / 2           # sensor on the right: right side visible
+        elif sv > v.max():
+            v_c = v.max() - width / 2           # sensor on the left: left side visible
+        else:
+            v_c = (v.min() + v.max()) / 2       # sensor straight behind/ahead: rear/front face centred
+
+        du = np.abs(np.abs(u - u_c) - length / 2)
+        dv = np.abs(np.abs(v - v_c) - width / 2)
+        cost = np.mean(np.minimum(du, dv) ** 2)
+
+        if cost < best_cost:
+            best_cost, best_center, best_heading = cost, u_c * forward + v_c * left, th
+
+    return best_center, best_heading
 
 
 def candidate_mask(xy_map, r, grid: Grid, inside, wall_dist, m0=0.10, k_yaw=0.005) -> np.ndarray:
@@ -189,3 +267,67 @@ def candidate_mask(xy_map, r, grid: Grid, inside, wall_dist, m0=0.10, k_yaw=0.00
     rr, cc = row[ok], col[ok]
     keep[ok] = inside[rr, cc] & (wall_dist[rr, cc] > m0 + k_yaw * r[ok])
     return keep
+
+
+def bounds_normals(b) -> np.ndarray:
+    """Normal at each point of a closed boundary line."""
+    t = np.roll(b, -1, axis=0) - np.roll(b, 1, axis=0)
+    t /= np.maximum(np.linalg.norm(t, axis=1, keepdims=True), 1e-9)
+    return np.column_stack((-t[:, 1], t[:, 0]))
+
+
+def measure_wall_offsets(xy_map, bounds, normals, tree, max_offset=0.25) -> tuple[np.ndarray, np.ndarray, float]:
+    """
+    For every bound point, compute the offset along its normal of the scan points attached to it.
+    Only points within max_offset of a bound point count.
+    """
+    offset_sum = np.zeros(len(bounds))
+    count = np.zeros(len(bounds))
+
+    # For every scan point get the distance to and index of the nearest bound point
+    dist, nearest = tree.query(xy_map)
+
+    for p, d, k in zip(xy_map, dist, nearest):
+        # Too far from a wall, skip
+        if d > max_offset:
+            continue
+        # How far the point is from the bound, along its normal
+        offset = np.dot(p - bounds[k], normals[k])
+        offset_sum[k] += offset
+        count[k] += 1
+
+    mean_offset = np.zeros(len(bounds))
+    seen = count > 0
+    mean_offset[seen] = offset_sum[seen] / count[seen]
+    share = np.mean(dist <= max_offset) if len(dist) else 0.0   # how well this scan matches the walls
+    return mean_offset, count, share
+
+
+def normals_into_track(grid: Grid, track, bound, normals, step=0.05) -> np.ndarray:
+    """Flip each normal so it points into the track."""
+    probe = bound + step * normals
+    row, col, ok = grid.world_to_grid(probe)
+    inside = np.zeros(len(bound), bool)
+    inside[ok] = track[row[ok], col[ok]]
+    return np.where(inside[:, None], normals, -normals)
+
+
+def update_wall_offsets(offset, measured, count, share, alpha_in=0.0125, alpha_out=0.05,
+                        min_points=2, min_share=0.55, max_in=0.15, max_out=0.25) -> tuple[np.ndarray, bool]:
+    """
+    Move each bound point's offset a little toward this scan's measurement.
+    Returns the new offsets and whether the scan was used.
+    """
+    # Localization guard: if few scan points lie near any wall, the pose is probably wrong
+    if share < min_share:
+        return offset, False
+
+    seen = count >= min_points
+    residual = measured[seen] - offset[seen]
+
+    # Slow when moving into the track (an opponent near the wall can only pull inward), faster outward
+    alpha = np.where(residual > 0, alpha_in, alpha_out)
+
+    new = offset.copy()
+    new[seen] = np.clip(offset[seen] + alpha * residual, -max_out, max_in)   # at most 15 cm in, 25 cm out
+    return new, True
