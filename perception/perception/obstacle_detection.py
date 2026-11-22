@@ -112,12 +112,12 @@ def beam_geometry(ranges, angle_min, angle_inc, time_inc, range_min, range_max):
     return idx, xy, r, dt
 
 
-def _yaw_from_quat(x, y, z, w) -> float:
+def yaw_from_quat(x, y, z, w) -> float:
     return np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
 
 
 def _se2_compose(a, b) -> np.ndarray:
-    """Chain two SE(2) transforms."""
+    """Chain two SE(2) transforms (T1 @ T2)"""
     a, b = np.asarray(a, float), np.asarray(b, float)
     c, s = np.cos(a[..., 2]), np.sin(a[..., 2])
     return np.stack((a[..., 0] + c * b[..., 0] - s * b[..., 1],
@@ -164,12 +164,18 @@ def segment_scan(idx, xy, r, angle_inc, lambda_=np.radians(10), sigma=0.03, max_
     if len(idx) == 0:
         return np.zeros(0, int)
 
-    # Angle between two consecutive (valid) beams
+    # Difference (angle and distance) between two consecutive (valid) beams
     dphi = np.diff(idx) * angle_inc
     gap = np.linalg.norm(np.diff(xy, axis=0), axis=1)
+
+    # Find the largest allowed distance where two points still count as the same surface
     with np.errstate(divide="ignore", invalid="ignore"):
+        # Law of sines (each side divided by the opposite angle gives the same value)
         d_max = r[:-1] * np.sin(dphi) / np.sin(lambda_ - dphi) + 3 * sigma
+
+    # Break down the beams into segments with the adaptive thresholds
     brk = (dphi >= lambda_) | (gap > d_max)
+
     # More than max_missing dropped beams in a row: always a new segment (d_max explodes as dphi -> lambda_)
     brk |= np.diff(idx) > max_missing + 1
     return np.concatenate((np.zeros(1, int), np.cumsum(brk)))
@@ -177,8 +183,15 @@ def segment_scan(idx, xy, r, angle_inc, lambda_=np.radians(10), sigma=0.03, max_
 
 def accept_segments(labels, point_ok) -> np.ndarray:
     """True only for points whose whole segment is ok."""
-    bad = np.zeros(labels.max() + 1, bool) if len(labels) else np.zeros(0, bool)
-    np.logical_or.at(bad, labels, ~point_ok)   # segment is bad if any point is bad
+    if len(labels) == 0:
+        return np.zeros(0, bool)  # no points, nothing to keep
+
+    # There are labels.max() + labels
+    bad = np.zeros(labels.max() + 1, bool)
+
+    # Segment is bad if any point is bad. Strictness reduces false positives, at the cost of some detection rate
+    # Relaxing this constraint can significantly increase FPs.
+    np.logical_or.at(bad, labels, ~point_ok)
     return ~bad[labels]
 
 
@@ -189,8 +202,11 @@ def group_segments(xy_map, labels, keep, max_gap=0.25) -> list[np.ndarray]:
         members = np.flatnonzero(keep & (labels == seg))
         merged = False
         for i, group in enumerate(groups):
+
             # Smallest disance between any point of this segment and any point in the group
             gap = np.linalg.norm(xy_map[members][:, None, :] - xy_map[group][None, :, :], axis=2).min()
+
+            # Group segments closer than max_gap
             if gap < max_gap:
                 groups[i] = np.concatenate((group, members))
                 merged = True
@@ -215,7 +231,7 @@ def plausible_group(xy_map, r, members, angle_inc, face_width=0.30, frac=0.3, mi
     return bool(extent <= max_extent)
 
 
-def fit_box(pts, sensor, heading, length, width, search=np.radians(10), step=np.radians(1)) -> tuple[np.ndarray, float]:
+def fit_box(pts, lidar, heading, length, width, search=np.radians(10), step=np.radians(1)) -> tuple[np.ndarray, float]:
     """
     Fixed size box on a group's points, placed so the faces visible from the sensor lie on the the
     points Tries headings within +-search of the heading and keeps the best fit.
@@ -224,36 +240,49 @@ def fit_box(pts, sensor, heading, length, width, search=np.radians(10), step=np.
 
     best_cost, best_center, best_heading = np.inf, np.zeros(2), heading
 
-    for th in np.arange(heading - search, heading + search + 1e-9, step):
-        forward = np.array([np.cos(th), np.sin(th)])
-        left = np.array([-np.sin(th), np.cos(th)])
+    # Search for the actual heading in the range prior +- search degs
+    for theta in np.arange(heading - search, heading + search + 1e-9, step):
 
-        # Points and sensor in the box's axes
+        forward = np.array([np.cos(theta), np.sin(theta)])
+        left = np.array([np.cos(theta + np.pi / 2), np.sin(theta + np.pi / 2)])
+
+        # Change of coordinates (into the box's axes): p @ e = x · e_x + y · e_y
         u, v = pts @ forward, pts @ left
-        su, sv = sensor @ forward, sensor @ left
 
-        # Along the car: put the visible end face on the points
+        # Also do the same for the LiDAR position (this tells us where the ego is compared to the candidate points)
+        su, sv = lidar @ forward, lidar @ left
+
+        # The LiDAR is behind ALL the points: ego is trailing -> we see the rear face
         if su < u.min():
-            u_c = u.min() + length / 2          # sensor behind: rear face visible
+            u_c = u.min() + length / 2
+
+        # The LiDAR is ahead of ALL the points: ego is ahead -> we see the front face
         elif su > u.max():
-            u_c = u.max() - length / 2          # sensor ahead: front face visible
-        else:
-            u_c = (u.min() + u.max()) / 2       # sensor level with the car: only a side visible
+            u_c = u.max() - length / 2
 
-        # Across the car: same for the visible side
+        # The LiDAR sees points ahead and behind: ego is side-by-side with the opponent -> we see a side face
+        else:
+            u_c = (u.min() + u.max()) / 2
+
+        # The LiDAR is to left of ALL the points: -> we see the right face
         if sv < v.min():
-            v_c = v.min() + width / 2           # sensor on the right: right side visible
-        elif sv > v.max():
-            v_c = v.max() - width / 2           # sensor on the left: left side visible
-        else:
-            v_c = (v.min() + v.max()) / 2       # sensor straight behind/ahead: rear/front face centred
+            v_c = v.min() + width / 2
 
+        # The LiDAR is to right of ALL the points: -> we see the left face
+        elif sv > v.max():
+            v_c = v.max() - width / 2
+
+        # The LiDAR sees points to the right and left of it: car is straight behind or ahead -> we see the front/back
+        else:
+            v_c = (v.min() + v.max()) / 2
+
+        # Evaluate how good the fit with these set of points is and keep the best one
         du = np.abs(np.abs(u - u_c) - length / 2)
         dv = np.abs(np.abs(v - v_c) - width / 2)
         cost = np.mean(np.minimum(du, dv) ** 2)
 
         if cost < best_cost:
-            best_cost, best_center, best_heading = cost, u_c * forward + v_c * left, th
+            best_cost, best_center, best_heading = cost, u_c * forward + v_c * left, theta
 
     return best_center, best_heading
 
@@ -299,7 +328,9 @@ def measure_wall_offsets(xy_map, bounds, normals, tree, max_offset=0.25) -> tupl
     mean_offset = np.zeros(len(bounds))
     seen = count > 0
     mean_offset[seen] = offset_sum[seen] / count[seen]
-    share = np.mean(dist <= max_offset) if len(dist) else 0.0   # how well this scan matches the walls
+
+    # How well this scan matches the walls
+    share = np.mean(dist <= max_offset) if len(dist) else 0.0
     return mean_offset, count, share
 
 

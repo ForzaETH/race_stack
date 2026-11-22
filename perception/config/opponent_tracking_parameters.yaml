@@ -1,0 +1,36 @@
+opponent_tracking:
+  meas_std_s:
+    type: double
+    default_value: 0.05
+    description: "Measurement noise of the detections along the track (std) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  meas_std_d:
+    type: double
+    default_value: 0.03
+    description: "Measurement noise of the detections across the track (std) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  coast_max:
+    type: double
+    default_value: 0.7
+    description: "A confirmed track without detections is kept (coasting) for this long [s]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  opp_length:
+    type: double
+    default_value: 0.55
+    description: "Opponent car length, for the published obstacle extent (Yokomo RS2.0: 0.45) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  opp_width:
+    type: double
+    default_value: 0.30
+    description: "Opponent car width, for the published obstacle extent (Yokomo RS2.0: 0.19) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]

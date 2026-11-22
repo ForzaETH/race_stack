@@ -1,10 +1,10 @@
 import numpy as np
 import rclpy
+from scipy.spatial import KDTree
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
-from sensor_msgs.msg import LaserScan, PointCloud2, PointField
-from sensor_msgs_py import point_cloud2
+from sensor_msgs.msg import LaserScan, PointCloud2
 from std_msgs.msg import Header
 from visualization_msgs.msg import Marker, MarkerArray
 from tf2_ros import Buffer, TransformListener, TransformException  # type: ignore
@@ -12,54 +12,47 @@ from tf2_ros import Buffer, TransformListener, TransformException  # type: ignor
 from stack_master.qos import LATCHED_QOS
 from rclpy.qos import qos_profile_sensor_data
 from perception import obstacle_detection as od
+from perception import visualization as viz
+from perception.obstacle_detection_parameters_codegen import obstacle_detection as parameters
 from f110_msgs.msg import WpntArray, ObstacleArray, Obstacle
 from frenet_conversion.frenet_converter import FrenetConverter
-
-FIELDS = [PointField(name=n, offset=4 * i, datatype=PointField.FLOAT32, count=1)
-          for i, n in enumerate(("x", "y", "z", "segment", "dt"))]
 
 
 def _se2(tf) -> np.ndarray:
     t, q = tf.transform.translation, tf.transform.rotation
-    return np.array([t.x, t.y, od._yaw_from_quat(q.x, q.y, q.z, q.w)])
+    return np.array([t.x, t.y, od.yaw_from_quat(q.x, q.y, q.z, q.w)])
 
 
 class ObstacleDetectionNode(Node):
     def __init__(self) -> None:
         super().__init__("obstacle_detection")
 
-        self.scan_topic = str(self.declare_parameter("scan_topic", "/scan").value)
-        self.map_frame = str(self.declare_parameter("map_frame", "map").value)
-        self.odom_frame = str(self.declare_parameter("odom_frame", "odom").value)  # SIM does not have an odom frame
-        self.max_range = self.declare_parameter("max_range", 9.0).get_parameter_value().double_value
-        self.m0 = self.declare_parameter("m0", 0.10).get_parameter_value().double_value
-        self.k_yaw = self.declare_parameter("k_yaw", 0.005).get_parameter_value().double_value
-        self.lambda_ = np.radians(self.declare_parameter("lambda_deg", 10.0).get_parameter_value().double_value)
-        self.sigma = self.declare_parameter("sigma", 0.03).get_parameter_value().double_value
-        self.grid_res = self.declare_parameter("grid_res", 0.02).get_parameter_value().double_value
-        self.grid_pad = self.declare_parameter("grid_pad", 0.5).get_parameter_value().double_value
-        self.max_map_odom_lag = self.declare_parameter("max_map_odom_lag", 0.2).get_parameter_value().double_value
-        self.publish_rejected = self.declare_parameter("publish_rejected", False).get_parameter_value().bool_value
-        self.opp_length = self.declare_parameter("opp_length", 0.55).get_parameter_value().double_value
-        self.opp_width = self.declare_parameter("opp_width", 0.30).get_parameter_value().double_value
-        self.heading_search = np.radians(
-            self.declare_parameter("heading_search_deg", 15.0).get_parameter_value().double_value)
+        # Parameters: config/obstacle_detection_parameters.yaml
+        self.params = parameters.ParamListener(self).get_params()
 
         # Static map built from the track bounds
         self.grid = self.track = self.wdist = None
+
+        # Live wall state, set up in bounds_cb: both bounds stacked (right then left), their inward
+        # normals, a lookup tree, and one learned offset per bound point (+ = into the track)
+        self.bounds = self.normals = self.bound_tree = self.wall_offset = None
+        self.n_right = 0
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
 
         self.points_pub = self.create_publisher(PointCloud2, "/perception/v2/candidate_points", 10)
         self.rejected_pub = (self.create_publisher(PointCloud2, "/perception/v2/rejected_points", 10)
-                             if self.publish_rejected else None)
+                             if self.params.publish_rejected else None)
         self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/v2/detections", 10)
         self.markers_pub = self.create_publisher(MarkerArray, "/perception/v2/detections/markers", 10)
+        self.walls_pub = self.create_publisher(Marker, "/perception/v2/live_walls", 1)
+        if self.params.live_wall:
+            self.create_timer(self.params.live_wall_period, self.rebuild_walls)
 
         # Obtain trackbounds from track bounds (markers)
         self.create_subscription(MarkerArray, "/trackbounds/markers", self.bounds_cb, LATCHED_QOS)
-        self.create_subscription(LaserScan, self.scan_topic, self.scan_cb, qos_profile_sensor_data)
+        self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, qos_profile_sensor_data)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
 
         # Dynamic tracks from the tracker (s, d, vs, vd), used as heading prior for the box fit
@@ -78,10 +71,19 @@ class ObstacleDetectionNode(Node):
         right, left = xy[~is_left], xy[is_left]
 
         # Construct the static grid
-        self.grid = od.grid_from_bounds(right, left, self.grid_res, self.grid_pad)
+        self.grid = od.grid_from_bounds(right, left, self.params.grid_res, self.params.grid_pad)
         self.track = od.track_mask(self.grid, left, right)
         self.wdist = od.wall_distance(self.grid, right, left)
-        self.get_logger().info(f"grid {self.grid.width}x{self.grid.height} @ {self.grid_res} m")
+        self.get_logger().info(f"grid {self.grid.width}x{self.grid.height} @ {self.params.grid_res} m")
+
+        # Live wall: normals per bound (computed separately, so the two loops don't join), flipped into the track
+        n_right = od.normals_into_track(self.grid, self.track, right, od.bounds_normals(right))
+        n_left = od.normals_into_track(self.grid, self.track, left, od.bounds_normals(left))
+        self.bounds = np.vstack((right, left))
+        self.normals = np.vstack((n_right, n_left))
+        self.n_right = len(right)
+        self.bound_tree = KDTree(self.bounds)
+        self.wall_offset = np.zeros(len(self.bounds))
 
     def pose(self, target: str, source: str, t: Time) -> np.ndarray:
         return _se2(self.tf_buffer.lookup_transform(target, source, t))
@@ -110,22 +112,22 @@ class ObstacleDetectionNode(Node):
 
         try:
             # There is no odom frame in sim
-            if not self.odom_frame:
+            if not self.params.odom_frame:
                 # Obtain the laser pose directly in map frame
-                start = self.pose_at(self.map_frame, frame, t0)
-                end = self.pose_at(self.map_frame, frame, t1)
+                start = self.pose_at(self.params.map_frame, frame, t0)
+                end = self.pose_at(self.params.map_frame, frame, t1)
                 return np.zeros(3), start, end
 
             # Obtain the laser pose in odom frame
-            start = self.pose_at(self.odom_frame, frame, t0)
-            end = self.pose_at(self.odom_frame, frame, t1)
+            start = self.pose_at(self.params.odom_frame, frame, t0)
+            end = self.pose_at(self.params.odom_frame, frame, t1)
 
             try:
-                map_odom = self.pose(self.map_frame, self.odom_frame, t0)
+                map_odom = self.pose(self.params.map_frame, self.params.odom_frame, t0)
             except TransformException:
-                tf = self.tf_buffer.lookup_transform(self.map_frame, self.odom_frame, Time())
+                tf = self.tf_buffer.lookup_transform(self.params.map_frame, self.params.odom_frame, Time())
                 lag = (t0 - Time.from_msg(tf.header.stamp)).nanoseconds * 1e-9
-                if lag > self.max_map_odom_lag:
+                if lag > self.params.max_map_odom_lag:
                     raise TransformException(f"latest map->odom is {lag:.3f} s old")
                 map_odom = _se2(tf)
             return map_odom, start, end
@@ -148,32 +150,39 @@ class ObstacleDetectionNode(Node):
                                           scan.time_increment, scan.range_min, scan.range_max)
 
         # Segment the scan at range jumps
-        labels = od.segment_scan(idx, xy, r, scan.angle_increment, self.lambda_, self.sigma)
+        labels = od.segment_scan(idx, xy, r, scan.angle_increment, np.radians(self.params.lambda_deg), self.params.sigma)
 
         # Transform each point to map frame
         xy_map = od.beams_to_map(xy, dt, scan_duration, *poses)
 
         # Keep points on the track and clear of the walls
-        ok = od.candidate_mask(xy_map, r, self.grid, self.track, self.wdist, self.m0, self.k_yaw)
+        ok = od.candidate_mask(xy_map, r, self.grid, self.track, self.wdist, self.params.m0, self.params.k_yaw)
 
         # Keep a segment only if ALL its points are ok
-        keep = od.accept_segments(labels, ok) & (r <= self.max_range)
+        keep = od.accept_segments(labels, ok) & (r <= self.params.max_range)
+
+        # Live wall: fold this scan's points near the bounds into the learned wall offsets
+        if self.params.live_wall and self.wall_offset is not None:
+            near = r <= self.params.max_range
+            measured, count, share = od.measure_wall_offsets(xy_map[near], self.bounds, self.normals, self.bound_tree)
+            self.wall_offset, _ = od.update_wall_offsets(self.wall_offset, measured, count, share)
 
         #  Group the kept segments into obstacle candidates
         boxes = []
         if self.converter is not None:
-            max_extent = np.hypot(self.opp_length, self.opp_width) + 0.1
+            max_extent = np.hypot(self.params.opp_length, self.params.opp_width) + self.params.size_margin
             for members in od.group_segments(xy_map, labels, keep):
                 if not od.plausible_group(xy_map, r, members, scan.angle_increment,
-                                          face_width=self.opp_width, max_extent=max_extent):
+                                          face_width=self.params.opp_width, max_extent=max_extent,
+                                          frac=self.params.min_points_frac):
                     continue
 
                 # Fit a car-sized box box to each group
                 pts = xy_map[members]
                 sensor = self.sensor_position(poses, dt[members], scan_duration)
                 heading = self.box_heading(pts.mean(axis=0))
-                center, yaw = od.fit_box(pts, sensor, heading, self.opp_length, self.opp_width,
-                                         search=self.heading_search)
+                center, yaw = od.fit_box(pts, sensor, heading, self.params.opp_length, self.params.opp_width,
+                                         search=np.radians(self.params.heading_search_deg))
                 boxes.append((center, yaw))
 
         # Publish the accepted points as well optionally the rejected ones
@@ -184,48 +193,36 @@ class ObstacleDetectionNode(Node):
 
     def publish_points(self, pub, stamp, xy, seg, dt) -> None:
         """Publish points as a PointCloud2 in the map frame, stamped with the scan time."""
-        header = Header(stamp=stamp, frame_id=self.map_frame)
-        pts = np.column_stack((xy, np.zeros(len(xy)), seg, dt)).astype(np.float32)
-        pub.publish(point_cloud2.create_cloud(header, FIELDS, pts))
+        header = Header(stamp=stamp, frame_id=self.params.map_frame)
+        pub.publish(viz.points_cloud(header, xy, seg, dt))
 
     def publish_obstacles(self, stamp, boxes) -> None:
         """Boxes as an ObstacleArray (Frenet, for the planner) and as cube markers (RViz). One message per scan."""
         msg = ObstacleArray()
-        msg.header = Header(stamp=stamp, frame_id=self.map_frame)
-        clear = Marker()
-        clear.action = Marker.DELETEALL                       # remove last scan's boxes in RViz
-        obstacle_list, marker_list = [], [clear]              # plain lists, assigned to the messages at the end
+        msg.header = Header(stamp=stamp, frame_id=self.params.map_frame)
+        obstacle_list = []                                    # plain list, assigned to the message at the end
 
         if boxes:
             assert self.converter is not None                 # boxes only exist once the raceline is known
             centers = np.array([c for c, _ in boxes])
             sd = np.asarray(self.converter.get_frenet(centers[:, 0], centers[:, 1]))
 
-            for i, ((center, yaw), s, d) in enumerate(zip(boxes, sd[0], sd[1])):
+            for i, (s, d) in enumerate(zip(sd[0], sd[1])):
                 o = Obstacle()
                 o.id = i
                 o.s_center = float(s % self.track_length)
                 o.d_center = float(d)
-                o.s_start = float((s - self.opp_length / 2) % self.track_length)
-                o.s_end = float((s + self.opp_length / 2) % self.track_length)
-                o.d_left = float(d + self.opp_width / 2)
-                o.d_right = float(d - self.opp_width / 2)
-                o.size = float(max(self.opp_length, self.opp_width))
+                o.s_start = float((s - self.params.opp_length / 2) % self.track_length)
+                o.s_end = float((s + self.params.opp_length / 2) % self.track_length)
+                o.d_left = float(d + self.params.opp_width / 2)
+                o.d_right = float(d - self.params.opp_width / 2)
+                o.size = float(max(self.params.opp_length, self.params.opp_width))
                 o.is_visible = True
                 obstacle_list.append(o)
 
-                m = Marker()
-                m.header = msg.header
-                m.ns, m.id, m.type, m.action = "detections", i, Marker.CUBE, Marker.ADD
-                m.pose.position.x, m.pose.position.y, m.pose.position.z = float(center[0]), float(center[1]), 0.05
-                m.pose.orientation.z, m.pose.orientation.w = float(np.sin(yaw / 2)), float(np.cos(yaw / 2))
-                m.scale.x, m.scale.y, m.scale.z = self.opp_length, self.opp_width, 0.1
-                m.color.r, m.color.g, m.color.b, m.color.a = 1.0, 0.5, 0.0, 0.6
-                marker_list.append(m)
-
         msg.obstacles = obstacle_list
         self.obstacles_pub.publish(msg)
-        self.markers_pub.publish(MarkerArray(markers=marker_list))
+        self.markers_pub.publish(viz.box_markers(msg.header, boxes, self.params.opp_length, self.params.opp_width))
 
     def waypoints_cb(self, msg: WpntArray) -> None:
         x = np.array([w.x_m for w in msg.wpnts])
@@ -235,6 +232,18 @@ class ObstacleDetectionNode(Node):
         self.wp_s = np.array([w.s_m for w in msg.wpnts])
         self.wp_psi = np.unwrap(psi)
         self.track_length = float(self.wp_s[-1])
+
+    def rebuild_walls(self) -> None:
+        """Rebuild the track mask and wall distance from the bounds shifted by the learned offsets."""
+        if self.grid is None or self.bounds is None or self.normals is None or self.wall_offset is None:
+            return
+        live = self.bounds + self.wall_offset[:, None] * self.normals
+        right, left = live[:self.n_right], live[self.n_right:]
+        self.track = od.track_mask(self.grid, left, right)
+        self.wdist = od.wall_distance(self.grid, right, left)
+
+        header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.params.map_frame)
+        self.walls_pub.publish(viz.live_wall_marker(header, live, self.wall_offset))
 
     def tracks_cb(self, msg: ObstacleArray) -> None:
         """Latest dynamic tracks from the tracker, used as heading prior for the box fit."""

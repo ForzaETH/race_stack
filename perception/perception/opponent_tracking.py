@@ -103,7 +103,7 @@ def nis_of(x, P, z, R, track_length) -> float:
     return float(y @ np.linalg.inv(S) @ y)
 
 
-def update_motion_class(tr: Track, track_length, v_up=0.5, v_down=0.2, window=0.5, min_span=0.3) -> None:
+def update_motion_class(tr: Track, track_length, v_up=0.8, v_down=0.2, window=0.5, min_span=0.3) -> None:
     """
     Static / dynamic from how far the track moved over the last `window` seconds (averages out the noisy
     speed estimate). Hysteresis: dynamic above v_up, static again below v_down [m/s].
@@ -202,8 +202,10 @@ def step_tracks(
             tracks.append(new_track(next_id, z, t, R))
             next_id += 1
 
-    # Static or dynamic, for every track
+    # Static or dynamic, only learned from scans where the track was actually detected
+    # (a coasting track keeps its label; otherwise its extrapolated motion could make a static object "dynamic")
     for tr in tracks:
-        update_motion_class(tr, track_length)
+        if tr.t_last_hit == t:
+            update_motion_class(tr, track_length)
 
     return tracks, next_id
