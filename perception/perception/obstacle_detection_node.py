@@ -41,12 +41,12 @@ class ObstacleDetectionNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
 
-        self.points_pub = self.create_publisher(PointCloud2, "/perception/v2/candidate_points", 10)
-        self.rejected_pub = (self.create_publisher(PointCloud2, "/perception/v2/rejected_points", 10)
+        self.points_pub = self.create_publisher(PointCloud2, "/perception/candidate_points", 10)
+        self.rejected_pub = (self.create_publisher(PointCloud2, "/perception/rejected_points", 10)
                              if self.params.publish_rejected else None)
-        self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/v2/detections", 10)
-        self.markers_pub = self.create_publisher(MarkerArray, "/perception/v2/detections/markers", 10)
-        self.walls_pub = self.create_publisher(Marker, "/perception/v2/live_walls", 1)
+        self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/detections", 10)
+        self.markers_pub = self.create_publisher(MarkerArray, "/perception/detections/markers", 10)
+        self.walls_pub = self.create_publisher(Marker, "/perception/live_walls", 1)
         if self.params.live_wall:
             self.create_timer(self.params.live_wall_period, self.rebuild_walls)
 
@@ -54,10 +54,6 @@ class ObstacleDetectionNode(Node):
         self.create_subscription(MarkerArray, "/trackbounds/markers", self.bounds_cb, LATCHED_QOS)
         self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, qos_profile_sensor_data)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
-
-        # Dynamic tracks from the tracker (s, d, vs, vd), used as heading prior for the box fit
-        self.tracked = []
-        self.create_subscription(ObstacleArray, "/perception/v2/obstacles", self.tracks_cb, 10)
 
         self.converter: FrenetConverter | None = None
 
@@ -93,9 +89,15 @@ class ObstacleDetectionNode(Node):
         if self.tf_buffer.can_transform(target, source, t):
             return self.pose(target, source, t)
 
-        tb = Time.from_msg(self.tf_buffer.lookup_transform(target, source, Time()).header.stamp)   # newest
-        ta = tb - Duration(nanoseconds=20_000_000)                                                   # 20 ms earlier
-        alpha = (t - ta).nanoseconds / (tb - ta).nanoseconds                                         # > 1 = ahead of tb
+        tb = Time.from_msg(self.tf_buffer.lookup_transform(target, source, Time()).header.stamp)
+
+        # Too far past the newest pose
+        gap = (t - tb).nanoseconds * 1e-9
+        if gap > self.params.max_extrapolation:
+            raise TransformException(f"newest {target}->{source} pose is {gap * 1e3:.0f} ms older than the scan")
+
+        ta = tb - Duration(nanoseconds=20_000_000)
+        alpha = (t - ta).nanoseconds / (tb - ta).nanoseconds
         return od._se2_interp(self.pose(target, source, ta), self.pose(target, source, tb), [alpha])[0]
 
     def laser_poses(self, scan: LaserScan, scan_duration: float):
@@ -150,7 +152,9 @@ class ObstacleDetectionNode(Node):
                                           scan.time_increment, scan.range_min, scan.range_max)
 
         # Segment the scan at range jumps
-        labels = od.segment_scan(idx, xy, r, scan.angle_increment, np.radians(self.params.lambda_deg), self.params.sigma)
+        labels = od.segment_scan(
+            idx, xy, r, scan.angle_increment, np.radians(
+                self.params.lambda_deg), self.params.sigma)
 
         # Transform each point to map frame
         xy_map = od.beams_to_map(xy, dt, scan_duration, *poses)
@@ -245,26 +249,12 @@ class ObstacleDetectionNode(Node):
         header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.params.map_frame)
         self.walls_pub.publish(viz.live_wall_marker(header, live, self.wall_offset))
 
-    def tracks_cb(self, msg: ObstacleArray) -> None:
-        """Latest dynamic tracks from the tracker, used as heading prior for the box fit."""
-        self.tracked = [(o.s_center, o.d_center, o.vs, o.vd) for o in msg.obstacles if not o.is_static]
-
     def box_heading(self, xy: np.ndarray) -> float:
-        """
-        Heading prior for the box fit at xy (2,): raceline direction, corrected by the direction of motion
-        of a nearby moving track (atan2(vd, vs)) if there is one.
-        """
+        """Heading prior for the box fit at xy (2,): the raceline direction there."""
         assert self.converter is not None
         sd = np.asarray(self.converter.get_frenet(np.array([xy[0]]), np.array([xy[1]])))
-        s, d = sd[0, 0] % self.track_length, sd[1, 0]
-        heading = float(np.interp(s, self.wp_s, self.wp_psi))
-
-        for ts, td, vs, vd in self.tracked:
-            ds = (ts - s + self.track_length / 2) % self.track_length - self.track_length / 2
-            if np.hypot(ds, td - d) < 0.8 and np.hypot(vs, vd) > 0.5:
-                heading += float(np.arctan2(vd, vs))   # opponent's direction relative to the raceline
-                break
-        return heading
+        s = sd[0, 0] % self.track_length
+        return float(np.interp(s, self.wp_s, self.wp_psi))
 
     def sensor_position(self, poses, dt, scan_duration) -> np.ndarray:
         """Laser position in the map frame at the mean beam time of a group."""

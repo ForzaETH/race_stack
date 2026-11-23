@@ -31,10 +31,10 @@ class OpponentTrackingNode(Node):
 
         self.converter: FrenetConverter | None = None
 
-        self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/v2/obstacles", 10)
-        self.markers_pub = self.create_publisher(MarkerArray, "/perception/v2/obstacles/markers", 10)
+        self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/obstacles", 10)
+        self.markers_pub = self.create_publisher(MarkerArray, "/perception/obstacles/markers", 10)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
-        self.create_subscription(ObstacleArray, "/perception/v2/detections", self.detections_cb, 10)
+        self.create_subscription(ObstacleArray, "/perception/detections", self.detections_cb, 10)
 
     def waypoints_cb(self, msg: WpntArray) -> None:
         x = np.array([w.x_m for w in msg.wpnts])

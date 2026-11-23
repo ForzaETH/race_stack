@@ -70,6 +70,13 @@ obstacle_detection:
     read_only: true
     validation:
       gt<>: [0.0]
+  max_extrapolation:
+    type: double
+    default_value: 0.05
+    description: "Skip a scan if it is more than this past the newest laser pose (extrapolating would guess) [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
   publish_rejected:
     type: bool
     default_value: false
@@ -105,8 +112,8 @@ obstacle_detection:
       bounds<>: [0.0, 1.0]
   heading_search_deg:
     type: double
-    default_value: 15.0
-    description: "Box heading search around the prior, +- [deg] (real car ~3, sim ~15)"
+    default_value: 45.0
+    description: "Box heading search around the raceline direction, +- [deg]"
     read_only: true
     validation:
       bounds<>: [0.0, 45.0]

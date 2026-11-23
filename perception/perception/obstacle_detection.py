@@ -231,7 +231,8 @@ def plausible_group(xy_map, r, members, angle_inc, face_width=0.30, frac=0.3, mi
     return bool(extent <= max_extent)
 
 
-def fit_box(pts, lidar, heading, length, width, search=np.radians(10), step=np.radians(1)) -> tuple[np.ndarray, float]:
+def fit_box(pts, lidar, heading, length, width, search=np.radians(10),
+            step=np.radians(1), prior_weight=0.005 ** 2) -> tuple[np.ndarray, float]:
     """
     Fixed size box on a group's points, placed so the faces visible from the sensor lie on the the
     points Tries headings within +-search of the heading and keeps the best fit.
@@ -277,14 +278,31 @@ def fit_box(pts, lidar, heading, length, width, search=np.radians(10), step=np.r
             v_c = (v.min() + v.max()) / 2
 
         # Evaluate how good the fit with these set of points is and keep the best one
-        du = np.abs(np.abs(u - u_c) - length / 2)
-        dv = np.abs(np.abs(v - v_c) - width / 2)
-        cost = np.mean(np.minimum(du, dv) ** 2)
+        cost = fit_cost(u, v, theta, u_c, v_c, heading, length, width, search, prior_weight)
 
         if cost < best_cost:
             best_cost, best_center, best_heading = cost, u_c * forward + v_c * left, theta
 
     return best_center, best_heading
+
+
+def fit_cost(u, v, theta, u_c, v_c, heading, box_length, box_width, search, prior_weight):
+    """Evaluate how good the candidate box fits give the set of points"""
+
+    # Re-centre the coordinates releative to the box centre
+    a, b = u - u_c, v - v_c
+
+    # Distance to the box outline: how far past each pair of faces (negative => between)
+    qa, qb = np.abs(a) - box_length / 2, np.abs(b) - box_width / 2
+    outside = np.hypot(np.maximum(qa, 0), np.maximum(qb, 0))
+    inside = np.minimum(np.maximum(qa, qb), 0)
+    dist = outside + inside
+
+    # Mean squared distance to the outline + a small pull towards a prior that ONLY comes into effect at near ties
+    pull = ((theta - heading) / search) ** 2 if search > 0 else 0.0
+    cost = np.mean(dist ** 2) + prior_weight * pull
+
+    return cost
 
 
 def candidate_mask(xy_map, r, grid: Grid, inside, wall_dist, m0=0.10, k_yaw=0.005) -> np.ndarray:
