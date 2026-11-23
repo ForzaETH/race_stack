@@ -24,8 +24,11 @@
     </group>
 
     <!-- PERCEPTION -->
+    <let name="perception_params" value="$(find-pkg-share stack_master)/config/perception_params.yaml" />
+    <let name="perception_params" value="$(find-pkg-share stack_master)/config/SIM/perception_params.yaml"
+        if="$(eval '\'$(var racecar_version)\' == \'SIM\'')" />
     <include file="$(find-pkg-share perception)/launch/perception_launch.xml">
-        <arg name="param_file" value="$(find-pkg-share stack_master)/config/opponent_tracker_params.yaml" />
+        <arg name="param_file" value="$(var perception_params)" />
     </include>
 
     <!-- LOCAL PLANNER -->

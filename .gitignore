@@ -64,3 +64,6 @@ bags/
 
 # state estimation eval results
 state_estimation/eval/results/
+
+# parameter codegen (generate_parameter_library)
+*parameters_codegen.py

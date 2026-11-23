@@ -1,0 +1,12 @@
+# Real cars. All parameters and their defaults: perception/config/*_parameters.yaml
+# Opponent: Yokomo RS2.0
+
+/**/obstacle_detection:
+  ros__parameters:
+    opp_length: 0.45
+    opp_width: 0.19
+
+/**/opponent_tracking:
+  ros__parameters:
+    opp_length: 0.45
+    opp_width: 0.19
