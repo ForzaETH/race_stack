@@ -34,8 +34,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'tracking = perception.tracking:main',
-            'detect = perception.detect:main',
             'obstacle_detection = perception.obstacle_detection_node:main',
             'opponent_tracking = perception.opponent_tracking_node:main'
         ],

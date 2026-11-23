@@ -20,17 +20,40 @@ opponent_tracking:
     read_only: true
     validation:
       gt_eq<>: [0.0]
-  opp_length:
+  car_length_range:
+    type: double_array
+    default_value: [0.511, 0.625]
+    description: "Opponent car length [min, max] (rules: 568 mm +-10 %). Centre = rear + mean/2, extent = max [m]"
+    read_only: true
+    validation:
+      fixed_size<>: [2]
+      element_bounds<>: [0.05, 2.0]
+  car_width_range:
+    type: double_array
+    default_value: [0.266, 0.326]
+    description: "Opponent car width [min, max] (rules: 296 mm +-10 %). Extent and footprint use the max [m]"
+    read_only: true
+    validation:
+      fixed_size<>: [2]
+      element_bounds<>: [0.05, 2.0]
+  min_speed_heading:
     type: double
-    default_value: 0.55
-    description: "Opponent car length, for the published obstacle extent (Yokomo RS2.0: 0.45) [m]"
+    default_value: 0.5
+    description: "Above this speed the track's velocity gives its heading (centre = rear + half a car along it); below, the raceline heading [m/s]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  min_face_width:
+    type: double
+    default_value: 0.10
+    description: "Publish a track only once its face is at least this wide (rules: 12 cm, minus edge bias) [m]"
     read_only: true
     validation:
       gt<>: [0.0]
-  opp_width:
-    type: double
-    default_value: 0.30
-    description: "Opponent car width, for the published obstacle extent (Yokomo RS2.0: 0.19) [m]"
+  min_face_samples:
+    type: int
+    default_value: 10
+    description: "Scans with a measured face width before a track is published (10 = 0.25 s at 40 Hz)"
     read_only: true
     validation:
-      gt<>: [0.0]
+      gt<>: [0]

@@ -1,12 +1,8 @@
 # Real cars. All parameters and their defaults: perception/config/*_parameters.yaml
-# Opponent: Yokomo RS2.0
-
-/**/obstacle_detection:
-  ros__parameters:
-    opp_length: 0.45
-    opp_width: 0.19
+# Opponent size = competition rules (568 x 296 mm +-10 %).
+# Testing against the Yokomo RS2.0 (0.45 x 0.19, outside the rules): use [0.43, 0.47] and [0.18, 0.20] instead.
 
 /**/opponent_tracking:
   ros__parameters:
-    opp_length: 0.45
-    opp_width: 0.19
+    car_length_range: [0.511, 0.625]
+    car_width_range: [0.266, 0.326]

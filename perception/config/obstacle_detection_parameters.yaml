@@ -82,17 +82,24 @@ obstacle_detection:
     default_value: false
     description: "Also publish the rejected points (debugging)"
     read_only: true
-  opp_length:
+  min_face_width:
     type: double
-    default_value: 0.55
-    description: "Opponent car length for the box fit (Yokomo RS2.0: 0.45) [m]"
+    default_value: 0.12
+    description: "Smallest face any opponent shows: rules require a >= 12x12 cm square at 10-30 cm height [m]"
     read_only: true
     validation:
       gt<>: [0.0]
-  opp_width:
+  max_car_length:
     type: double
-    default_value: 0.30
-    description: "Opponent car width for the box fit (Yokomo RS2.0: 0.19) [m]"
+    default_value: 0.625
+    description: "Largest allowed car length (rules: 568 mm +10 %), for the plausibility check [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  max_car_width:
+    type: double
+    default_value: 0.326
+    description: "Largest allowed car width (rules: 296 mm +10 %), for the plausibility check [m]"
     read_only: true
     validation:
       gt<>: [0.0]
@@ -105,14 +112,14 @@ obstacle_detection:
       gt_eq<>: [0.0]
   min_points_frac:
     type: double
-    default_value: 0.2
-    description: "Group needs this share of the beams a car-wide face would get at its range"
+    default_value: 0.5
+    description: "Group needs this share of the beams a 12cm fac (LiDAR box minimum size) would get at its range"
     read_only: true
     validation:
       bounds<>: [0.0, 1.0]
   heading_search_deg:
     type: double
-    default_value: 45.0
+    default_value: 30.0
     description: "Box heading search around the raceline direction, +- [deg]"
     read_only: true
     validation:
