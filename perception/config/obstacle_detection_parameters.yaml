@@ -1,0 +1,131 @@
+obstacle_detection:
+  scan_topic:
+    type: string
+    default_value: "/scan"
+    description: "LiDAR scan topic"
+    read_only: true
+  map_frame:
+    type: string
+    default_value: "map"
+    description: "Map frame the detections are published in"
+    read_only: true
+  odom_frame:
+    type: string
+    default_value: "odom"
+    description: "Odometry frame for the per-beam poses; empty = no odom frame (sim)"
+    read_only: true
+  max_range:
+    type: double
+    default_value: 9.0
+    description: "Viewing distance: points farther away are dropped (after segmentation) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  m0:
+    type: double
+    default_value: 0.10
+    description: "Wall margin: points closer than m0 + k_yaw * range to a track bound are rejected [m]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  k_yaw:
+    type: double
+    default_value: 0.005
+    description: "Growth of the wall margin with range (~ heading error) [m/m]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  lambda_deg:
+    type: double
+    default_value: 10.0
+    description: "Segmentation: flattest incidence angle that still counts as one surface [deg]"
+    read_only: true
+    validation:
+      bounds<>: [1.0, 89.0]
+  sigma:
+    type: double
+    default_value: 0.03
+    description: "Segmentation: LiDAR range noise (std) [m]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  grid_res:
+    type: double
+    default_value: 0.02
+    description: "Cell size of the track mask / wall distance grid [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  grid_pad:
+    type: double
+    default_value: 0.5
+    description: "Grid padding around the track bounds [m]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  max_map_odom_lag:
+    type: double
+    default_value: 0.2
+    description: "Skip a scan if the newest map->odom transform is older than this [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  max_extrapolation:
+    type: double
+    default_value: 0.05
+    description: "Skip a scan if it is more than this past the newest laser pose (extrapolating would guess) [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  publish_rejected:
+    type: bool
+    default_value: false
+    description: "Also publish the rejected points (debugging)"
+    read_only: true
+  opp_length:
+    type: double
+    default_value: 0.55
+    description: "Opponent car length for the box fit (Yokomo RS2.0: 0.45) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  opp_width:
+    type: double
+    default_value: 0.30
+    description: "Opponent car width for the box fit (Yokomo RS2.0: 0.19) [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  size_margin:
+    type: double
+    default_value: 0.2
+    description: "Largest accepted group = car diagonal + size_margin [m]"
+    read_only: true
+    validation:
+      gt_eq<>: [0.0]
+  min_points_frac:
+    type: double
+    default_value: 0.2
+    description: "Group needs this share of the beams a car-wide face would get at its range"
+    read_only: true
+    validation:
+      bounds<>: [0.0, 1.0]
+  heading_search_deg:
+    type: double
+    default_value: 45.0
+    description: "Box heading search around the raceline direction, +- [deg]"
+    read_only: true
+    validation:
+      bounds<>: [0.0, 45.0]
+  live_wall:
+    type: bool
+    default_value: true
+    description: "Learn where the walls really are (e.g. boards rebuilt off their mapped spot)"
+    read_only: true
+  live_wall_period:
+    type: double
+    default_value: 1.0
+    description: "How often the track mask is rebuilt from the learned walls [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]

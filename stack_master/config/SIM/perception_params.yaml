@@ -1,0 +1,13 @@
+# Simulator. All parameters and their defaults: perception/config/*_parameters.yaml
+# Opponent: gym car body; no odom frame, the laser pose comes straight from map
+
+/**/obstacle_detection:
+  ros__parameters:
+    odom_frame: ""
+    opp_length: 0.58
+    opp_width: 0.2032
+
+/**/opponent_tracking:
+  ros__parameters:
+    opp_length: 0.58
+    opp_width: 0.2032

@@ -66,5 +66,5 @@ stack_master/config/*/pacejka/
 # state estimation eval results
 state_estimation/eval/results/
 
-# parameter codegen
-parameters_codegen.py
+# parameter codegen (generate_parameter_library)
+*parameters_codegen.py

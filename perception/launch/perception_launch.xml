@@ -1,13 +1,19 @@
 <launch>
-    <arg name="param_file" description="Filepath to the opponent tracking/detection config file" />
+    <arg name="param_file"
+        description="Perception parameters, e.g. stack_master/config/perception_params.yaml" />
 
-    <node pkg="perception" name="detect" exec="detect" output="log"
+    <!-- LiDAR scan -> car-sized boxes (/perception/detections) -->
+    <node pkg="perception" name="obstacle_detection" exec="obstacle_detection" output="log"
         args="--ros-args --log-level info">
-        <param from= "$(var param_file)" />
+        <param from="$(var param_file)" />
+        <!-- Single-threaded BLAS: our matrices are tiny, and idle OpenBLAS worker threads busy-wait
+        (~1 core) -->
+        <env name="OPENBLAS_NUM_THREADS" value="1" />
     </node>
 
-    <node pkg="perception" name="tracking" exec="tracking" output="log"
-        args="--ros-args --log-level warn">
-        <param from= "$(var param_file)" />
+    <!-- Boxes -> tracked obstacles (/perception/obstacles) -->
+    <node pkg="perception" name="opponent_tracking" exec="opponent_tracking" output="log"
+        args="--ros-args --log-level info">
+        <param from="$(var param_file)" />
     </node>
 </launch>
