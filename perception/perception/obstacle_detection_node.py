@@ -171,62 +171,69 @@ class ObstacleDetectionNode(Node):
             measured, count, share = od.measure_wall_offsets(xy_map[near], self.bounds, self.normals, self.bound_tree)
             self.wall_offset, _ = od.update_wall_offsets(self.wall_offset, measured, count, share)
 
-        #  Group the kept segments into obstacle candidates
-        boxes = []
+        # Group the kept segments into obstacle candidates and observe what of each is seen
+        observations = []
         if self.converter is not None:
-            max_extent = np.hypot(self.params.opp_length, self.params.opp_width) + self.params.size_margin
+            ranges = np.asarray(scan.ranges, dtype=float)
+            max_extent = np.hypot(self.params.max_car_length, self.params.max_car_width) + self.params.size_margin
             for members in od.group_segments(xy_map, labels, keep):
                 if not od.plausible_group(xy_map, r, members, scan.angle_increment,
-                                          face_width=self.params.opp_width, max_extent=max_extent,
+                                          face_width=self.params.min_face_width, max_extent=max_extent,
                                           frac=self.params.min_points_frac):
                     continue
 
-                # Fit a car-sized box box to each group
-                pts = xy_map[members]
-                sensor = self.sensor_position(poses, dt[members], scan_duration)
-                heading = self.box_heading(pts.mean(axis=0))
-                center, yaw = od.fit_box(pts, sensor, heading, self.params.opp_length, self.params.opp_width,
-                                         search=np.radians(self.params.heading_search_deg))
-                boxes.append((center, yaw))
+                # Fit on the largest contiguous segment only
+                main = od.main_segment(labels, members)
+                pts = xy_map[main]
+                sensor = self.sensor_position(poses, dt[main], scan_duration)
+                heading = od.closeness_heading(pts, self.box_heading(pts.mean(axis=0)),
+                                               search=np.radians(self.params.heading_search_deg))
+                rear, front, left, right = od.observe_face(pts, idx[main], r[main], ranges, sensor, heading)
+                observations.append((pts.mean(axis=0), rear, front, left, right))
 
         # Publish the accepted points as well optionally the rejected ones
         self.publish_points(self.points_pub, scan.header.stamp, xy_map[keep], labels[keep], dt[keep])
         if self.rejected_pub is not None:
             self.publish_points(self.rejected_pub, scan.header.stamp, xy_map[~keep], labels[~keep], dt[~keep])
-        self.publish_obstacles(scan.header.stamp, boxes)
+        self.publish_obstacles(scan.header.stamp, observations)
+    
+    def to_frenet(self, xy) -> np.ndarray:
+        """(N, 2) map points to (N, 2) [s, d]. NaN rows stay NaN: the converter can't take NaN."""
+        assert self.converter is not None
+        sd = np.full(xy.shape, np.nan)
+        ok = np.isfinite(xy).all(axis=1)
+        if ok.any():
+            s, d = self.converter.get_frenet(xy[ok, 0], xy[ok, 1])
+            sd[ok, 0] = np.asarray(s) % self.track_length
+            sd[ok, 1] = d
+        return sd
 
     def publish_points(self, pub, stamp, xy, seg, dt) -> None:
         """Publish points as a PointCloud2 in the map frame, stamped with the scan time."""
         header = Header(stamp=stamp, frame_id=self.params.map_frame)
         pub.publish(viz.points_cloud(header, xy, seg, dt))
 
-    def publish_obstacles(self, stamp, boxes) -> None:
-        """Boxes as an ObstacleArray (Frenet, for the planner) and as cube markers (RViz). One message per scan."""
+    def publish_obstacles(self, stamp, observations) -> None:
         msg = ObstacleArray()
         msg.header = Header(stamp=stamp, frame_id=self.params.map_frame)
-        obstacle_list = []                                    # plain list, assigned to the message at the end
+        obstacle_list = []
 
-        if boxes:
-            assert self.converter is not None                 # boxes only exist once the raceline is known
-            centers = np.array([c for c, _ in boxes])
-            sd = np.asarray(self.converter.get_frenet(centers[:, 0], centers[:, 1]))
-
-            for i, (s, d) in enumerate(zip(sd[0], sd[1])):
+        if observations:
+            # One conversion for all points; rows per observation: centroid, rear, front, left, right
+            sd = self.to_frenet(np.array([p for obs in observations for p in obs]))
+            for i in range(len(observations)):
+                centroid, rear, front, left, right = sd[5 * i: 5 * i + 5]
                 o = Obstacle()
                 o.id = i
-                o.s_center = float(s % self.track_length)
-                o.d_center = float(d)
-                o.s_start = float((s - self.params.opp_length / 2) % self.track_length)
-                o.s_end = float((s + self.params.opp_length / 2) % self.track_length)
-                o.d_left = float(d + self.params.opp_width / 2)
-                o.d_right = float(d - self.params.opp_width / 2)
-                o.size = float(max(self.params.opp_length, self.params.opp_width))
+                o.s_center, o.d_center = float(centroid[0]), float(centroid[1])
+                o.s_start, o.s_end = float(rear[0]), float(front[0])
+                o.d_left, o.d_right = float(left[1]), float(right[1])
                 o.is_visible = True
                 obstacle_list.append(o)
 
         msg.obstacles = obstacle_list
         self.obstacles_pub.publish(msg)
-        self.markers_pub.publish(viz.box_markers(msg.header, boxes, self.params.opp_length, self.params.opp_width))
+        self.markers_pub.publish(viz.observation_markers(msg.header, observations))
 
     def waypoints_cb(self, msg: WpntArray) -> None:
         x = np.array([w.x_m for w in msg.wpnts])

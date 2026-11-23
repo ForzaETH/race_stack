@@ -23,7 +23,11 @@ class OpponentTrackingNode(Node):
 
         # Parameters: config/opponent_tracking_parameters.yaml
         self.params = parameters.ParamListener(self).get_params()
-        self.R = np.diag([self.params.meas_std_s ** 2, self.params.meas_std_d ** 2])
+
+        # Opponent size from the rules (or an override): nominal length for the centre, maxima for the extent
+        self.length_nom = float(np.mean(self.params.car_length_range))
+        self.length_max = float(max(self.params.car_length_range))
+        self.width_max = float(max(self.params.car_width_range))
 
         self.track_length: float | None = None        # from the raceline
         self.tracks: list[ot.Track] = []
@@ -48,9 +52,13 @@ class OpponentTrackingNode(Node):
         if self.track_length is None:
             return
         t = Time.from_msg(msg.header.stamp).nanoseconds * 1e-9          # measurement time of the scan
-        detections = [[o.s_center, o.d_center] for o in msg.obstacles]
-        self.tracks, self.next_id = ot.step_tracks(self.tracks, detections, t, self.R, self.track_length,
-                                                   self.next_id, coast_max=self.params.coast_max)
+        # What detection saw of each object (NaN = not seen): see obstacle_detection_node.publish_obstacles
+        observations = [ot.Observation(o.s_start, o.s_end, o.d_left, o.d_right, o.s_center, o.d_center)
+                        for o in msg.obstacles]
+        self.tracks, self.next_id = ot.step_tracks(self.tracks, observations, t, self.track_length, self.next_id,
+                                                   std_s=self.params.meas_std_s, std_d=self.params.meas_std_d,
+                                                   coast_max=self.params.coast_max,
+                                                   merge_length=self.length_max, merge_width=self.width_max)
         self.publish_tracks(t)
 
     def publish_tracks(self, t_meas: float) -> None:
@@ -60,18 +68,30 @@ class OpponentTrackingNode(Node):
 
         obstacle_list, viz_tracks = [], []
         for tr in self.tracks:
-            if not tr.confirmed:
+            # Shape gate: only publish what could be a legal car (face >= ~12 cm, not wider than a car)
+            if not tr.confirmed or not ot.plausible_shape(tr.shape, w_min=self.params.min_face_width,
+                                                          w_max=self.width_max + 0.03,
+                                                          n_min=self.params.min_face_samples):
                 continue
             x, _ = ot.kf_predict(tr.x.copy(), tr.P.copy(), dt, self.track_length)
-            s, d, vs, vd = (float(v) for v in x)
+            s_rear, d_rear, vs, vd = (float(v) for v in x)
+
+            # Heading relative to the raceline, from the track's own velocity (meaningless when slow: assume 0).
+            # The centre lies half a car ahead of the rear ALONG THAT HEADING, not along the raceline.
+            rel = float(np.arctan2(vd, vs)) if vs > self.params.min_speed_heading else 0.0
+            s = (s_rear + self.length_nom / 2 * np.cos(rel)) % self.track_length     # centre of a nominal car
+            d = d_rear + self.length_nom / 2 * np.sin(rel)
+
+            # A car angled to the raceline covers more lateral space: widen each side by half its length * |sin|
+            half_width = self.width_max / 2 + self.length_max / 2 * abs(np.sin(rel))
 
             o = Obstacle()
             o.id = tr.id
             o.s_center, o.d_center, o.vs, o.vd = s, d, vs, vd
-            o.s_start = (s - self.params.opp_length / 2) % self.track_length
-            o.s_end = (s + self.params.opp_length / 2) % self.track_length
-            o.d_left, o.d_right = d + self.params.opp_width / 2, d - self.params.opp_width / 2
-            o.size = max(self.params.opp_length, self.params.opp_width)
+            o.s_start = s_rear % self.track_length                       # observed rear
+            o.s_end = (s_rear + self.length_max) % self.track_length     # conservative: longest legal car
+            o.d_left, o.d_right = d + half_width, d - half_width
+            o.size = max(self.length_max, self.width_max)
             o.is_static = not tr.dynamic
             o.is_visible = tr.t_last_hit == tr.t                         # detected in the latest scan
             obstacle_list.append(o)

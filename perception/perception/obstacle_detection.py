@@ -231,80 +231,6 @@ def plausible_group(xy_map, r, members, angle_inc, face_width=0.30, frac=0.3, mi
     return bool(extent <= max_extent)
 
 
-def fit_box(pts, lidar, heading, length, width, search=np.radians(10),
-            step=np.radians(1), prior_weight=0.005 ** 2) -> tuple[np.ndarray, float]:
-    """
-    Fixed size box on a group's points, placed so the faces visible from the sensor lie on the the
-    points Tries headings within +-search of the heading and keeps the best fit.
-    Returns the box centre and its heading.
-    """
-
-    best_cost, best_center, best_heading = np.inf, np.zeros(2), heading
-
-    # Search for the actual heading in the range prior +- search degs
-    for theta in np.arange(heading - search, heading + search + 1e-9, step):
-
-        forward = np.array([np.cos(theta), np.sin(theta)])
-        left = np.array([np.cos(theta + np.pi / 2), np.sin(theta + np.pi / 2)])
-
-        # Change of coordinates (into the box's axes): p @ e = x · e_x + y · e_y
-        u, v = pts @ forward, pts @ left
-
-        # Also do the same for the LiDAR position (this tells us where the ego is compared to the candidate points)
-        su, sv = lidar @ forward, lidar @ left
-
-        # The LiDAR is behind ALL the points: ego is trailing -> we see the rear face
-        if su < u.min():
-            u_c = u.min() + length / 2
-
-        # The LiDAR is ahead of ALL the points: ego is ahead -> we see the front face
-        elif su > u.max():
-            u_c = u.max() - length / 2
-
-        # The LiDAR sees points ahead and behind: ego is side-by-side with the opponent -> we see a side face
-        else:
-            u_c = (u.min() + u.max()) / 2
-
-        # The LiDAR is to left of ALL the points: -> we see the right face
-        if sv < v.min():
-            v_c = v.min() + width / 2
-
-        # The LiDAR is to right of ALL the points: -> we see the left face
-        elif sv > v.max():
-            v_c = v.max() - width / 2
-
-        # The LiDAR sees points to the right and left of it: car is straight behind or ahead -> we see the front/back
-        else:
-            v_c = (v.min() + v.max()) / 2
-
-        # Evaluate how good the fit with these set of points is and keep the best one
-        cost = fit_cost(u, v, theta, u_c, v_c, heading, length, width, search, prior_weight)
-
-        if cost < best_cost:
-            best_cost, best_center, best_heading = cost, u_c * forward + v_c * left, theta
-
-    return best_center, best_heading
-
-
-def fit_cost(u, v, theta, u_c, v_c, heading, box_length, box_width, search, prior_weight):
-    """Evaluate how good the candidate box fits give the set of points"""
-
-    # Re-centre the coordinates releative to the box centre
-    a, b = u - u_c, v - v_c
-
-    # Distance to the box outline: how far past each pair of faces (negative => between)
-    qa, qb = np.abs(a) - box_length / 2, np.abs(b) - box_width / 2
-    outside = np.hypot(np.maximum(qa, 0), np.maximum(qb, 0))
-    inside = np.minimum(np.maximum(qa, qb), 0)
-    dist = outside + inside
-
-    # Mean squared distance to the outline + a small pull towards a prior that ONLY comes into effect at near ties
-    pull = ((theta - heading) / search) ** 2 if search > 0 else 0.0
-    cost = np.mean(dist ** 2) + prior_weight * pull
-
-    return cost
-
-
 def candidate_mask(xy_map, r, grid: Grid, inside, wall_dist, m0=0.10, k_yaw=0.005) -> np.ndarray:
     """True for points that are on the track and are clear of the walls."""
     row, col, ok = grid.world_to_grid(xy_map)
@@ -380,3 +306,124 @@ def update_wall_offsets(offset, measured, count, share, alpha_in=0.0125, alpha_o
     new = offset.copy()
     new[seen] = np.clip(offset[seen] + alpha * residual, -max_out, max_in)   # at most 15 cm in, 25 cm out
     return new, True
+
+
+def closeness_heading(pts, prior, search=np.radians(30), step=np.radians(1), d0=0.01, prior_weight=0.03) -> float:
+    """Heading of the box the points define. Search within +-search of the prior (ego raceline heading)."""
+    
+    best_score, best_heading = -np.inf, prior
+    
+    for theta in np.arange(prior - search, prior + search + 1e-9, step):
+        # Points in the box axes
+        u = pts @ np.array([np.cos(theta), np.sin(theta)])
+        v = pts @ np.array([np.cos(theta + np.pi / 2), np.sin(theta + np.pi / 2)])
+        
+        # Distance of each point to the nearest edge of the bounding rectangle
+        du = np.minimum(u - u.min(), u.max() - u)
+        dv = np.minimum(v - v.min(), v.max() - v)
+        
+        # Each point is weighted by the edge its closest to
+        d = np.maximum(np.minimum(du, dv), d0)
+        score = np.mean(1.0 / d) * d0 - prior_weight * ((theta - prior) / search) ** 2
+        
+        if score > best_score:
+            best_score, best_heading = score, theta
+
+    return best_heading
+
+
+def end_is_real(ranges, beam, direction, r_end, tol=0.10, max_look=3) -> bool:
+    """
+    Whether the end of a segment is a real edge of the object, or cut off by something in front of it.
+    Looks at the next valid beam beyond the end, before the first beam, and after the last.
+    """
+    n = len(ranges)
+    for k in range(1, max_look + 1):
+        j = beam + direction * k
+        
+        # End of the scan: the object may continue outside the field of view -> not a real edge
+        if j < 0 or j >= n:
+            return False
+        
+        rj = ranges[j]
+        
+        # Skip dropped beams
+        if not np.isfinite(rj) or rj < 0.02:
+            continue
+        
+        # Background farther away => real edge. Nearer => occluded
+        return rj > r_end - tol
+
+    return True
+
+def main_segment(labels, members) -> np.ndarray:
+    """The largest contiguous segment of a group."""
+    segments, counts = np.unique(labels[members], return_counts=True)
+    return members[labels[members] == segments[np.argmax(counts)]]
+
+def observe_face(pts, beams, r, ranges, sensor, theta, face_depth=0.05, edge_tol=0.03):
+    """
+    What of the object's outline is actually seen, in its own axes (heading theta).
+    Returns four map points (2,), NaN where not observed:
+        rear:  centre of the rear face
+        front: centre of the front face
+        left:  a point on the left edge (only if it is a real edge)
+        right: a point on the right edge (only if it is a real edge)
+    """
+    fwd = np.array([np.cos(theta), np.sin(theta)])
+    lft = np.array([-np.sin(theta), np.cos(theta)])
+
+    # Points and sensor in the object's axes: u forward, v left
+    u, v = pts @ fwd, pts @ lft
+    su, sv = sensor @ fwd, sensor @ lft
+    umin, umax, vmin, vmax = u.min(), u.max(), v.min(), v.max()
+    
+     # Is each angular end of the segment (first / last beam) a real edge, or cut off by an occluder?
+    i0, i1 = np.argmin(beams), np.argmax(beams)
+    real0 = end_is_real(ranges, beams[i0], -1, r[i0])
+    real1 = end_is_real(ranges, beams[i1], +1, r[i1])
+
+    def trusted(values, extreme):
+        """An extent can be used unless it is set by an occluded end."""
+        for i, real in ((i0, real0), (i1, real1)):
+            if not real and abs(values[i] - extreme) < edge_tol:
+                return False
+        return True
+
+    u_rear = u_front = v_left = v_right = np.nan
+    
+    # The sensor is behind / ahead of all points: we look at the rear / front face
+    behind, ahead = su < umin, su > umax
+    if behind or ahead:
+        # Points of the face we look at: the outermost face_depth along u
+        face = (u < umin + face_depth) if behind else (u > umax - face_depth)
+        if behind:
+            u_rear = np.median(u[face])
+        else:
+            u_front = np.median(u[face])
+
+        # Lateral edges from the face points only: a side seen under a small heading error can't widen it
+        if trusted(v, vmin):
+            v_right = v[face].min()
+        if trusted(v, vmax):
+            v_left = v[face].max()
+
+    # Otherwise we look at a side: its ends give rear / front, the side itself gives one lateral edge
+    else:
+        if trusted(u, umin):
+            u_rear = umin
+        if trusted(u, umax):
+            u_front = umax
+        if sv > vmax:
+            v_left = vmax
+        elif sv < vmin:
+            v_right = vmin
+            
+    # Back to map points. Lateral position for rear / front: face centre if both edges seen
+    v_c = 0.5 * (v_left + v_right) if np.isfinite(v_left) and np.isfinite(v_right) else np.median(v)
+    u_ref = u_rear if np.isfinite(u_rear) else (u_front if np.isfinite(u_front) else np.median(u))
+
+    def point(uu, vv):
+        return uu * fwd + vv * lft          # NaN in, NaN out
+
+    return point(u_rear, v_c), point(u_front, v_c), point(u_ref, v_left), point(u_ref, v_right)

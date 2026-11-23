@@ -4,10 +4,8 @@
 /**/obstacle_detection:
   ros__parameters:
     odom_frame: ""
-    opp_length: 0.58
-    opp_width: 0.2032
 
 /**/opponent_tracking:
   ros__parameters:
-    opp_length: 0.58
-    opp_width: 0.2032
+    car_length_range: [0.56, 0.60]    # gym car 0.58 x 0.2032: narrower than the rules allow
+    car_width_range: [0.19, 0.22]
