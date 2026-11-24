@@ -172,7 +172,7 @@ class ObstacleDetectionNode(Node):
             self.wall_offset, _ = od.update_wall_offsets(self.wall_offset, measured, count, share)
 
         # Group the kept segments into obstacle candidates and observe what of each is seen
-        observations = []
+        observations, headings = [], []
         if self.converter is not None:
             ranges = np.asarray(scan.ranges, dtype=float)
             max_extent = np.hypot(self.params.max_car_length, self.params.max_car_width) + self.params.size_margin
@@ -190,13 +190,14 @@ class ObstacleDetectionNode(Node):
                                                search=np.radians(self.params.heading_search_deg))
                 rear, front, left, right = od.observe_face(pts, idx[main], r[main], ranges, sensor, heading)
                 observations.append((pts.mean(axis=0), rear, front, left, right))
+                headings.append(float(np.arctan2(np.sin(heading), np.cos(heading))))     # map frame, wrapped
 
         # Publish the accepted points as well optionally the rejected ones
         self.publish_points(self.points_pub, scan.header.stamp, xy_map[keep], labels[keep], dt[keep])
         if self.rejected_pub is not None:
             self.publish_points(self.rejected_pub, scan.header.stamp, xy_map[~keep], labels[~keep], dt[~keep])
-        self.publish_obstacles(scan.header.stamp, observations)
-    
+        self.publish_obstacles(scan.header.stamp, observations, headings)
+
     def to_frenet(self, xy) -> np.ndarray:
         """(N, 2) map points to (N, 2) [s, d]. NaN rows stay NaN: the converter can't take NaN."""
         assert self.converter is not None
@@ -213,7 +214,14 @@ class ObstacleDetectionNode(Node):
         header = Header(stamp=stamp, frame_id=self.params.map_frame)
         pub.publish(viz.points_cloud(header, xy, seg, dt))
 
-    def publish_obstacles(self, stamp, observations) -> None:
+    def publish_obstacles(self, stamp, observations, headings) -> None:
+        """
+        One Obstacle per observation, in Frenet, only what was seen (NaN otherwise):
+            s_start / s_end: rear / front face, d_right / d_left: right / left edge.
+            s_center / d_center: centroid of the points (fallback / display only).
+            size: NOT a size here: the object's heading in the map frame [rad] (L-shape fit).
+        This message is internal (detection -> tracking); the tracker turns it into a car position.
+        """
         msg = ObstacleArray()
         msg.header = Header(stamp=stamp, frame_id=self.params.map_frame)
         obstacle_list = []
@@ -228,6 +236,7 @@ class ObstacleDetectionNode(Node):
                 o.s_center, o.d_center = float(centroid[0]), float(centroid[1])
                 o.s_start, o.s_end = float(rear[0]), float(front[0])
                 o.d_left, o.d_right = float(left[1]), float(right[1])
+                o.size = headings[i]                              # heading in the map frame, see docstring
                 o.is_visible = True
                 obstacle_list.append(o)
 
