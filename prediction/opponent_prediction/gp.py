@@ -156,13 +156,15 @@ class OpponentTrajectoryGP:
         lap_shape.lengthscale = torch.tensor(5.0)
 
         # How much a lap's pace deviates (log-variance)
-        # Prior: typically ~8 % of speed. The opponent's pace varies ~5–10 % between laps
+        # Prior: typically ~16 % of speed, at most 30 %. Tuned on the real ROS1 bags (train on 2 laps, predict
+        # the 3rd): with 2 laps of history the lap-to-lap spread is barely identifiable from data, and an 8 %
+        # prior left the band covering only ~75 % of the real next laps (now ~96 % when trailing).
         lap_deviation = ScaleKernel(
             lap_shape * SameLapKernel(active_dims=(2,)),
-            outputscale_prior=_lap_deviation_prior(typical_std=0.08),
-            outputscale_constraint=Interval(1e-5, 1e-2),
+            outputscale_prior=_lap_deviation_prior(typical_std=0.16),
+            outputscale_constraint=Interval(1e-5, 0.3**2),
         )
-        lap_deviation.outputscale = torch.tensor(0.08**2)
+        lap_deviation.outputscale = torch.tensor(0.16**2)
 
         return AdditiveKernel(pace, lap_deviation)
 

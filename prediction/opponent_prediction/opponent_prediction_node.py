@@ -10,12 +10,33 @@ from rclpy._rclpy_pybind11 import RCLError
 from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
 from visualization_msgs.msg import Marker, MarkerArray
+from rclpy.time import Time
 from nav_msgs.msg import Odometry
 from f110_msgs.msg import ObstacleArray, OppWpnt, OpponentTrajectory, WpntArray
 from stack_master.qos import LATCHED_QOS
 
 from opponent_prediction.gp import OpponentPrediction, OpponentTrajectoryGP
 from opponent_prediction.parameters_codegen import opponent_prediction as parameters
+
+
+def centred_speed(t: np.ndarray, history: np.ndarray, half: float, max_gap: float) -> np.ndarray:
+    """
+    Speed along the track at times t from the position history (N, 2: time [s], s unwrapped over laps [m]):
+    (s(t + half) - s(t - half)) / (2 half). Non-causal, so it has no lag: the tracker's real-time vs trails
+    the truth by ~150 ms when the opponent accelerates or brakes, at the same corners every lap. The GP fits
+    laps that are already over, so it can use this instead.
+    NaN where the window isn't covered: the newest samples, or the opponent was out of view (gap > max_gap).
+    """
+    ht, hs = history[:, 0], history[:, 1]
+    lo, hi = t - half, t + half
+    v = (np.interp(hi, ht, hs) - np.interp(lo, ht, hs)) / (2 * half)
+
+    bad = (lo < ht[0]) | (hi > ht[-1])
+    gap = np.diff(ht) > max_gap
+    for g0, g1 in zip(ht[:-1][gap], ht[1:][gap]):        # every gap [g0, g1] overlapping a window
+        bad |= (lo < g1) & (hi > g0)
+    v[bad] = np.nan
+    return v
 
 
 class OpponentPredictionNode(Node):
@@ -37,7 +58,8 @@ class OpponentPredictionNode(Node):
         # The opponent is the closest dynamic obstacle ahead of us (within a window)
         self.lap = 0
         self.last_s: float | None = None
-        self.samples: list[tuple[float, float, float, int]] = []  # (s, d, vs, lap)
+        self.samples: list[tuple[float, float, float, int]] = []  # (t, s, d, lap), thinned
+        self.history: list[tuple[float, float]] = []              # (t, s unwrapped) of every message, for the speed
 
         # Fitting runs in a background thread, periodically
         self.n_added = 0
@@ -89,19 +111,28 @@ class OpponentPredictionNode(Node):
         # The closest opponent is what we need
         opp = min(gaps, key=lambda x: x[0])[1]
         s = opp.s_center % L
+        t = Time.from_msg(msg.header.stamp).nanoseconds * 1e-9
         self.check_on_trajectory(s, opp.d_center)
 
+        thin = False
         if self.last_s is not None:
             ds = s - self.last_s
             if ds < -L / 2:                     # crossed the finish line
                 self.lap += 1
                 self.samples = [x for x in self.samples if x[3] >= self.lap - self.params.laps_kept]
+                t_oldest = self.samples[0][0] if self.samples else t
+                self.history = [h for h in self.history if h[0] >= t_oldest - 1.0]
             elif ds > L / 2:                    # jittered back over it
                 self.lap -= 1
-            elif abs(ds) < self.params.ds_min:         # too close, drop it
-                return
+            elif abs(ds) < self.params.ds_min:  # too close to the last sample
+                thin = True
+
+        # Every position goes into the history (the speed window needs them all); only some become samples
+        self.history.append((t, self.lap * L + s))
+        if thin:
+            return
         self.last_s = s
-        self.samples.append((s, opp.d_center, opp.vs, self.lap))
+        self.samples.append((t, s, opp.d_center, self.lap))
         self.n_added += 1
 
     def check_on_trajectory(self, s: float, d: float) -> None:
@@ -129,14 +160,16 @@ class OpponentPredictionNode(Node):
         if self.track_length is None or self.s_ref is None or self.v_ref is None:
             return
         self.n_added_at_fit = self.n_added
-        data = np.array(self.samples)  # snapshot: the callbacks keep appending meanwhile
+        data = np.array(self.samples)    # snapshots: the callbacks keep appending meanwhile
+        history = np.array(self.history)
         gp = OpponentTrajectoryGP(self.track_length, self.s_ref, self.v_ref)
-        self.fit_thread = threading.Thread(target=self.fit, args=(gp, data), daemon=True)
+        self.fit_thread = threading.Thread(target=self.fit, args=(gp, data, history), daemon=True)
         self.fit_thread.start()
 
-    def fit(self, gp: OpponentTrajectoryGP, data: np.ndarray) -> None:
-        s, d, vs, lap = data.T
-        ok = vs > 0  # the speed model is in log space
+    def fit(self, gp: OpponentTrajectoryGP, data: np.ndarray, history: np.ndarray) -> None:
+        t, s, d, lap = data.T
+        vs = centred_speed(t, history, self.params.speed_window, self.params.max_history_gap)
+        ok = np.isfinite(vs) & (vs > 0)  # window covered; the speed model is in log space
         t0 = time.perf_counter()
         try:
             gp.fit(s[ok], d[ok], vs[ok], (lap[ok] - lap.min()).astype(int),

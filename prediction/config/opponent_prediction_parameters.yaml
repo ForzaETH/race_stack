@@ -1,15 +1,15 @@
 opponent_prediction:
   d_noise_std:
     type: double
-    default_value: 0.09
-    description: "Lateral sensor noise of the perception (std) [m]"
+    default_value: 0.02
+    description: "Lateral sensor noise of the perception, uncorrelated part only (std) [m]. Slow sway is absorbed by the lap-deviation kernel"
     read_only: true
     validation:
       gt<>: [0.0]
   vs_noise_std:
     type: double
-    default_value: 1.0
-    description: "Speed sensor noise of the perception (std) [m/s]"
+    default_value: 0.15
+    description: "Speed noise of the GP samples (centred speed, uncorrelated part) (std) [m/s]. Tuned with the lap-deviation prior in gp.py"
     read_only: true
     validation:
       gt<>: [0.0]
@@ -31,6 +31,20 @@ opponent_prediction:
     type: double
     default_value: 0.2
     description: "Thinning: minimum progress between stored samples [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  speed_window:
+    type: double
+    default_value: 0.15
+    description: "Speed for the GP = centred difference of the opponent's position over +-speed_window (no lag, unlike the tracker's vs) [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  max_history_gap:
+    type: double
+    default_value: 0.1
+    description: "No speed for samples whose speed window contains a gap in the position history longer than this (opponent out of view) [s]"
     read_only: true
     validation:
       gt<>: [0.0]
