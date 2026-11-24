@@ -1,14 +1,14 @@
 opponent_tracking:
   meas_std_s:
     type: double
-    default_value: 0.05
+    default_value: 0.03
     description: "Measurement noise of the detections along the track (std) [m]"
     read_only: true
     validation:
       gt<>: [0.0]
   meas_std_d:
     type: double
-    default_value: 0.03
+    default_value: 0.02
     description: "Measurement noise of the detections across the track (std) [m]"
     read_only: true
     validation:
@@ -36,13 +36,13 @@ opponent_tracking:
     validation:
       fixed_size<>: [2]
       element_bounds<>: [0.05, 2.0]
-  min_speed_heading:
+  heading_alpha:
     type: double
-    default_value: 0.5
-    description: "Above this speed the track's velocity gives its heading (centre = rear + half a car along it); below, the raceline heading [m/s]"
+    default_value: 0.7
+    description: "Smoothing of the track heading (L-shape fit, map frame): weight of each new scan. Keep high: smoothing lags in corners. Centre = rear + half a car along it"
     read_only: true
     validation:
-      gt_eq<>: [0.0]
+      bounds<>: [0.0, 1.0]
   min_face_width:
     type: double
     default_value: 0.10

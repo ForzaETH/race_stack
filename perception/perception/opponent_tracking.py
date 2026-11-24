@@ -21,6 +21,7 @@ class Observation:
     d_right: float       # right edge
     s_c: float           # centroid of the points (always set): fallback position
     d_c: float
+    heading: float = np.nan    # heading in the map frame from the L-shape fit [rad]
 
 
 @dataclass
@@ -45,6 +46,7 @@ class Track:
     dynamic: bool = False
     history: list = field(default_factory=list)   # recent (t, s, d) of the estimate, for static/dynamic
     shape: Shape = field(default_factory=Shape)    # learned size of what we see of it
+    heading: float = np.nan                        # smoothed heading in the map frame [rad], NaN until seen
 
 
 def new_track(track_id, z, t, R, v0_std=3.0) -> Track:
@@ -202,6 +204,20 @@ def anchor(obs: Observation, shape: Shape, track_length, std_s=0.05, std_d=0.03,
     R = np.diag([ss ** 2, sdd ** 2])
     return z, R
 
+def update_heading(tr: Track, heading, alpha) -> None:
+    """
+    Smooth the track's map-frame heading towards a new L-shape heading (in place), wrap-safe.
+    alpha: weight of the new scan. Kept high: heavier smoothing lags in corners (yaw rate ~1 rad/s).
+    """
+    if not np.isfinite(heading):
+        return
+    if not np.isfinite(tr.heading):
+        tr.heading = heading
+        return
+    step = np.arctan2(np.sin(heading - tr.heading), np.cos(heading - tr.heading))
+    tr.heading = float(np.arctan2(np.sin(tr.heading + alpha * step), np.cos(tr.heading + alpha * step)))
+
+
 def inside_footprint(a_s, a_d, b_s, b_d, track_length, length=0.625, width=0.326) -> bool:
     """Whether position a lies within one car footprint (max legal length x width) of position b."""
     return abs(wrap_ds(a_s - b_s, track_length)) < length and abs(a_d - b_d) < width
@@ -212,13 +228,14 @@ def step_tracks(
         t,
         track_length,
         next_id,
-        std_s=0.05,
-        std_d=0.03,
+        std_s=0.03,
+        std_d=0.02,
         gate=9.21,
         coast_max=0.7,
         max_tracks=8,
         merge_length=0.625,
-        merge_width=0.326):
+        merge_width=0.326,
+        heading_alpha=0.7):
     """
     Advance all tracks to time t and fold in this scan's observations.
     Each track turns an observation into its own measurement (anchor) with the shape it learned,
@@ -258,6 +275,7 @@ def step_tracks(
         z, R = measure(observations[oi], tr.shape)
         tr.x, tr.P, _ = kf_update(tr.x, tr.P, z, R, track_length)
         update_shape(tr.shape, observations[oi], track_length)
+        update_heading(tr, observations[oi].heading, heading_alpha)
         tr.t_last_hit = t
 
     # 3./4. Record hit or miss, keep the last 4 scans, confirm at 3 of 4
@@ -293,6 +311,7 @@ def step_tracks(
         if oi not in used_obs and not near and len(tracks) < max_tracks:
             tr = new_track(next_id, z, t, R)
             update_shape(tr.shape, obs, track_length)
+            update_heading(tr, obs.heading, heading_alpha)
             tracks.append(tr)
             next_id += 1
 
