@@ -30,9 +30,7 @@ class Observation:
 class Shape:
     """Learned size of what we see of one object."""
     width: float = np.nan      # lateral extent of a face seen from behind / ahead [m]
-    length: float = np.nan     # extent of a side seen from beside [m]
     widths: list = field(default_factory=list)
-    lengths: list = field(default_factory=list)
 
 
 @dataclass
@@ -46,13 +44,12 @@ class Track:
     hits: list = field(default_factory=list)
     confirmed: bool = False
     dynamic: bool = False
-    history: list = field(default_factory=list)   # recent (t, s, d) of the estimate, for static/dynamic
+    history: list = field(default_factory=list)   # recent (t, s, d) at each detection: dynamic label, stationarity
     shape: Shape = field(default_factory=Shape)    # learned size of what we see of it
     heading: float = np.nan                        # smoothed heading in the map frame [rad], NaN until seen
-    still_hist: list = field(default_factory=list)  # recent (t, s, d) of detections, for the stationarity check
     static_confirmed: bool = False                  # still for >= t_static: a static object
-    extent: tuple | None = None                     # union of observed boxes while still, relative to x[0]:
-                                                    # (s_lo, s_hi, d_lo, d_hi) [m]
+    extent: tuple | None = None                     # union of observed boxes while still, ABSOLUTE (s_lo, s_hi,
+                                                    # d_lo, d_hi) [m]; s_hi = s_lo + length, may exceed the track length
 
 
 def new_track(track_id, z, t, R, v0_std=3.0) -> Track:
@@ -71,7 +68,7 @@ def wrap_ds(ds, track_length):
     return (ds + track_length / 2) % track_length - track_length / 2
 
 
-def update_shape(shape: Shape, obs: Observation, track_length, keep=200) -> None:
+def update_shape(shape: Shape, obs: Observation, keep=200) -> None:
     """Fold one observation into the learned shape (in place)."""
 
     # Both lateral edges seen: only happens looking at the rear or front face -> its width
@@ -79,11 +76,7 @@ def update_shape(shape: Shape, obs: Observation, track_length, keep=200) -> None
         shape.widths = (shape.widths + [obs.d_left - obs.d_right])[-keep:]
         shape.width = float(np.median(shape.widths))
 
-    # Both rear and front seen: only happens looking at a side -> its length
-    if np.isfinite(obs.s_rear) and np.isfinite(obs.s_front):
-        shape.lengths = (shape.lengths + [wrap_ds(obs.s_front - obs.s_rear, track_length)])[-keep:]
-        shape.length = float(np.median(shape.lengths))
-        
+
 def plausible_shape(shape: Shape, w_min=0.10, w_max=0.356, n_min=10) -> bool:
     """Plausible shape for a car: at least a face >= 12 cm (LiDAR box), and max width of 32.6 cm. """
     return len(shape.widths) >= n_min and w_min <= shape.width <= w_max
@@ -126,7 +119,7 @@ def kf_predict(x, P, dt, track_length, sigma_as=7.0, sigma_ad=3.0):
 def kf_update(x, P, z, R, track_length):
     """
     Correct the state with a measured position z = [s, d] (measurement noise R, 2x2).
-    Returns the new state, its uncertainty, and the NIS (how surprising the measurement was).
+    Returns the new state and its uncertainty.
     """
     H = np.array([[1, 0, 0, 0],
                   [0, 1, 0, 0]], dtype=float)
@@ -141,8 +134,7 @@ def kf_update(x, P, z, R, track_length):
     x[0] = wrap_s(x[0], track_length)
     I_KH = np.eye(4) - K @ H
     P = I_KH @ P @ I_KH.T + K @ R @ K.T
-    nis = float(y @ np.linalg.inv(S) @ y)
-    return x, P, nis
+    return x, P
 
 
 def nis_of(x, P, z, R, track_length) -> float:
@@ -161,15 +153,14 @@ def update_motion_class(tr: Track, track_length, v_up=0.8, v_down=0.2, window=0.
     (|dd| < max_lateral * |ds|): a static structure that only seems to move, because more of it
     becomes visible as we approach, shifts inconsistently or sideways. Static again below v_down.
     """
-    tr.history.append((tr.t, tr.x[0], tr.x[1]))
-    tr.history = [h for h in tr.history if tr.t - h[0] <= window]
+    h = [x for x in tr.history if tr.t - x[0] <= window]    # history is filled in update_static_evidence
 
-    span = tr.history[-1][0] - tr.history[0][0]
+    span = h[-1][0] - h[0][0]
     if span < min_span:
         return                                     # not enough history yet: keep the current label
 
-    ds = wrap_ds(tr.history[-1][1] - tr.history[0][1], track_length)
-    dd = tr.history[-1][2] - tr.history[0][2]
+    ds = wrap_ds(h[-1][1] - h[0][1], track_length)
+    dd = h[-1][2] - h[0][2]
     along = ds / span
     if not tr.dynamic and along > v_up and abs(dd) < max_lateral * abs(ds):
         tr.dynamic = True
@@ -184,11 +175,9 @@ def anchor(obs: Observation, shape: Shape, track_length, std_s=0.05, std_d=0.03,
     Missing parts are filled in with the learned shape; where the shape is unknown, the noise is raised
     so the filter barely moves on that axis.
     """
-    # Along the track: rear seen directly, else front minus the learned length
+    # Along the track: rear seen directly, else the front with an unknown length (high noise: barely moves s)
     if np.isfinite(obs.s_rear):
         s, ss = obs.s_rear, std_s
-    elif np.isfinite(obs.s_front) and np.isfinite(shape.length):
-        s, ss = obs.s_front - shape.length, 2 * std_s
     elif np.isfinite(obs.s_front):
         s, ss = obs.s_front - MIN_FACE, std_unknown_s
     else:
@@ -243,7 +232,11 @@ def step_tracks(
         merge_width=0.326,
         heading_alpha=0.7,
         t_static=0.75,
-        static_spread=0.05):
+        static_spread=0.05,
+        ego=None,
+        t_fast=0.3,
+        path_half_width=0.25,
+        fast_range=6.0):
     """
     Advance all tracks to time t and fold in this scan's observations.
     Each track turns an observation into its own measurement (anchor) with the shape it learned,
@@ -253,6 +246,12 @@ def step_tracks(
 
     def measure(obs, shape):
         return anchor(obs, shape, track_length, std_s=std_s, std_d=std_d)
+
+    def needed_still_time(tr, obs):
+        """Fast path: an object close ahead in our path is confirmed static after t_fast, everything else t_static."""
+        if ego is not None and in_our_path(tr, obs, ego[0], ego[1], track_length, path_half_width, fast_range):
+            return t_fast
+        return t_static
 
     # Predict every track to this scan's time
     for tr in tracks:
@@ -281,10 +280,11 @@ def step_tracks(
         # Update with the assigned observation, then learn the shape from it
         tr = tracks[ti]
         z, R = measure(observations[oi], tr.shape)
-        tr.x, tr.P, _ = kf_update(tr.x, tr.P, z, R, track_length)
-        update_shape(tr.shape, observations[oi], track_length)
+        tr.x, tr.P = kf_update(tr.x, tr.P, z, R, track_length)
+        update_shape(tr.shape, observations[oi])
         update_heading(tr, observations[oi].heading, heading_alpha)
-        update_static_evidence(tr, observations[oi], t, track_length, t_static, static_spread)
+        update_static_evidence(tr, observations[oi], t, track_length, t_static, static_spread,
+                               needed_still_time(tr, observations[oi]))
         tr.t_last_hit = t
 
     # 3./4. Record hit or miss, keep the last 4 scans, confirm at 3 of 4
@@ -305,20 +305,11 @@ def step_tracks(
 
     # Merge tracks inside an older track's car footprint (one car can't be two tracks): keep the older one
     tracks.sort(key=lambda tr: tr.id)
-    
-    # Static tracks whose boxes overlap are one object split in two: the older keeps the union of both boxes
     merged = []
     for tr in tracks:
-        host = next((o for o in merged
-                     if inside_footprint(tr.x[0], tr.x[1], o.x[0], o.x[1], track_length, merge_length, merge_width)
-                     or statics_overlap(tr, o, track_length)), None)
-        if host is None:
+        if not any(inside_footprint(tr.x[0], tr.x[1], o.x[0], o.x[1], track_length, merge_length, merge_width)
+                   for o in merged):
             merged.append(tr)
-        elif host.static_confirmed and tr.extent is not None and host.extent is not None:
-            s0, s1, d_r, d_l = static_extent(tr, track_length)
-            lo = wrap_ds(s0 - host.x[0], track_length)
-            e = host.extent
-            host.extent = (min(e[0], lo), max(e[1], lo + wrap_ds(s1 - s0, track_length)), min(e[2], d_r), max(e[3], d_l))
     tracks = merged
 
     # 6. Start a new track for each observation nobody claimed (unless a track is already right there)
@@ -328,9 +319,9 @@ def step_tracks(
                    for tr in tracks)
         if oi not in used_obs and not near and len(tracks) < max_tracks:
             tr = new_track(next_id, z, t, R)
-            update_shape(tr.shape, obs, track_length)
+            update_shape(tr.shape, obs)
             update_heading(tr, obs.heading, heading_alpha)
-            update_static_evidence(tr, obs, t, track_length, t_static, static_spread)
+            update_static_evidence(tr, obs, t, track_length, t_static, static_spread, needed_still_time(tr, obs))
             tracks.append(tr)
             next_id += 1
 
@@ -342,14 +333,17 @@ def step_tracks(
 
     return tracks, next_id
 
-def update_static_evidence(tr: Track, obs: Observation, t, track_length, t_static=0.75, spread_max=0.05) -> None:
+def update_static_evidence(tr: Track, obs: Observation, t, track_length, t_static=0.75, spread_max=0.05,
+                           t_needed=None) -> None:
     """
-    A track is a static object if its detected position has stayed within spread_max for at least t_static seconds.
-    The observed bounding bounding boxes are accumulated, gradually building the obstacle as its seen.
+    A track is a static object if its detected position has stayed within spread_max for at least t_needed seconds
+    (default t_static; shorter for an object in our path, see in_our_path). The window always covers t_static.
+    The observed bounding boxes are accumulated, gradually building the obstacle as it is seen.
     """
-    tr.still_hist.append((t, tr.x[0], tr.x[1]))
-    tr.still_hist = [h for h in tr.still_hist if t - h[0] <= t_static + 0.3]
-    h = np.array(tr.still_hist)
+    # The one position history of the track (also read by update_motion_class); keeps t_static + margin
+    tr.history.append((t, tr.x[0], tr.x[1]))
+    tr.history = [x for x in tr.history if t - x[0] <= t_static + 0.3]
+    h = np.array(tr.history)
 
     # Spread of the position over the window (s relative to the newest, wrap-safe)
     ds = wrap_ds(h[:, 1] - h[-1, 1], track_length)
@@ -359,33 +353,41 @@ def update_static_evidence(tr: Track, obs: Observation, t, track_length, t_stati
         return
     
     # Once confirmed it stays static until it moves
-    tr.static_confirmed = bool(tr.static_confirmed or h[-1, 0] - h[0, 0] >= t_static)
+    tr.static_confirmed = bool(tr.static_confirmed or h[-1, 0] - h[0, 0] >= (t_static if t_needed is None else t_needed))
 
-    # Accumulate this scan's box (relative to the track position: the track barely moves while still)
+    # Accumulate this scan's box in ABSOLUTE coordinates: a static object's outline must not move with the track
+    # position, which drifts when the object is seen from other sides (e.g. from the front once we have passed it)
     if np.isfinite(obs.length) and np.isfinite(obs.width):
-        lo = wrap_ds(obs.s_c - obs.length / 2 - tr.x[0], track_length)
-        box = (lo, lo + obs.length, obs.d_c - obs.width / 2, obs.d_c + obs.width / 2)
+        lo = (obs.s_c - obs.length / 2) % track_length
+        box_d = (obs.d_c - obs.width / 2, obs.d_c + obs.width / 2)
         if tr.extent is None:
-            tr.extent = box
+            tr.extent = (lo, lo + obs.length, *box_d)
         else:
-            e = tr.extent
-            tr.extent = (min(e[0], box[0]), max(e[1], box[1]), min(e[2], box[2]), max(e[3], box[3]))
+            tr.extent = union_box(tr.extent, lo, obs.length, *box_d, track_length)
+
+
+def in_our_path(tr: Track, obs: Observation, ego_s, ego_d, track_length, half_width=0.25, max_range=6.0) -> bool:
+    """Is the object close ahead (< max_range) and does its lateral extent overlap +-half_width around the
+    raceline or around our current lateral position?"""
+    gap = wrap_ds(tr.x[0] - ego_s, track_length)
+    if not 0.0 < gap < max_range:
+        return False
+    d_lo, d_hi = tr.x[1] - MIN_FACE / 2, tr.x[1] + MIN_FACE / 2
+    if np.isfinite(obs.width):
+        d_lo, d_hi = min(d_lo, obs.d_c - obs.width / 2), max(d_hi, obs.d_c + obs.width / 2)
+    if tr.extent is not None:
+        d_lo, d_hi = min(d_lo, tr.extent[2]), max(d_hi, tr.extent[3])
+    return any(d_lo < line + half_width and d_hi > line - half_width for line in (0.0, ego_d))
+
+
+def union_box(extent, lo, length, d_lo, d_hi, track_length) -> tuple[float, float, float, float]:
+    """Grow an absolute box (s_lo, s_hi, d_lo, d_hi) by another one starting at s = lo (wrap-safe)."""
+    e_lo, e_hi, e_dlo, e_dhi = extent
+    lo = e_lo + wrap_ds(lo - e_lo, track_length)          # the new start, unwrapped next to the stored one
+    return min(e_lo, lo), max(e_hi, lo + length), min(e_dlo, d_lo), max(e_dhi, d_hi)
 
 
 def static_extent(tr: Track, track_length) -> tuple[float, float, float, float]:
     """The accumulated box in absolute Frenet coordinates: (s_start, s_end, d_right, d_left)."""
     lo, hi, d_lo, d_hi = tr.extent
-    return (tr.x[0] + lo) % track_length, (tr.x[0] + hi) % track_length, d_lo, d_hi
-
-
-def statics_overlap(a: Track, b: Track, track_length, margin=0.05) -> bool:
-    """Whether two confirmed static tracks' boxes overlap (with a small margin): one object split in two."""
-    if not (a.static_confirmed and b.static_confirmed and a.extent and b.extent):
-        return False
-    a_lo, a_hi, a_dr, a_dl = static_extent(a, track_length)
-    b_lo, b_hi, b_dr, b_dl = static_extent(b, track_length)
-    # along s: centre distance vs half lengths (wrap-safe)
-    a_len, b_len = wrap_ds(a_hi - a_lo, track_length), wrap_ds(b_hi - b_lo, track_length)
-    gap_s = abs(wrap_ds((a_lo + a_len / 2) - (b_lo + b_len / 2), track_length)) - (a_len + b_len) / 2
-    gap_d = abs((a_dr + a_dl) / 2 - (b_dr + b_dl) / 2) - ((a_dl - a_dr) + (b_dl - b_dr)) / 2
-    return gap_s < margin and gap_d < margin
+    return lo % track_length, hi % track_length, d_lo, d_hi

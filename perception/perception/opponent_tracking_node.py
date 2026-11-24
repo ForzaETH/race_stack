@@ -8,6 +8,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import Header
 from visualization_msgs.msg import MarkerArray
+from nav_msgs.msg import Odometry
 from f110_msgs.msg import ObstacleArray, Obstacle, WpntArray, DetectionArray
 from stack_master.qos import LATCHED_QOS
 
@@ -40,6 +41,13 @@ class OpponentTrackingNode(Node):
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
         self.create_subscription(DetectionArray, "/perception/detections", self.detections_cb, 10)
 
+        # Our own Frenet position (s, d), for the fast path of static objects in our way
+        self.ego: tuple[float, float] | None = None
+        self.create_subscription(Odometry, "/car_state/frenet/odom", self.ego_cb, 10)
+
+    def ego_cb(self, msg: Odometry) -> None:
+        self.ego = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
     def waypoints_cb(self, msg: WpntArray) -> None:
         x = np.array([w.x_m for w in msg.wpnts])
         y = np.array([w.y_m for w in msg.wpnts])
@@ -64,7 +72,10 @@ class OpponentTrackingNode(Node):
                                                    merge_length=self.length_max, merge_width=self.width_max,
                                                    heading_alpha=self.params.heading_alpha,
                                                    t_static=self.params.static_min_time,
-                                                   static_spread=self.params.static_max_spread)
+                                                   static_spread=self.params.static_max_spread,
+                                                   ego=self.ego, t_fast=self.params.static_fast_time,
+                                                   path_half_width=self.params.path_half_width,
+                                                   fast_range=self.params.fast_range)
         self.publish_tracks(t)
 
     def raceline_heading(self, s: float) -> float:
