@@ -57,3 +57,38 @@ opponent_tracking:
     read_only: true
     validation:
       gt<>: [0]
+  static_min_time:
+    type: double
+    default_value: 0.75
+    description: "A track still (position spread < static_max_spread) for this long is a static object of any size [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  static_max_spread:
+    type: double
+    default_value: 0.05
+    description: "Largest position spread (std, along and across) that still counts as still [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  static_fast_time:
+    type: double
+    default_value: 0.3
+    description: "Fast path: an object close ahead and in our path is confirmed static after this still time (else static_min_time) [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  path_half_width:
+    type: double
+    default_value: 0.25
+    description: "Fast path: our path = +-this around the raceline and around our current lateral position [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  fast_range:
+    type: double
+    default_value: 6.0
+    description: "Fast path: only objects less than this far ahead of us [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]

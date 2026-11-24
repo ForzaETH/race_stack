@@ -14,7 +14,7 @@ from rclpy.qos import qos_profile_sensor_data
 from perception import obstacle_detection as od
 from perception import visualization as viz
 from perception.obstacle_detection_parameters_codegen import obstacle_detection as parameters
-from f110_msgs.msg import WpntArray, ObstacleArray, Obstacle
+from f110_msgs.msg import WpntArray, Detection, DetectionArray
 from frenet_conversion.frenet_converter import FrenetConverter
 
 
@@ -33,24 +33,25 @@ class ObstacleDetectionNode(Node):
         # Static map built from the track bounds
         self.grid = self.track = self.wdist = None
 
-        # Live wall state, set up in bounds_cb: both bounds stacked (right then left), their inward
-        # normals, a lookup tree, and one learned offset per bound point (+ = into the track)
+        # Live wall state
         self.bounds = self.normals = self.bound_tree = self.wall_offset = None
         self.n_right = 0
 
+        # Transforms
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
 
+        # Publishers
         self.points_pub = self.create_publisher(PointCloud2, "/perception/candidate_points", 10)
         self.rejected_pub = (self.create_publisher(PointCloud2, "/perception/rejected_points", 10)
                              if self.params.publish_rejected else None)
-        self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/detections", 10)
+        self.obstacles_pub = self.create_publisher(DetectionArray, "/perception/detections", 10)
         self.markers_pub = self.create_publisher(MarkerArray, "/perception/detections/markers", 10)
         self.walls_pub = self.create_publisher(Marker, "/perception/live_walls", 1)
         if self.params.live_wall:
             self.create_timer(self.params.live_wall_period, self.rebuild_walls)
 
-        # Obtain trackbounds from track bounds (markers)
+        # Obtain trackbounds from the planner's track bounds (TODO: this is hacky)
         self.create_subscription(MarkerArray, "/trackbounds/markers", self.bounds_cb, LATCHED_QOS)
         self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, qos_profile_sensor_data)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
@@ -61,8 +62,8 @@ class ObstacleDetectionNode(Node):
         """Construct the static grid, track mask and wall distance from the planner's trackbounds."""
         xy = np.array([[m.pose.position.x, m.pose.position.y] for m in msg.markers])
 
-        # TODO: hacky. In the future just get the trackbounds directly from a
-        # topic, not inferring them through marker colours
+        # TODO: hacky. In the future just get the trackbounds directly from a topic, not inferring them through marker
+        # colours
         is_left = np.array([m.color.g > 0.9 for m in msg.markers])
         right, left = xy[~is_left], xy[is_left]
 
@@ -72,7 +73,7 @@ class ObstacleDetectionNode(Node):
         self.wdist = od.wall_distance(self.grid, right, left)
         self.get_logger().info(f"grid {self.grid.width}x{self.grid.height} @ {self.params.grid_res} m")
 
-        # Live wall: normals per bound (computed separately, so the two loops don't join), flipped into the track
+        # Live wall: normals per bound, flipped into the track
         n_right = od.normals_into_track(self.grid, self.track, right, od.bounds_normals(right))
         n_left = od.normals_into_track(self.grid, self.track, left, od.bounds_normals(left))
         self.bounds = np.vstack((right, left))
@@ -85,13 +86,13 @@ class ObstacleDetectionNode(Node):
         return _se2(self.tf_buffer.lookup_transform(target, source, t))
 
     def pose_at(self, target: str, source: str, t: Time) -> np.ndarray:
-        """Pose at time t: exact TF if available, else extended linearly from the two newest poses."""
+        """Pose at time t: exact TF if available, else linearly extrapolated from the two newest poses."""
         if self.tf_buffer.can_transform(target, source, t):
             return self.pose(target, source, t)
 
         tb = Time.from_msg(self.tf_buffer.lookup_transform(target, source, Time()).header.stamp)
 
-        # Too far past the newest pose
+        # Too far past the newest pose, skip this scan
         gap = (t - tb).nanoseconds * 1e-9
         if gap > self.params.max_extrapolation:
             raise TransformException(f"newest {target}->{source} pose is {gap * 1e3:.0f} ms older than the scan")
@@ -103,18 +104,17 @@ class ObstacleDetectionNode(Node):
     def laser_poses(self, scan: LaserScan, scan_duration: float):
         """
         Returns:
-            - map_odom (where odom sits in the map)
+            - map_odom (where odom sits in the map (in sim that's just the identity)
             - odom_laser_start (laser pose in odom of the first beam)
             - odom_laser_end (laser pose in odom of the last beam)
         """
-
         t0 = Time.from_msg(scan.header.stamp)
         t1 = t0 + Duration(nanoseconds=int(scan_duration * 1e9))
         frame = scan.header.frame_id
 
         try:
             # There is no odom frame in sim
-            if not self.params.odom_frame:
+            if not self.params.odom_frame:                
                 # Obtain the laser pose directly in map frame
                 start = self.pose_at(self.params.map_frame, frame, t0)
                 end = self.pose_at(self.params.map_frame, frame, t1)
@@ -138,6 +138,17 @@ class ObstacleDetectionNode(Node):
             return None
 
     def scan_cb(self, scan: LaserScan) -> None:
+        """
+        Detect obstacles in a LiDAR scan:
+        
+        1. Project valid beams into the map frame, each at its own beam time (motion-compensated)
+        2. Break up the scan at range jumps, keeping segments only if all its points are inside the track and clear of 
+           the live walls.
+        3. Update the live wall offsets (if the track borders have slightly moved, to avoid detecting them as obstacles)
+        4. Merge nearby kept segments into car candidates, dropping those not car-sized.
+        5. Fit a box heading near the raceline heading, and extract a seen outline (rear / front / left / right)
+        6. Publish the kept points and observations as Frenet frame obstacles.
+        """
         if self.grid is None:
             return
 
@@ -147,7 +158,7 @@ class ObstacleDetectionNode(Node):
         if poses is None:
             return
 
-        # Valid beams: within range, not NaN or inf, and their timestamp releative to header.stamp
+        # Valid beams: within range, not NaN or inf, and their timestamp relative to header.stamp
         idx, xy, r, dt = od.beam_geometry(scan.ranges, scan.angle_min, scan.angle_increment,
                                           scan.time_increment, scan.range_min, scan.range_max)
 
@@ -160,9 +171,9 @@ class ObstacleDetectionNode(Node):
         xy_map = od.beams_to_map(xy, dt, scan_duration, *poses)
 
         # Keep points on the track and clear of the walls
-        ok = od.candidate_mask(xy_map, r, self.grid, self.track, self.wdist, self.params.m0, self.params.k_yaw)
+        ok = od.candidate_mask(xy_map, r, self.grid, self.track, self.wdist, self.params.m0, self.params.k_range)
 
-        # Keep a segment only if ALL its points are ok
+        # Keep a segment only if ALL its points are ok (strict to minimize false positives) and within max_range
         keep = od.accept_segments(labels, ok) & (r <= self.params.max_range)
 
         # Live wall: fold this scan's points near the bounds into the learned wall offsets
@@ -172,10 +183,10 @@ class ObstacleDetectionNode(Node):
             self.wall_offset, _ = od.update_wall_offsets(self.wall_offset, measured, count, share)
 
         # Group the kept segments into obstacle candidates and observe what of each is seen
-        observations, headings = [], []
+        observations, headings, boxes = [], [], []
         if self.converter is not None:
             ranges = np.asarray(scan.ranges, dtype=float)
-            max_extent = np.hypot(self.params.max_car_length, self.params.max_car_width) + self.params.size_margin
+            max_extent=self.params.max_object_extent
             for members in od.group_segments(xy_map, labels, keep):
                 if not od.plausible_group(xy_map, r, members, scan.angle_increment,
                                           face_width=self.params.min_face_width, max_extent=max_extent,
@@ -185,22 +196,28 @@ class ObstacleDetectionNode(Node):
                 # Fit on the largest contiguous segment only
                 main = od.main_segment(labels, members)
                 pts = xy_map[main]
-                sensor = self.sensor_position(poses, dt[main], scan_duration)
+                sensor = self.lidar_position(poses, dt[main], scan_duration)
+                
+                # Get the best fitting heading angle, given the scan and starting from a prior
                 heading = od.closeness_heading(pts, self.box_heading(pts.mean(axis=0)),
                                                search=np.radians(self.params.heading_search_deg))
+                
+                # Get an outline of the object that is actually seen
                 rear, front, left, right = od.observe_face(pts, idx[main], r[main], ranges, sensor, heading)
+                sd_all = self.to_frenet(xy_map[members])
+                boxes.append(od.frenet_box(sd_all[:, 0], sd_all[:, 1], self.track_length))
+                
                 observations.append((pts.mean(axis=0), rear, front, left, right))
-                headings.append(float(np.arctan2(np.sin(heading), np.cos(heading))))     # map frame, wrapped
+                headings.append(float(np.arctan2(np.sin(heading), np.cos(heading))))
 
-        # Publish the accepted points as well optionally the rejected ones
+        # Publish the accepted points and optionally the rejected ones
         self.publish_points(self.points_pub, scan.header.stamp, xy_map[keep], labels[keep], dt[keep])
         if self.rejected_pub is not None:
             self.publish_points(self.rejected_pub, scan.header.stamp, xy_map[~keep], labels[~keep], dt[~keep])
-        self.publish_obstacles(scan.header.stamp, observations, headings)
+        self.publish_detections(scan.header.stamp, observations, headings, boxes)
 
     def to_frenet(self, xy) -> np.ndarray:
-        """(N, 2) map points to (N, 2) [s, d]. NaN rows stay NaN: the converter can't take NaN."""
-        assert self.converter is not None
+        """Map (x, y) to Frenet (s, d), wrapped to track length"""
         sd = np.full(xy.shape, np.nan)
         ok = np.isfinite(xy).all(axis=1)
         if ok.any():
@@ -210,37 +227,28 @@ class ObstacleDetectionNode(Node):
         return sd
 
     def publish_points(self, pub, stamp, xy, seg, dt) -> None:
-        """Publish points as a PointCloud2 in the map frame, stamped with the scan time."""
         header = Header(stamp=stamp, frame_id=self.params.map_frame)
         pub.publish(viz.points_cloud(header, xy, seg, dt))
 
-    def publish_obstacles(self, stamp, observations, headings) -> None:
-        """
-        One Obstacle per observation, in Frenet, only what was seen (NaN otherwise):
-            s_start / s_end: rear / front face, d_right / d_left: right / left edge.
-            s_center / d_center: centroid of the points (fallback / display only).
-            size: NOT a size here: the object's heading in the map frame [rad] (L-shape fit).
-        This message is internal (detection -> tracking); the tracker turns it into a car position.
-        """
-        msg = ObstacleArray()
+    def publish_detections(self, stamp, observations, headings, boxes) -> None:
+        """One Detection per observed object (what was seen, NaN otherwise), plus RViz markers."""
+        msg = DetectionArray()
         msg.header = Header(stamp=stamp, frame_id=self.params.map_frame)
-        obstacle_list = []
+        detections = []
 
         if observations:
-            # One conversion for all points; rows per observation: centroid, rear, front, left, right
+            # One conversion for all face/edge points; rows per observation: centroid, rear, front, left, right
             sd = self.to_frenet(np.array([p for obs in observations for p in obs]))
             for i in range(len(observations)):
-                centroid, rear, front, left, right = sd[5 * i: 5 * i + 5]
-                o = Obstacle()
-                o.id = i
-                o.s_center, o.d_center = float(centroid[0]), float(centroid[1])
-                o.s_start, o.s_end = float(rear[0]), float(front[0])
-                o.d_left, o.d_right = float(left[1]), float(right[1])
-                o.size = headings[i]                              # heading in the map frame, see docstring
-                o.is_visible = True
-                obstacle_list.append(o)
+                _, rear, front, left, right = sd[5 * i: 5 * i + 5]
+                s_mid, d_mid, length, width = boxes[i]
+                detections.append(Detection(
+                    s_rear=float(rear[0]), s_front=float(front[0]),
+                    d_left=float(left[1]), d_right=float(right[1]),
+                    heading=headings[i],
+                    s_center=s_mid, d_center=d_mid, length=length, width=width))
 
-        msg.obstacles = obstacle_list
+        msg.detections = detections
         self.obstacles_pub.publish(msg)
         self.markers_pub.publish(viz.observation_markers(msg.header, observations))
 
@@ -266,13 +274,13 @@ class ObstacleDetectionNode(Node):
         self.walls_pub.publish(viz.live_wall_marker(header, live, self.wall_offset))
 
     def box_heading(self, xy: np.ndarray) -> float:
-        """Heading prior for the box fit at xy (2,): the raceline direction there."""
+        """Heading prior for the box fit at xy (the raceline direction usually)."""
         assert self.converter is not None
         sd = np.asarray(self.converter.get_frenet(np.array([xy[0]]), np.array([xy[1]])))
         s = sd[0, 0] % self.track_length
         return float(np.interp(s, self.wp_s, self.wp_psi))
 
-    def sensor_position(self, poses, dt, scan_duration) -> np.ndarray:
+    def lidar_position(self, poses, dt, scan_duration) -> np.ndarray:
         """Laser position in the map frame at the mean beam time of a group."""
         map_odom, start, end = poses
         alpha = np.mean(dt) / scan_duration if scan_duration > 0 else 0.0

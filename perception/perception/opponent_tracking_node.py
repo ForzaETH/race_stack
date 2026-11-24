@@ -8,7 +8,8 @@ from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import Header
 from visualization_msgs.msg import MarkerArray
-from f110_msgs.msg import ObstacleArray, Obstacle, WpntArray
+from nav_msgs.msg import Odometry
+from f110_msgs.msg import ObstacleArray, Obstacle, WpntArray, DetectionArray
 from stack_master.qos import LATCHED_QOS
 
 from perception import opponent_tracking as ot
@@ -38,7 +39,14 @@ class OpponentTrackingNode(Node):
         self.obstacles_pub = self.create_publisher(ObstacleArray, "/perception/obstacles", 10)
         self.markers_pub = self.create_publisher(MarkerArray, "/perception/obstacles/markers", 10)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
-        self.create_subscription(ObstacleArray, "/perception/detections", self.detections_cb, 10)
+        self.create_subscription(DetectionArray, "/perception/detections", self.detections_cb, 10)
+
+        # Our own Frenet position (s, d), for the fast path of static objects in our way
+        self.ego: tuple[float, float] | None = None
+        self.create_subscription(Odometry, "/car_state/frenet/odom", self.ego_cb, 10)
+
+    def ego_cb(self, msg: Odometry) -> None:
+        self.ego = (msg.pose.pose.position.x, msg.pose.pose.position.y)
 
     def waypoints_cb(self, msg: WpntArray) -> None:
         x = np.array([w.x_m for w in msg.wpnts])
@@ -49,21 +57,25 @@ class OpponentTrackingNode(Node):
         self.wp_psi = np.unwrap(psi)
         self.track_length = float(self.wp_s[-1])
 
-    def detections_cb(self, msg: ObstacleArray) -> None:
+    def detections_cb(self, msg: DetectionArray) -> None:
         """One detection message per scan: update all tracks, then publish."""
         if self.track_length is None:
             return
         t = Time.from_msg(msg.header.stamp).nanoseconds * 1e-9          # measurement time of the scan
-        # What detection saw of each object (NaN = not seen): see obstacle_detection_node.publish_obstacles
-        # (`size` carries the heading relative to the raceline in this internal message)
-        observations = [ot.Observation(o.s_start, o.s_end, o.d_left, o.d_right, o.s_center, o.d_center,
-                                       heading=o.size)
-                        for o in msg.obstacles]
+        # What detection saw of each object (NaN = not seen), see f110_msgs/Detection.msg
+        observations = [ot.Observation(o.s_rear, o.s_front, o.d_left, o.d_right, o.s_center, o.d_center,
+                                       length=o.length, width=o.width, heading=o.heading)
+                        for o in msg.detections]
         self.tracks, self.next_id = ot.step_tracks(self.tracks, observations, t, self.track_length, self.next_id,
                                                    std_s=self.params.meas_std_s, std_d=self.params.meas_std_d,
                                                    coast_max=self.params.coast_max,
                                                    merge_length=self.length_max, merge_width=self.width_max,
-                                                   heading_alpha=self.params.heading_alpha)
+                                                   heading_alpha=self.params.heading_alpha,
+                                                   t_static=self.params.static_min_time,
+                                                   static_spread=self.params.static_max_spread,
+                                                   ego=self.ego, t_fast=self.params.static_fast_time,
+                                                   path_half_width=self.params.path_half_width,
+                                                   fast_range=self.params.fast_range)
         self.publish_tracks(t)
 
     def raceline_heading(self, s: float) -> float:
@@ -90,6 +102,48 @@ class OpponentTrackingNode(Node):
         sd = np.asarray(self.converter.get_frenet(np.array([c[0]]), np.array([c[1]])), dtype=float)
         return float(sd[0, 0] % self.track_length), float(sd[1, 0])
 
+    def car_obstacle(self, tr: ot.Track, dt: float) -> tuple[Obstacle, np.ndarray]:
+        """A car: predicted to now, centre along its heading, extent from the size rules. Returns it and its map xy."""
+        assert self.track_length is not None and self.converter is not None
+        x, _ = ot.kf_predict(tr.x.copy(), tr.P.copy(), dt, self.track_length)
+        s_rear, d_rear, vs, vd = (float(v) for v in x)
+
+        # The centre lies half a nominal car ahead of the rear ALONG THE CAR'S HEADING (smoothed L-shape fit),
+        # computed in the map frame so the curving raceline doesn't distort it
+        s, d = self.car_centre(s_rear, d_rear, tr.heading)
+
+        # A car angled to the raceline covers more lateral space: widen each side by half its length * |sin|
+        rel = self.relative_heading(s, tr.heading)
+        half_width = self.width_max / 2 + self.length_max / 2 * abs(np.sin(rel))
+
+        o = Obstacle()
+        o.id = tr.id
+        o.s_center, o.d_center, o.vs, o.vd = s, d, vs, vd
+        o.s_start = s_rear % self.track_length                       # observed rear
+        o.s_end = (s_rear + self.length_max) % self.track_length     # conservative: longest legal car
+        o.d_left, o.d_right = d + half_width, d - half_width
+        o.size = max(self.length_max, self.width_max)
+        o.is_static = not tr.dynamic
+        o.is_visible = tr.t_last_hit == tr.t                         # detected in the latest scan
+        return o, np.asarray(self.converter.get_cartesian(s, d))
+
+    def static_obstacle(self, tr: ot.Track) -> Obstacle:
+        """A static object of any size: its accumulated bounding box (Frenet)."""
+        assert self.track_length is not None
+        s0, s1, d_right, d_left = ot.static_extent(tr, self.track_length)
+        length = (s1 - s0) % self.track_length
+
+        o = Obstacle()
+        o.id = tr.id
+        o.s_start, o.s_end, o.d_right, o.d_left = s0, s1, d_right, d_left
+        o.s_center = (s0 + length / 2) % self.track_length
+        o.d_center = (d_right + d_left) / 2
+        o.size = max(length, d_left - d_right)
+        o.vs = o.vd = 0.0
+        o.is_static = True
+        o.is_visible = tr.t_last_hit == tr.t
+        return o
+
     def publish_tracks(self, t_meas: float) -> None:
         assert self.track_length is not None and self.converter is not None
         now = self.get_clock().now()
@@ -97,34 +151,21 @@ class OpponentTrackingNode(Node):
 
         obstacle_list, viz_tracks = [], []
         for tr in self.tracks:
-            # Shape gate: only publish what could be a legal car (face >= ~12 cm, not wider than a car)
-            if not tr.confirmed or not ot.plausible_shape(tr.shape, w_min=self.params.min_face_width,
-                                                          w_max=self.width_max + 0.03,
-                                                          n_min=self.params.min_face_samples):
+            if not tr.confirmed:
                 continue
-            x, _ = ot.kf_predict(tr.x.copy(), tr.P.copy(), dt, self.track_length)
-            s_rear, d_rear, vs, vd = (float(v) for v in x)
 
-            # The centre lies half a nominal car ahead of the rear ALONG THE CAR'S HEADING (smoothed L-shape fit),
-            # computed in the map frame so the curving raceline doesn't distort it
-            s, d = self.car_centre(s_rear, d_rear, tr.heading)
+            # Static object of any size: still for >= t_static, published with its accumulated box
+            if tr.static_confirmed and not tr.dynamic and tr.extent is not None:
+                o = self.static_obstacle(tr)
+                xy = np.asarray(self.converter.get_cartesian(o.s_center, o.d_center))
+            # Car-shaped (moving, or not yet confirmed static): face >= ~12 cm, not wider than a car
+            elif ot.plausible_shape(tr.shape, w_min=self.params.min_face_width, w_max=self.width_max + 0.03,
+                                    n_min=self.params.min_face_samples):
+                o, xy = self.car_obstacle(tr, dt)
+            else:
+                continue
 
-            # A car angled to the raceline covers more lateral space: widen each side by half its length * |sin|
-            rel = self.relative_heading(s, tr.heading)
-            half_width = self.width_max / 2 + self.length_max / 2 * abs(np.sin(rel))
-
-            o = Obstacle()
-            o.id = tr.id
-            o.s_center, o.d_center, o.vs, o.vd = s, d, vs, vd
-            o.s_start = s_rear % self.track_length                       # observed rear
-            o.s_end = (s_rear + self.length_max) % self.track_length     # conservative: longest legal car
-            o.d_left, o.d_right = d + half_width, d - half_width
-            o.size = max(self.length_max, self.width_max)
-            o.is_static = not tr.dynamic
-            o.is_visible = tr.t_last_hit == tr.t                         # detected in the latest scan
             obstacle_list.append(o)
-
-            xy = np.asarray(self.converter.get_cartesian(s, d))
             viz_tracks.append((tr.id, xy, tr.dynamic, o.is_visible))
 
         msg = ObstacleArray()

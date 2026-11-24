@@ -231,14 +231,14 @@ def plausible_group(xy_map, r, members, angle_inc, face_width=0.30, frac=0.3, mi
     return bool(extent <= max_extent)
 
 
-def candidate_mask(xy_map, r, grid: Grid, inside, wall_dist, m0=0.10, k_yaw=0.005) -> np.ndarray:
+def candidate_mask(xy_map, r, grid: Grid, inside, wall_dist, m0=0.10, k_range=0.005) -> np.ndarray:
     """True for points that are on the track and are clear of the walls."""
     row, col, ok = grid.world_to_grid(xy_map)
     keep = np.zeros(len(xy_map), bool)
 
     # Keep points inside the track but not too close to the walls
     rr, cc = row[ok], col[ok]
-    keep[ok] = inside[rr, cc] & (wall_dist[rr, cc] > m0 + k_yaw * r[ok])
+    keep[ok] = inside[rr, cc] & (wall_dist[rr, cc] > m0 + k_range * r[ok])
     return keep
 
 
@@ -309,7 +309,11 @@ def update_wall_offsets(offset, measured, count, share, alpha_in=0.0125, alpha_o
 
 
 def closeness_heading(pts, prior, search=np.radians(30), step=np.radians(1), d0=0.01, prior_weight=0.03) -> float:
-    """Heading of the box the points define. Search within +-search of the prior (ego raceline heading)."""
+    """
+    Heading of the box that best fits the points (closeness criterion: points near the box edges score high).
+    Searches within +-search of the prior (the raceline heading at the obstacle), with a soft penalty for
+    straying from it.
+    """
     
     best_score, best_heading = -np.inf, prior
     
@@ -427,3 +431,14 @@ def observe_face(pts, beams, r, ranges, sensor, theta, face_depth=0.05, edge_tol
         return uu * fwd + vv * lft          # NaN in, NaN out
 
     return point(u_rear, v_c), point(u_front, v_c), point(u_ref, v_left), point(u_ref, v_right)
+
+def frenet_box(s, d, track_length) -> tuple[float, float, float, float]:
+    """Bounding box of points in Frenet coordinates. Returns (s_mid, d_mid, length along s, width along d)."""
+    
+    ref = s[0]
+    ds = (s - ref + track_length / 2) % track_length - track_length / 2
+    lo, hi = ds.min(), ds.max()
+    
+    s_mid = (ref + (lo + hi) / 2) % track_length
+    d_mid = (d.min() + d.max()) / 2
+    return float(s_mid), float(d_mid), float(hi - lo), float(d.max() - d.min())
