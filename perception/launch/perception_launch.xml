@@ -6,8 +6,6 @@
     <node pkg="perception" name="obstacle_detection" exec="obstacle_detection" output="log"
         args="--ros-args --log-level info">
         <param from="$(var param_file)" />
-        <!-- Single-threaded BLAS: our matrices are tiny, and idle OpenBLAS worker threads busy-wait
-        (~1 core) -->
         <env name="OPENBLAS_NUM_THREADS" value="1" />
     </node>
 
@@ -15,5 +13,7 @@
     <node pkg="perception" name="opponent_tracking" exec="opponent_tracking" output="log"
         args="--ros-args --log-level info">
         <param from="$(var param_file)" />
+        <env name="OPENBLAS_NUM_THREADS" value="1" />
     </node>
 </launch>
+
