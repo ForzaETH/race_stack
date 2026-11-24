@@ -431,3 +431,14 @@ def observe_face(pts, beams, r, ranges, sensor, theta, face_depth=0.05, edge_tol
         return uu * fwd + vv * lft          # NaN in, NaN out
 
     return point(u_rear, v_c), point(u_front, v_c), point(u_ref, v_left), point(u_ref, v_right)
+
+def frenet_box(s, d, track_length) -> tuple[float, float, float, float]:
+    """Bounding box of points in Frenet coordinates. Returns (s_mid, d_mid, length along s, width along d)."""
+    
+    ref = s[0]
+    ds = (s - ref + track_length / 2) % track_length - track_length / 2
+    lo, hi = ds.min(), ds.max()
+    
+    s_mid = (ref + (lo + hi) / 2) % track_length
+    d_mid = (d.min() + d.max()) / 2
+    return float(s_mid), float(d_mid), float(hi - lo), float(d.max() - d.min())

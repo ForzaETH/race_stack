@@ -89,27 +89,6 @@ obstacle_detection:
     read_only: true
     validation:
       gt<>: [0.0]
-  max_car_length:
-    type: double
-    default_value: 0.625
-    description: "Largest allowed car length (rules: 568 mm +10 %), for the plausibility check [m]"
-    read_only: true
-    validation:
-      gt<>: [0.0]
-  max_car_width:
-    type: double
-    default_value: 0.326
-    description: "Largest allowed car width (rules: 296 mm +10 %), for the plausibility check [m]"
-    read_only: true
-    validation:
-      gt<>: [0.0]
-  size_margin:
-    type: double
-    default_value: 0.2
-    description: "Largest accepted group = car diagonal + size_margin [m]"
-    read_only: true
-    validation:
-      gt_eq<>: [0.0]
   min_points_frac:
     type: double
     default_value: 0.5
@@ -133,6 +112,13 @@ obstacle_detection:
     type: double
     default_value: 1.0
     description: "How often the track mask is rebuilt from the learned walls [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  max_object_extent:
+    type: double
+    default_value: 3.0
+    description: "Largest accepted group (point extent), any object: only a sanity cap against stray wall chunks [m]."
     read_only: true
     validation:
       gt<>: [0.0]

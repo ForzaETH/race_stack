@@ -57,3 +57,17 @@ opponent_tracking:
     read_only: true
     validation:
       gt<>: [0]
+  static_min_time:
+    type: double
+    default_value: 0.75
+    description: "A track still (position spread < static_max_spread) for this long is a static object of any size [s]"
+    read_only: true
+    validation:
+      gt<>: [0.0]
+  static_max_spread:
+    type: double
+    default_value: 0.05
+    description: "Largest position spread (std, along and across) that still counts as still [m]"
+    read_only: true
+    validation:
+      gt<>: [0.0]

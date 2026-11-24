@@ -11,8 +11,9 @@
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
-
+  
   <build_depend>generate_parameter_library_py</build_depend>
+  <exec_depend>f110_msgs</exec_depend>
   <exec_depend>generate_parameter_library_py</exec_depend>
   <exec_depend>stack_master</exec_depend>
 
