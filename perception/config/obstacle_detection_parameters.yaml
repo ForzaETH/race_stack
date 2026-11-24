@@ -24,14 +24,14 @@ obstacle_detection:
   m0:
     type: double
     default_value: 0.10
-    description: "Wall margin: points closer than m0 + k_yaw * range to a track bound are rejected [m]"
+    description: "Wall margin: points closer than m0 + k_range * range to a track bound are rejected [m]"
     read_only: true
     validation:
       gt_eq<>: [0.0]
-  k_yaw:
+  k_range:
     type: double
     default_value: 0.005
-    description: "Growth of the wall margin with range (~ heading error) [m/m]"
+    description: "Growth of the wall margin with range, absorbs heading error [m/m]"
     read_only: true
     validation:
       gt_eq<>: [0.0]
