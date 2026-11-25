@@ -1,6 +1,6 @@
 #!/bin/bash
 # Usage: bags/record_bag.sh <name> [map_name]
-# Records all topics (except compressed camera streams) into bags/<name> and copies the map in use into
+# Records all topics (except compressed camera streams) as mcap into bags/<name> and copies the map in use into
 # bags/<name>/map/<map_name>. map_name defaults to the one the running stack uses, else `latest`.
 
 [ -n "$1" ] || { echo "usage: $0 <name> [map_name]" >&2; exit 1; }
@@ -27,4 +27,4 @@ echo "recording to $out with map $map_name"
   done
 ) &
 
-exec ros2 bag record -a -x '/camera/.*/(compressed|compressedDepth|theora)' -o "$out"
+exec ros2 bag record -s mcap -a -x '/camera/.*/(compressed|compressedDepth|theora)' -o "$out"

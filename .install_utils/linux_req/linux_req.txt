@@ -24,6 +24,7 @@ ros-humble-xacro
 ros-humble-nav2-map-server
 ros-humble-nav2-lifecycle-manager
 ros-humble-rmw-zenoh-cpp
+ros-humble-rosbag2-storage-mcap
 ros-humble-rviz2
 python3-tk
 ros-humble-imu-pipeline
