@@ -5,6 +5,17 @@ Here is the `stack_master`, it is intended to be the main interface between the 
 We use [zenoh](https://github.com/ros2/rmw_zenoh) as ros2 middleware. The zenoh router is started as a vscode task when you open the container. You can also start it manually with: `ros2 run rmw_zenoh_cpp rmw_zenohd` or the `zenoh` alias.
 If you have problems you may need to first stop the ros2 daemon: `ros2 daemon stop`
 
+### Shared memory
+Zenoh shared memory is enabled in the container (`ZENOH_CONFIG_OVERRIDE=transport/shared_memory/enabled=true` in `docker-compose.yaml`): payloads over 512 B between processes on the same computer go through `/dev/shm` instead of the loopback socket. Remote computers and processes without it keep working over TCP. Set `ZENOH_SHM=false` in `.env` and recreate the container to turn it off; restart the router and all nodes after changing it (`ros2 daemon stop` as well).
+
+Every ROS process allocates a segment of up to 48 MiB in the host's `/dev/shm` on its first large message (`transport/shared_memory/transport_optimization/pool_size`), check `df -h /dev/shm` with the full stack running.
+
+To measure what it brings on a computer, run inside the container:
+```shell
+scripz && python3 zenoh_shm_eval.py
+```
+It sends messages from 256 B to 8 MB between two processes with shared memory off and on, prints latency (p50 / p99 / max) and loss for both, and whether shared memory was actually used. The test has its own topic and does not change the running stack. On a Mac in Docker the latency of 1 MB+ messages drops by 30-60 %, a laser scan (8 kB) does not change.
+
 ### Connect to host
 If you now want to connect to this host (e.g. to stream topics to RViz on another computer) you can run the following command on the other computer: `export ZENOH_CONFIG_OVERRIDE='mode="client";connect/endpoints=["tcp/THE_CAR_IP:7447"]'`. You will need to run this command in each terminal with which you want to connect. You can also add the ips of the cars to `remote_car.sh` and run `scripz && source remote_car.sh YOUR_CAR`.
 

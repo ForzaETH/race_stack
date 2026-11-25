@@ -9,7 +9,8 @@ declare -A machines=(
 
 set_local() {
     export ROS_DOMAIN_ID=48
-    unset ZENOH_CONFIG_OVERRIDE
+    # back to the container default (docker-compose.yaml), keeps shared memory on
+    export ZENOH_CONFIG_OVERRIDE="transport/shared_memory/enabled=${ZENOH_SHM:-false}"
     ROS_LOCALHOST_ONLY=1
 }
 # parse first argument to check which nuc has been selected
@@ -23,7 +24,6 @@ elif [ "${1:3:1}" == "" ] || [ "${1:3:1}" == "0" ] || [ "${1:4:1}" != "" ] || [ 
     echo "Invalid nuc name. Please provide the nuc name as the first argument, e.g. NUC5, NUC6, etc."
     echo "ROS_DOMAIN_ID will be set to 48."
     set_local
-    unset ZENOH_CONFIG_OVERRIDE
 else
     # make the ros_domain_id 40+ nuc number
     export ROS_DOMAIN_ID=$((40 + ${1:3:1}))

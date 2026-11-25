@@ -5,6 +5,6 @@
 source /opt/ros/humble/setup.bash
 source $HOME/ws/install/setup.bash
 if [ -n "$1" ]; then
-    export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/'$1':7447"]'
+    export ZENOH_CONFIG_OVERRIDE='connect/endpoints=["tcp/'$1':7447"];transport/shared_memory/enabled='${ZENOH_SHM:-false}
 fi
 ros2 run rmw_zenoh_cpp rmw_zenohd
