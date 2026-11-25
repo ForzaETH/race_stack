@@ -9,8 +9,8 @@ button again to repeat the experiment. If the node dies, the VESC driver stops t
 `command_timeout` after the last command.
 
 Between experiments the car can be driven by hand with the human deadman: the launch file runs the
-usual teleop chain, with `ackermann_to_vesc` publishing on `teleop/speed` and `teleop/servo`, and
-the node forwards those to the VESC only while no experiment runs.
+usual teleop chain, with `ackermann_to_vesc` publishing on this node's `~/teleop/speed` and
+`~/teleop/servo`, and the node forwards those to the VESC only while no experiment runs.
 """
 import time
 
@@ -95,8 +95,8 @@ class CurrentStepNode(Node):
         self.last_deadman = float('-inf')  # last time the deadman was seen held
         self.last_command = None
         self.create_subscription(Joy, '/joy', self.joy_cb, 1)
-        self.create_subscription(Float64, 'teleop/speed', self.teleop_cb(self.speed_pub), 1)
-        self.create_subscription(Float64, 'teleop/servo', self.teleop_cb(self.servo_pub), 1)
+        self.create_subscription(Float64, '~/teleop/speed', self.teleop_cb(self.speed_pub), 1)
+        self.create_subscription(Float64, '~/teleop/servo', self.teleop_cb(self.servo_pub), 1)
         # wall time on purpose: this drives hardware, and so does the deadman timeout
         self.create_timer(1.0 / 100, self.step)
         self.get_logger().warn(
