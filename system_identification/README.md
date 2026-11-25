@@ -90,7 +90,7 @@ Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a r
 
 Constant motor current with centred steering for a short time, then a constant brake current. Real car only, and it needs a free straight.
 
-The experiment commands the VESC directly, so it runs **without** `base_system`: the launch file starts the VESC driver, the joystick and VIO itself. No `actuation_manager` limits apply. VIO needs an image built with `USE_VIO=true`.
+The experiment commands the VESC directly, so it runs **without** `base_system`: the launch file starts the VESC driver, the joystick, manual driving and VIO itself. No `actuation_manager` limits apply to the experiment. VIO needs an image built with `USE_VIO=true`.
 
 1. Stop `base_system`.
 2. Set the currents and times in `longitudinal_sysid_ros/config/current_step.yaml`. Start low.
@@ -102,7 +102,9 @@ The experiment commands the VESC directly, so it runs **without** `base_system`:
    ```shell
    ros2 bag record /sensors/core /sensors/imu/raw /basalt/odom /commands/motor/current /commands/motor/brake
    ```
-5. Wait for VIO to publish `/basalt/odom`, then hold the autonomous deadman button. The car drives for `accel_time`, then brakes for `brake_time`, then the node exits and the VESC driver holds the car at 0 erpm. Releasing the button brakes at once.
+5. Wait for VIO to publish `/basalt/odom`, then hold the autonomous deadman button. After `hold_time` with the servo centred, the car drives for `accel_time`, then brakes for `brake_time`, then the VESC driver holds the car at 0 erpm. Releasing the button brakes at once.
+6. Drive the car back by hand with the human deadman, as in `base_system` (through `actuation_manager`, with its limits). The manual commands are dropped while an experiment runs.
+7. Release the autonomous deadman and hold it again to repeat. Holding it through the end of a run does not start the next one.
 
 If the node dies, the VESC driver commands 0 erpm `command_timeout` after the last command. `current_step.yaml` sets that to 0.05 s. The node refuses to run while anything publishes `/commands/motor/speed`.
 

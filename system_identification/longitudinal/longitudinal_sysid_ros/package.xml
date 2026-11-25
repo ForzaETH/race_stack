@@ -12,6 +12,9 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>joy_linux</exec_depend>
+  <exec_depend>joy_teleop</exec_depend>
+  <exec_depend>f1tenth_stack</exec_depend>
+  <exec_depend>vesc_ackermann</exec_depend>
   <exec_depend>vesc_driver</exec_depend>
   <exec_depend>stack_master</exec_depend>
   <exec_depend>state_estimation</exec_depend>

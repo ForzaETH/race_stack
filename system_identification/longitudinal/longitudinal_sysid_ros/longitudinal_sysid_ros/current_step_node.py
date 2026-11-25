@@ -4,8 +4,13 @@ Commands the VESC driver directly, with the servo centred. It must run without `
 whose speed commands would alternate with the current commands: use `current_step_launch.xml`.
 
 Nothing else guards the car, so the node checks the deadman itself: the experiment starts when
-the button is pressed, and releasing it brakes at once. If the node dies, the VESC driver stops
-the motor `command_timeout` after the last command.
+the button is pressed, and releasing it brakes at once. After the brake, release and press the
+button again to repeat the experiment. If the node dies, the VESC driver stops the motor
+`command_timeout` after the last command.
+
+Between experiments the car can be driven by hand with the human deadman: the launch file runs the
+usual teleop chain, with `ackermann_to_vesc` publishing on `teleop/speed` and `teleop/servo`, and
+the node forwards those to the VESC only while no experiment runs.
 """
 import time
 
@@ -17,31 +22,55 @@ from std_msgs.msg import Float64
 
 
 class CurrentStep:
-    """The experiment sequence: wait for the deadman, drive, brake, done."""
+    """The experiment sequence: wait for the deadman, hold, drive, brake, done, and again.
 
-    def __init__(self, accel_time, brake_time):
+    A run starts only on a press made while waiting: holding the button through the end of a run
+    does not start the next one. The hold commands nothing to the motor, so that the VESC driver's
+    speed watchdog, started when the manual commands stop, fires before the current starts.
+    """
+
+    def __init__(self, hold_time, accel_time, brake_time):
+        self.hold_time = hold_time
         self.accel_time = accel_time
         self.brake_time = brake_time
-        self.accel_start = None
+        self.start = None
         self.brake_start = None
+        self.armed = True
 
     def step(self, now, deadman):
-        """Return what to command at time `now`: None (waiting), 'current', 'brake' or 'done'."""
+        """Return what to command at time `now`: None (waiting), 'hold', 'current', 'brake' or
+        'done'. 'done' is returned once, at the end of each run; then it waits again.
+        """
+        if self.start is None:
+            if not deadman:
+                self.armed = True
+            if not (deadman and self.armed):
+                return None
+            self.start = now
+            self.armed = False
         if self.brake_start is None:
-            if self.accel_start is None:
-                if not deadman:
-                    return None
-                self.accel_start = now
-            if deadman and now - self.accel_start < self.accel_time:
+            elapsed = now - self.start
+            if elapsed < self.hold_time:
+                if deadman:
+                    return 'hold'
+                # released before driving: nothing to brake, and the next press starts again
+                self.start = None
+                self.armed = True
+                return None
+            if deadman and elapsed < self.hold_time + self.accel_time:
                 return 'current'
             self.brake_start = now
-        return 'brake' if now - self.brake_start < self.brake_time else 'done'
+        if now - self.brake_start < self.brake_time:
+            return 'brake'
+        self.start = self.brake_start = None
+        return 'done'
 
 
 class CurrentStepNode(Node):
     def __init__(self):
         super().__init__('current_step')
         p = self.declare_parameters('', [
+            ('hold_time', 0.1),
             ('current', 20.0),
             ('accel_time', 1.0),
             ('brake_current', 20.0),
@@ -53,42 +82,61 @@ class CurrentStepNode(Node):
         self.params = {param.name: param.value for param in p}
         if self.params['steering_angle_to_servo_offset'] is None:
             raise ValueError('steering_angle_to_servo_offset is not set: pass vesc.yaml')
-        self.experiment = CurrentStep(self.params['accel_time'], self.params['brake_time'])
+        self.experiment = CurrentStep(
+            self.params['hold_time'], self.params['accel_time'], self.params['brake_time'])
         self.pubs = {
             'current': self.create_publisher(Float64, '/commands/motor/current', 1),
             'brake': self.create_publisher(Float64, '/commands/motor/brake', 1),
         }
         self.values = {'current': self.params['current'], 'brake': self.params['brake_current']}
         self.servo_pub = self.create_publisher(Float64, '/commands/servo/position', 1)
+        self.speed_pub = self.create_publisher(Float64, '/commands/motor/speed', 1)
+        self.running = False  # an experiment runs: manual commands are dropped
         self.last_deadman = float('-inf')  # last time the deadman was seen held
         self.last_command = None
         self.create_subscription(Joy, '/joy', self.joy_cb, 1)
+        self.create_subscription(Float64, 'teleop/speed', self.teleop_cb(self.speed_pub), 1)
+        self.create_subscription(Float64, 'teleop/servo', self.teleop_cb(self.servo_pub), 1)
         # wall time on purpose: this drives hardware, and so does the deadman timeout
         self.create_timer(1.0 / 100, self.step)
         self.get_logger().warn(
             f"Hold button {self.params['deadman_button']} to start: {self.params['current']} A "
             f"for {self.params['accel_time']} s, then {self.params['brake_current']} A brake "
-            f"for {self.params['brake_time']} s. Release to brake.")
+            f"for {self.params['brake_time']} s. Release to brake. Release and hold again to "
+            "repeat. Drive by hand in between with the human deadman.")
 
     def joy_cb(self, msg):
         button = self.params['deadman_button']
         held = button < len(msg.buttons) and msg.buttons[button] == 1
         self.last_deadman = time.monotonic() if held else float('-inf')
 
+    def teleop_cb(self, pub):
+        def forward(msg):
+            if not self.running:
+                pub.publish(msg)
+        return forward
+
     def step(self):
-        if self.count_publishers('/commands/motor/speed'):
-            self.get_logger().fatal("Something publishes speed commands: stop base_system first")
+        me = (self.get_name(), self.get_namespace())
+        others = [info for info in self.get_publishers_info_by_topic('/commands/motor/speed')
+                  if (info.node_name, info.node_namespace) != me]
+        if others:
+            self.get_logger().fatal(
+                "Something else publishes speed commands: stop base_system first")
             raise SystemExit
-        self.servo_pub.publish(Float64(data=self.params['steering_angle_to_servo_offset']))
         now = time.monotonic()
         command = self.experiment.step(now, now - self.last_deadman <= self.params['joy_timeout'])
         if command != self.last_command:
             self.get_logger().info(f"Phase: {command}")
+            if command == 'done':
+                self.get_logger().warn("Done: release and hold the button again to repeat")
             self.last_command = command
-        if command == 'done':
-            # the VESC driver sees the commands end, and holds the car at 0 erpm
-            raise SystemExit
-        if command is not None:
+        # after a run the VESC driver sees the current commands end, and holds the car at 0 erpm
+        # until manual speed commands arrive
+        self.running = command in ('hold', 'current', 'brake')
+        if self.running:
+            self.servo_pub.publish(Float64(data=self.params['steering_angle_to_servo_offset']))
+        if command in self.pubs:
             self.pubs[command].publish(Float64(data=self.values[command]))
 
 
