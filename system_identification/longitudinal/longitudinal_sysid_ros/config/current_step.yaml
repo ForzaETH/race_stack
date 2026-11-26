@@ -1,0 +1,22 @@
+current_step:
+  ros__parameters:
+    hold_time: 0.1       # [s] servo centred, no motor command: > command_timeout below + 0.02 s,
+                         # so the driver's watchdog on the manual speed commands fires before the current
+    current: 20.0        # [A] clipped by current_min / current_max in vesc.yaml
+    accel_time: 1.0      # [s] the car covers about a * accel_time^2 / 2 before it starts braking
+    brake_current: 20.0  # [A]
+    brake_time: 2.0      # [s] long enough to stop: the VESC driver holds the car afterwards
+    deadman_button: 5    # same as autonomous_deadman_button in vesc.yaml
+    joy_timeout: 0.2     # [s]
+
+vesc_driver_node:
+  ros__parameters:
+    # [s] the driver commands 0 erpm this long after the last command, e.g. when current_step dies.
+    # Shorter than in vesc.yaml: nothing else guards the car here.
+    command_timeout: 0.05
+
+ackermann_to_vesc_node:
+  ros__parameters:
+    # manual driving goes through current_step, which drops it during an experiment
+    motor_output_topic: /current_step/teleop/speed
+    servo_output_topic: /current_step/teleop/servo
