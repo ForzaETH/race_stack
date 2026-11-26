@@ -15,6 +15,7 @@ usual teleop chain, with `ackermann_to_vesc` publishing on this node's `~/teleop
 import time
 
 import rclpy
+from rclpy.clock import Clock, ClockType
 from rclpy.node import Node
 from rclpy.parameter import Parameter
 from sensor_msgs.msg import Joy
@@ -24,9 +25,12 @@ from std_msgs.msg import Float64
 class CurrentStep:
     """The experiment sequence: wait for the deadman, hold, drive, brake, done, and again.
 
-    A run starts only on a press made while waiting: holding the button through the end of a run
-    does not start the next one. The hold commands nothing to the motor, so that the VESC driver's
-    speed watchdog, started when the manual commands stop, fires before the current starts.
+    A run starts only on a press made while waiting, after a release seen while waiting: holding
+    the button through the end of a run does not start the next one, and neither does a joystick
+    timeout, which stops the deadman but is no release.
+
+    The hold commands nothing to the motor, so that the VESC driver's speed watchdog, started when
+    the manual commands stop, fires before the current starts.
     """
 
     def __init__(self, hold_time, accel_time, brake_time):
@@ -37,12 +41,15 @@ class CurrentStep:
         self.brake_start = None
         self.armed = True
 
-    def step(self, now, deadman):
+    def step(self, now, deadman, released):
         """Return what to command at time `now`: None (waiting), 'hold', 'current', 'brake' or
         'done'. 'done' is returned once, at the end of each run; then it waits again.
+
+        `deadman`: the button is held and the joystick is fresh. `released`: the joystick is fresh
+        and reports the button released.
         """
         if self.start is None:
-            if not deadman:
+            if released:
                 self.armed = True
             if not (deadman and self.armed):
                 return None
@@ -53,9 +60,9 @@ class CurrentStep:
             if elapsed < self.hold_time:
                 if deadman:
                     return 'hold'
-                # released before driving: nothing to brake, and the next press starts again
+                # stopped before driving: nothing to brake
                 self.start = None
-                self.armed = True
+                self.armed = released
                 return None
             if deadman and elapsed < self.hold_time + self.accel_time:
                 return 'current'
@@ -92,13 +99,15 @@ class CurrentStepNode(Node):
         self.servo_pub = self.create_publisher(Float64, '/commands/servo/position', 1)
         self.speed_pub = self.create_publisher(Float64, '/commands/motor/speed', 1)
         self.running = False  # an experiment runs: manual commands are dropped
-        self.last_deadman = float('-inf')  # last time the deadman was seen held
+        self.last_joy = float('-inf')  # last time a joystick message arrived
+        self.held = False  # the deadman, in the last joystick message
         self.last_command = None
         self.create_subscription(Joy, '/joy', self.joy_cb, 1)
         self.create_subscription(Float64, '~/teleop/speed', self.teleop_cb(self.speed_pub), 1)
         self.create_subscription(Float64, '~/teleop/servo', self.teleop_cb(self.servo_pub), 1)
-        # wall time on purpose: this drives hardware, and so does the deadman timeout
-        self.create_timer(1.0 / 100, self.step)
+        # steady time on purpose, never sim time: this drives hardware, and so does the deadman
+        # timeout
+        self.create_timer(1.0 / 100, self.step, clock=Clock(clock_type=ClockType.STEADY_TIME))
         self.get_logger().warn(
             f"Hold button {self.params['deadman_button']} to start: {self.params['current']} A "
             f"for {self.params['accel_time']} s, then {self.params['brake_current']} A brake "
@@ -107,8 +116,8 @@ class CurrentStepNode(Node):
 
     def joy_cb(self, msg):
         button = self.params['deadman_button']
-        held = button < len(msg.buttons) and msg.buttons[button] == 1
-        self.last_deadman = time.monotonic() if held else float('-inf')
+        self.held = button < len(msg.buttons) and msg.buttons[button] == 1
+        self.last_joy = time.monotonic()
 
     def teleop_cb(self, pub):
         def forward(msg):
@@ -117,15 +126,15 @@ class CurrentStepNode(Node):
         return forward
 
     def step(self):
-        me = (self.get_name(), self.get_namespace())
-        others = [info for info in self.get_publishers_info_by_topic('/commands/motor/speed')
-                  if (info.node_name, info.node_namespace) != me]
-        if others:
+        # this node has one publisher there: any other, even from a node with the same name, is not
+        # this node's
+        if self.count_publishers('/commands/motor/speed') > 1:
             self.get_logger().fatal(
                 "Something else publishes speed commands: stop base_system first")
             raise SystemExit
         now = time.monotonic()
-        command = self.experiment.step(now, now - self.last_deadman <= self.params['joy_timeout'])
+        fresh = now - self.last_joy <= self.params['joy_timeout']
+        command = self.experiment.step(now, fresh and self.held, fresh and not self.held)
         if command != self.last_command:
             self.get_logger().info(f"Phase: {command}")
             if command == 'done':

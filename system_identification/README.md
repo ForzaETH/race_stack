@@ -90,10 +90,10 @@ Parameters are in `lateral_sysid_ros/config/on_track.yaml`. To identify from a r
 
 Constant motor current with centred steering for a short time, then a constant brake current. Real car only, and it needs a free straight.
 
-The experiment commands the VESC directly, so it runs **without** `base_system`: the launch file starts the VESC driver, the joystick, manual driving and VIO itself. No `actuation_manager` limits apply to the experiment. VIO needs an image built with `USE_VIO=true`.
+The experiment commands the VESC directly, so it runs **without** `base_system`: the launch file includes `teleop_launch.xml` (VESC driver, joystick, manual driving, sensors, camera) and starts VIO itself. No `actuation_manager` limits apply to the experiment. VIO needs an image built with `USE_VIO=true`.
 
 1. Stop `base_system`.
-2. Set the currents and times in `longitudinal_sysid_ros/config/current_step.yaml`. Start low to understand how much space the experiment takes.
+2. Set the currents and times in `longitudinal_sysid_ros/config/current_step.yaml`. Start low to understand how much space the experiment takes. The launch reads the installed copy: rebuild after each edit (`colcon build --packages-select longitudinal_sysid_ros`), unless the workspace is built with `--symlink-install`.
 3. Run:
    ```shell
    ros2 launch longitudinal_sysid_ros current_step_launch.xml
@@ -104,9 +104,9 @@ The experiment commands the VESC directly, so it runs **without** `base_system`:
    ```
 5. Wait for VIO to publish `/basalt/odom`, then hold the autonomous deadman button. After `hold_time` with the servo centred, the car drives for `accel_time`, then brakes for `brake_time`, then the VESC driver holds the car at 0 erpm. Releasing the button brakes at once.
 6. Drive the car back by hand with the human deadman, as in `base_system` (through `actuation_manager`, with its limits). The manual commands are dropped while an experiment runs.
-7. Release the autonomous deadman and hold it again to repeat. Holding it through the end of a run does not start the next one.
+7. Release the autonomous deadman and hold it again to repeat. Holding it through the end of a run does not start the next one, and neither does a joystick timeout.
 
-If the node dies, the VESC driver commands 0 erpm `command_timeout` after the last command. `current_step.yaml` sets that to 0.05 s. The node refuses to run while anything publishes `/commands/motor/speed`.
+If the node dies, the VESC driver commands 0 erpm `command_timeout` after the last command. `current_step.yaml` sets that to 0.05 s. The node refuses to run while anything else publishes `/commands/motor/speed`.
 
 WIP: the recorded data can then be used to identify a longitudinal longitudinal acceleration limits and even a Pacejka model. 
 
