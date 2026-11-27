@@ -8,8 +8,7 @@ from std_msgs.msg import Header
 from visualization_msgs.msg import MarkerArray
 from tf2_ros import Buffer, TransformListener, TransformException  # type: ignore
 
-from stack_master.qos import LATCHED_QOS
-from rclpy.qos import qos_profile_sensor_data
+from stack_master.qos import LATCHED_QOS, LATEST_SENSOR_QOS
 from perception import obstacle_detection as od
 from perception import visualization as viz
 from perception.obstacle_detection_parameters_codegen import obstacle_detection as parameters
@@ -45,7 +44,8 @@ class ObstacleDetectionNode(Node):
 
         # Obtain trackbounds from the planner's track bounds (TODO: this is hacky)
         self.create_subscription(MarkerArray, "/trackbounds/markers", self.bounds_cb, LATCHED_QOS)
-        self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, qos_profile_sensor_data)
+        # Newest scan only: if a scan takes longer than the scan period, skip scans instead of processing stale ones
+        self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, LATEST_SENSOR_QOS)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
 
         self.converter: FrenetConverter | None = None

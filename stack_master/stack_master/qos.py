@@ -8,3 +8,12 @@ LATCHED_QOS = QoSProfile(
     reliability=QoSReliabilityPolicy.RELIABLE,
     durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
 )
+
+# Sensor data, newest message only (best effort like qos_profile_sensor_data, but depth 1).
+# For callbacks that can be slower than the sensor rate: they skip messages instead of working through a stale queue.
+LATEST_SENSOR_QOS = QoSProfile(
+    depth=1,
+    history=QoSHistoryPolicy.KEEP_LAST,
+    reliability=QoSReliabilityPolicy.BEST_EFFORT,
+    durability=QoSDurabilityPolicy.VOLATILE,
+)

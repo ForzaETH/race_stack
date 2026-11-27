@@ -248,26 +248,24 @@ def closeness_heading(pts, prior, search=np.radians(30), step=np.radians(1), d0=
     Searches within +-search of the prior (the raceline heading at the obstacle), with a soft penalty for
     straying from it.
     """
-    
-    best_score, best_heading = -np.inf, prior
-    
-    for theta in np.arange(prior - search, prior + search + 1e-9, step):
-        # Points in the box axes
-        u = pts @ np.array([np.cos(theta), np.sin(theta)])
-        v = pts @ np.array([np.cos(theta + np.pi / 2), np.sin(theta + np.pi / 2)])
-        
-        # Distance of each point to the nearest edge of the bounding rectangle
-        du = np.minimum(u - u.min(), u.max() - u)
-        dv = np.minimum(v - v.min(), v.max() - v)
-        
-        # Each point is weighted by the edge its closest to
-        d = np.maximum(np.minimum(du, dv), d0)
-        score = np.mean(1.0 / d) * d0 - prior_weight * ((theta - prior) / search) ** 2
-        
-        if score > best_score:
-            best_score, best_heading = score, theta
+    # All candidate headings at once (columns)
+    thetas = np.arange(prior - search, prior + search + 1e-9, step)
+    c, s = np.cos(thetas), np.sin(thetas)
 
-    return best_heading
+    # Points in the box axes of every candidate: along (u) and across (v) the heading
+    u = pts[:, :1] * c + pts[:, 1:2] * s
+    v = -pts[:, :1] * s + pts[:, 1:2] * c
+
+    # Distance of each point to the nearest edge of the bounding rectangle
+    du = np.minimum(u - u.min(axis=0), u.max(axis=0) - u)
+    dv = np.minimum(v - v.min(axis=0), v.max(axis=0) - v)
+
+    # Each point is weighted by the edge its closest to
+    d = np.maximum(np.minimum(du, dv), d0)
+    score = np.mean(1.0 / d, axis=0) * d0 - prior_weight * ((thetas - prior) / search) ** 2
+
+    # First best on ties, like a sequential search
+    return float(thetas[np.argmax(score)])
 
 
 def end_is_real(ranges, beam, direction, r_end, tol=0.10, max_look=3) -> bool:
@@ -376,3 +374,4 @@ def frenet_box(s, d, track_length) -> tuple[float, float, float, float]:
     s_mid = (ref + (lo + hi) / 2) % track_length
     d_mid = (d.min() + d.max()) / 2
     return float(s_mid), float(d_mid), float(hi - lo), float(d.max() - d.min())
+
