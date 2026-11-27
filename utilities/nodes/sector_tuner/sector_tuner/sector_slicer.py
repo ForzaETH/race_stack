@@ -1,7 +1,6 @@
 import yaml, os, subprocess, time
 import rclpy
 from stack_master.qos import LATCHED_QOS
-from stack_master.maps import map_dir
 from rclpy.node import Node
 from f110_msgs.msg import WpntArray
 import numpy as np
@@ -45,7 +44,7 @@ class SectorSlicer(Node):
 
         #rosparam to define yaml dir but filename will always be speed_scaling.yaml
         map_name = self.get_parameter('map_name').get_parameter_value().string_value
-        self.yaml_dir = map_dir(map_name)
+        self.yaml_dir = os.path.join(os.environ['MAPS_DIR'], map_name)
         self.get_logger().info('Waiting for global waypoints...')
 
     def global_wpnts_cb(self, data):

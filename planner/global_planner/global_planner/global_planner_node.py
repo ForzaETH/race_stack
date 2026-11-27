@@ -32,7 +32,6 @@ from .global_planner_utils import extract_centerline, \
     publish_track_bounds, \
     create_wpnts_markers, \
     compare_direction
-from stack_master.maps import map_dir
 
 
 class GlobalPlannerNode(Node):
@@ -94,7 +93,7 @@ class GlobalPlannerNode(Node):
     def load_and_plot_map(self):
         """Loads the map from disk, applies filtering and plots it."""
         self.get_logger().info(f"Loading map: {self.map_name}")
-        self.map_dir = map_dir(self.map_name)
+        self.map_dir = Path(os.environ['MAPS_DIR']) / self.map_name
         img_path = os.path.join(self.map_dir, self.map_name + '.png')
         self.filtered_map = cv2.flip(cv2.imread(img_path, 0), 0)
         skeleton = skeletonize(self.filtered_map, method='lee')
