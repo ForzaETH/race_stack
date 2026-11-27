@@ -13,8 +13,8 @@ The resulting car state is exposed as:
 
 ## Recording and offline evaluation ##
 
-Record a bag on the car with `state_estimation/eval/record_bag.sh <name>` (all topics except the compressed camera
-streams, into `bags/<name>`). With motion capture, record the ground truth on the mocap PC into a second bag, e.g.
+Record a bag on the car with `bags/record_bag.sh <name> [map_name]` (all topics except the compressed camera
+streams, into `bags/<name>`; the map in use is copied to `bags/<name>/map/`). With motion capture, record the ground truth on the mocap PC into a second bag, e.g.
 `ros2 bag record /nuc6/pose /nuc6/twist -o <name>_gt` (recording the car topics over WiFi stalls the car's publishers).
 Replay the bag through the stack headlessly and get plots and metrics (see `eval/README.md`):
 ```

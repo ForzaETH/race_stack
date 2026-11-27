@@ -42,7 +42,10 @@ You can now enjoy a terminal with GUI forwarding! If you need multiple GUI appli
 
 ## How to use (docker container)
 **Set up X forwarding and launch the container**
-To get GUI application properly forwarded, run the additional setup script that sets up the xauth file for the container. The launch command does this automatically. If you are on an arm machine (such as a macbook) this step is omitted. It is recommended to use [this](https://github.com/ETH-PBL/remote-novnc) for display support. To launch the container you can then run:
+Launching the stack also launches a remote-novnc container from [here](https://github.com/ETH-PBL/remote-novnc). This can be used as a display in your browser under `http://localhost:21800`.This is usefull when you use an arm machine (such as a macbook). If you work with a car or another remote make sure to ssh with port forwarding: `ssh -L SOME_PORT:127.0.0.1:21800`. Then you can navigate to `http://localhost:SOME_PORT` in your browser to use the display of the car.
+
+
+Otherwise you can run the additional setup script that sets up the xauth file for the container. The launch command does this automatically. To launch the container you can then run:
 
 ```bash
 cd <race_stack folder>
@@ -50,10 +53,8 @@ make launch
 ```
 This spins up the container and runs some post installation steps. This is only done the first time and the next time the script will detect the correct container and restarts it. After the post installation finished you can run `make launch` again to attach a terminal to the container.
 
-
-
 ## How to use GUI applications with the container
-To have more information on how to use GUI applications with remote containers, please refer to the [GUI applications documentation](./README_GUI.md).
+To have more information on how to use GUI applications with remote containers, without using noVNC, please refer to the [GUI applications documentation](./README_GUI.md).
 
 ---
 [Go back to the main README](../README.md)

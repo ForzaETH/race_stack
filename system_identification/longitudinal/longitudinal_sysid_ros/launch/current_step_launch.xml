@@ -1,0 +1,29 @@
+<launch>
+    <!-- Standalone: starts teleop (VESC driver, joystick, manual driving, sensors, RealSense camera) and VIO itself.
+         Do NOT run base_system with it.
+         Drives the car: constant motor current, then brake. Hold the autonomous deadman to start, release and
+         hold again to repeat. Drive by hand in between with the human deadman. Record a bag meanwhile -->
+    <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'NUCx'" />
+    <arg name="param_file" default="$(find-pkg-share longitudinal_sysid_ros)/config/current_step.yaml" />
+    <let name="car_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)" />
+
+    <!-- as in base_system, but param_file overrides the VESC driver's command_timeout with a shorter one, and
+         makes ackermann_to_vesc publish to current_step, which forwards the manual commands only between
+         experiments -->
+    <include file="$(find-pkg-share stack_master)/launch/teleop_launch.xml">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+        <arg name="use_vio" value="true" />
+        <arg name="extra_vesc_config" value="$(var param_file)" />
+    </include>
+
+    <!-- VIO, for the speed of the car on /basalt/odom. Same as base_system with USE_VIO=true -->
+    <include file="$(find-pkg-share state_estimation)/launch/vio_composed.launch.py">
+        <arg name="racecar_version" value="$(var racecar_version)" />
+    </include>
+
+    <node pkg="longitudinal_sysid_ros" exec="current_step_node" name="current_step" output="screen">
+        <!-- for steering_angle_to_servo_offset, the centred servo position -->
+        <param from="$(var car_config)/vesc.yaml" />
+        <param from="$(var param_file)" />
+    </node>
+</launch>

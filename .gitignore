@@ -60,7 +60,8 @@ stack_master/config/*/pacejka/
 
 .env
 
-bags/
+/bags/*
+!/bags/record_bag.sh
 
 # state estimation eval results
 state_estimation/eval/results/
