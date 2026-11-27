@@ -1,9 +1,0 @@
-free_thresh: 0.196
-image: pf_map.png
-negate: 0
-occupied_thresh: 0.65
-origin:
-- -6.993723297119141
-- -5.3515869140625005
-- 0
-resolution: 0.05000000074505806

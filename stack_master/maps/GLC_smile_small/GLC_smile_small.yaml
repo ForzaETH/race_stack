@@ -1,9 +1,0 @@
-free_thresh: 0.196
-image: GLC_smile_small.png
-negate: 0
-occupied_thresh: 0.65
-origin:
-- -5.1000000000000005
-- -7.469422912597657
-- 0
-resolution: 0.05000000074505806
