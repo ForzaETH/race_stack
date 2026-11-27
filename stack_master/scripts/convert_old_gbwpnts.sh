@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the base directory where maps are stored
-BASE_DIR=~/ws/src/race_stack/stack_master/maps
+BASE_DIR=${MAPS_DIR:-~/ws/src/race_stack/maps}
 
 # Check for the provided map name
 if [ "$#" -ne 1 ]; then

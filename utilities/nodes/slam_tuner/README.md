@@ -15,7 +15,7 @@ ros2 launch slam_tuner tuner_launch.xml bag:=mapping map_name:=GLC_smile_small r
 
 This launch file has a few parameters:
 - `bag`: Name of the rosbag folder within `slam_tuner/data`
-- `map_name`: Map you wish to get from `stack_master/maps`
+- `map_name`: Map you wish to get from `$MAPS_DIR`
 - `racecar_version`: Choose the relevant NUC lookup tables
 - `bag_ekf`: Whether or not to use the EKF estimates from the bag (early fusion; set to True) or alternatively to run the EKF live (set to False)
 - `rviz`: Whether or not to visualize
