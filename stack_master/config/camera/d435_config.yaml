@@ -31,7 +31,7 @@ camera:
       enable_gyro: true
       enable_accel: true
       unite_imu_method:
-        1 # 0=none, 1=copy, 2=linear_interpolation
+        2 # 0=none, 1=copy, 2=linear_interpolation
         # (some versions want the string name instead)
 
       # --- sync / alignment / tf ---

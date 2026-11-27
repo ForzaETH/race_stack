@@ -2,6 +2,7 @@
 <launch>
     <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
     <arg name="use_vio" default="$(env USE_VIO false)" description="Launch the RealSense D455 camera (set via USE_VIO in .env)" />
+    <arg name="extra_vesc_config" default="" description="Optional param file loaded after vesc.yaml by the VESC driver and ackermann_to_vesc" />
 
     <let name="joy_teleop_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/joy_teleop.yaml" />
     <let name="vesc_config" value="$(find-pkg-share stack_master)/config/$(var racecar_version)/vesc.yaml" />
@@ -18,5 +19,7 @@
         <arg name="joy_teleop_config" value="$(var joy_teleop_config)" />
         <arg name="vesc_config" value="$(var vesc_config)" />
         <arg name="sensors_config" value="$(var sensors_config)" />
+        <arg name="use_vio" value="$(var use_vio)" />
+        <arg name="extra_vesc_config" value="$(var extra_vesc_config)" />
     </include>
 </launch>
