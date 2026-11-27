@@ -103,18 +103,6 @@ obstacle_detection:
     read_only: true
     validation:
       bounds<>: [0.0, 45.0]
-  live_wall:
-    type: bool
-    default_value: true
-    description: "Learn where the walls really are (e.g. boards rebuilt off their mapped spot)"
-    read_only: true
-  live_wall_period:
-    type: double
-    default_value: 1.0
-    description: "How often the track mask is rebuilt from the learned walls [s]"
-    read_only: true
-    validation:
-      gt<>: [0.0]
   max_object_extent:
     type: double
     default_value: 3.0

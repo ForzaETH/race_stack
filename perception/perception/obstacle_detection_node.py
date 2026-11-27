@@ -1,16 +1,14 @@
 import numpy as np
 import rclpy
-from scipy.spatial import KDTree
 from rclpy.node import Node
 from rclpy.time import Time
 from rclpy.duration import Duration
 from sensor_msgs.msg import LaserScan, PointCloud2
 from std_msgs.msg import Header
-from visualization_msgs.msg import Marker, MarkerArray
+from visualization_msgs.msg import MarkerArray
 from tf2_ros import Buffer, TransformListener, TransformException  # type: ignore
 
-from stack_master.qos import LATCHED_QOS
-from rclpy.qos import qos_profile_sensor_data
+from stack_master.qos import LATCHED_QOS, LATEST_SENSOR_QOS
 from perception import obstacle_detection as od
 from perception import visualization as viz
 from perception.obstacle_detection_parameters_codegen import obstacle_detection as parameters
@@ -33,10 +31,6 @@ class ObstacleDetectionNode(Node):
         # Static map built from the track bounds
         self.grid = self.track = self.wdist = None
 
-        # Live wall state
-        self.bounds = self.normals = self.bound_tree = self.wall_offset = None
-        self.n_right = 0
-
         # Transforms
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=True)
@@ -47,13 +41,11 @@ class ObstacleDetectionNode(Node):
                              if self.params.publish_rejected else None)
         self.obstacles_pub = self.create_publisher(DetectionArray, "/perception/detections", 10)
         self.markers_pub = self.create_publisher(MarkerArray, "/perception/detections/markers", 10)
-        self.walls_pub = self.create_publisher(Marker, "/perception/live_walls", 1)
-        if self.params.live_wall:
-            self.create_timer(self.params.live_wall_period, self.rebuild_walls)
 
         # Obtain trackbounds from the planner's track bounds (TODO: this is hacky)
         self.create_subscription(MarkerArray, "/trackbounds/markers", self.bounds_cb, LATCHED_QOS)
-        self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, qos_profile_sensor_data)
+        # Newest scan only: if a scan takes longer than the scan period, skip scans instead of processing stale ones
+        self.create_subscription(LaserScan, self.params.scan_topic, self.scan_cb, LATEST_SENSOR_QOS)
         self.create_subscription(WpntArray, "/global_waypoints", self.waypoints_cb, LATCHED_QOS)
 
         self.converter: FrenetConverter | None = None
@@ -72,15 +64,6 @@ class ObstacleDetectionNode(Node):
         self.track = od.track_mask(self.grid, left, right)
         self.wdist = od.wall_distance(self.grid, right, left)
         self.get_logger().info(f"grid {self.grid.width}x{self.grid.height} @ {self.params.grid_res} m")
-
-        # Live wall: normals per bound, flipped into the track
-        n_right = od.normals_into_track(self.grid, self.track, right, od.bounds_normals(right))
-        n_left = od.normals_into_track(self.grid, self.track, left, od.bounds_normals(left))
-        self.bounds = np.vstack((right, left))
-        self.normals = np.vstack((n_right, n_left))
-        self.n_right = len(right)
-        self.bound_tree = KDTree(self.bounds)
-        self.wall_offset = np.zeros(len(self.bounds))
 
     def pose(self, target: str, source: str, t: Time) -> np.ndarray:
         return _se2(self.tf_buffer.lookup_transform(target, source, t))
@@ -142,12 +125,11 @@ class ObstacleDetectionNode(Node):
         Detect obstacles in a LiDAR scan:
         
         1. Project valid beams into the map frame, each at its own beam time (motion-compensated)
-        2. Break up the scan at range jumps, keeping segments only if all its points are inside the track and clear of 
-           the live walls.
-        3. Update the live wall offsets (if the track borders have slightly moved, to avoid detecting them as obstacles)
-        4. Merge nearby kept segments into car candidates, dropping those not car-sized.
-        5. Fit a box heading near the raceline heading, and extract a seen outline (rear / front / left / right)
-        6. Publish the kept points and observations as Frenet frame obstacles.
+        2. Break up the scan at range jumps, keeping segments only if all its points are inside the track and clear of
+           the walls.
+        3. Merge nearby kept segments into car candidates, dropping those not car-sized.
+        4. Fit a box heading near the raceline heading, and extract a seen outline (rear / front / left / right)
+        5. Publish the kept points and observations as Frenet frame obstacles.
         """
         if self.grid is None:
             return
@@ -175,12 +157,6 @@ class ObstacleDetectionNode(Node):
 
         # Keep a segment only if ALL its points are ok (strict to minimize false positives) and within max_range
         keep = od.accept_segments(labels, ok) & (r <= self.params.max_range)
-
-        # Live wall: fold this scan's points near the bounds into the learned wall offsets
-        if self.params.live_wall and self.wall_offset is not None:
-            near = r <= self.params.max_range
-            measured, count, share = od.measure_wall_offsets(xy_map[near], self.bounds, self.normals, self.bound_tree)
-            self.wall_offset, _ = od.update_wall_offsets(self.wall_offset, measured, count, share)
 
         # Group the kept segments into obstacle candidates and observe what of each is seen
         observations, headings, boxes = [], [], []
@@ -260,18 +236,6 @@ class ObstacleDetectionNode(Node):
         self.wp_s = np.array([w.s_m for w in msg.wpnts])
         self.wp_psi = np.unwrap(psi)
         self.track_length = float(self.wp_s[-1])
-
-    def rebuild_walls(self) -> None:
-        """Rebuild the track mask and wall distance from the bounds shifted by the learned offsets."""
-        if self.grid is None or self.bounds is None or self.normals is None or self.wall_offset is None:
-            return
-        live = self.bounds + self.wall_offset[:, None] * self.normals
-        right, left = live[:self.n_right], live[self.n_right:]
-        self.track = od.track_mask(self.grid, left, right)
-        self.wdist = od.wall_distance(self.grid, right, left)
-
-        header = Header(stamp=self.get_clock().now().to_msg(), frame_id=self.params.map_frame)
-        self.walls_pub.publish(viz.live_wall_marker(header, live, self.wall_offset))
 
     def box_heading(self, xy: np.ndarray) -> float:
         """Heading prior for the box fit at xy (the raceline direction usually)."""

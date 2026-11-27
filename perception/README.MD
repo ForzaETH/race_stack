@@ -12,9 +12,9 @@ The logic lives in `obstacle_detection.py` / `opponent_tracking.py` (pure Python
 
 ## Detection (`obstacle_detection`)
 Per scan, every beam is transformed with its own laser pose (per-beam motion correction), and the scan is split into
-segments at range jumps. A segment is kept only if *all* its points lie on the track and clear of the walls. The walls
-are the planner's track bounds, corrected online by a learned per-bound offset (live wall model) for boards that were put
-back slightly off. Kept segments are grouped into objects. For each object the node reports only what was actually seen
+segments at range jumps. A segment is kept only if *all* its points lie on the track and clear of the walls (the
+planner's track bounds). This also rejects walls that were put back slightly off: they stay connected to the rest of the
+wall. Kept segments are grouped into objects. For each object the node reports only what was actually seen
 (`f110_msgs/Detection`): rear / front face and left / right edge (NaN if not seen or occluded), the heading from an
 L-shape fit, and the bounding box of all its points. It makes no assumption about the object's size.
 

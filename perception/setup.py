@@ -28,10 +28,9 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='nicolas.baumann@pbl.ee.ethz.ch',
+    maintainer_email='contact@forzaeth.ch',
     description='The perception package',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'obstacle_detection = perception.obstacle_detection_node:main',

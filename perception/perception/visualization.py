@@ -5,7 +5,7 @@ RViz messages for the perception nodes. Display only: nothing here feeds back in
 import numpy as np
 from sensor_msgs.msg import PointCloud2, PointField
 from sensor_msgs_py import point_cloud2
-from std_msgs.msg import Header, ColorRGBA
+from std_msgs.msg import Header
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -37,22 +37,6 @@ def observation_markers(header: Header, observations) -> MarkerArray:
             m.color.r, m.color.g, m.color.b, m.color.a = cr, cg, cb, 0.9
             markers.append(m)
     return MarkerArray(markers=markers)
-
-
-def live_wall_marker(header: Header, walls, offsets, full_scale: float = 0.15) -> Marker:
-    """Learned wall points (N, 2), coloured by offset: red = moved into the track, blue = moved out."""
-    m = Marker()
-    m.header = header
-    m.ns, m.id, m.type, m.action = "live_walls", 0, Marker.POINTS, Marker.ADD
-    m.pose.orientation.w = 1.0
-    m.scale.x = m.scale.y = 0.04
-    points, colors = [], []
-    for (x, y), off in zip(walls, offsets):
-        points.append(Point(x=float(x), y=float(y), z=0.0))
-        k = float(np.clip(off / full_scale, -1.0, 1.0))
-        colors.append(ColorRGBA(r=max(k, 0.0), g=0.2, b=max(-k, 0.0), a=1.0))
-    m.points, m.colors = points, colors
-    return m
 
 
 def track_markers(header: Header, tracks) -> MarkerArray:
