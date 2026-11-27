@@ -65,3 +65,6 @@ stack_master/config/*/pacejka/
 
 # state estimation eval results
 state_estimation/eval/results/
+
+# Ignore parameter codegen files
+*parameters_codegen.py
