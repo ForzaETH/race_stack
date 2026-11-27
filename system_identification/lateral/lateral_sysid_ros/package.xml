@@ -4,7 +4,7 @@
   <name>lateral_sysid_ros</name>
   <version>0.1.0</version>
   <description>ROS 2 nodes and tools around on_track_sysid: on-track and steady-state tire identification, steering LUT generation</description>
-  <maintainer email="edoardo.ghignone@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>

@@ -4,7 +4,7 @@
   <name>local_planner</name>
   <version>0.0.0</version>
   <description>The local_planner package</description>
-  <maintainer email="maurice.brunner@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <exec_depend>ros2launch</exec_depend>

@@ -4,8 +4,8 @@
   <name>sector_tuner</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="kuehnej@ethz.ch">kuehnej</maintainer>
-  <license>TODO: License declaration</license>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
+  <license>MIT</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

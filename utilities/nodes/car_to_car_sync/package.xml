@@ -4,8 +4,8 @@
   <name>car_to_car_sync</name>
   <version>0.0.0</version>
   <description>Stream opponent car topics across ROS domains and publish them as ground-truth obstacles</description>
-  <maintainer email="maurice.brunner@pbl.ee.ethz.ch">Maurice Brunner</maintainer>
-  <license>Apache License 2.0</license>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
+  <license>MIT</license>
 
   <exec_depend>ros2launch</exec_depend>
   <depend>rclpy</depend>

@@ -4,7 +4,7 @@
   <name>slam_tuner</name>
   <version>0.0.0</version>
   <description>A helpful tool for offline tuning of SLAM parameters using rosbags</description>
-  <maintainer email="bastuckn@student.ethz.ch">niklas</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <exec_depend>ros2launch</exec_depend>

@@ -18,7 +18,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='edoardo.ghignone@pbl.ee.ethz.ch',
+    maintainer_email='contact@forzaeth.ch',
     description='ROS 2 nodes and tools around on_track_sysid',
     license='MIT',
     tests_require=['pytest'],

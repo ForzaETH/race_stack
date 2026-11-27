@@ -4,7 +4,7 @@
   <name>longitudinal_sysid_ros</name>
   <version>0.1.0</version>
   <description>Longitudinal identification experiments that command the VESC directly</description>
-  <maintainer email="edoardo.ghignone@pbl.ee.ethz.ch">ForzaETH</maintainer>
+  <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
   <depend>rclpy</depend>

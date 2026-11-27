@@ -13,7 +13,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='ForzaETH',
-    maintainer_email='edoardo.ghignone@pbl.ee.ethz.ch',
+    maintainer_email='contact@forzaeth.ch',
     description='ROS 2 layer of forza_config: car config lookup in stack_master, remote parameters',
     license='MIT',
     tests_require=['pytest'],

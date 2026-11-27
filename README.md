@@ -80,3 +80,7 @@ If you found our race stack helpful in your research, we would appreciate if you
   publisher={Wiley Online Library}
 }
 ```
+
+## License
+
+This project is licensed under the MIT License, see [LICENSE](LICENSE).
