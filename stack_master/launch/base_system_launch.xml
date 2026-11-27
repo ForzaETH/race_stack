@@ -2,15 +2,14 @@
 <launch>
   <arg name="racecar_version" default="$(env RACECAR_VERSION)" description="'SIM' / 'NUCx'" />
   <arg name="floor" default="dubi" />
-  <arg name="map_name" default="latest" description="Map name in stack_master/maps" />
+  <arg name="map_name" default="latest" description="Map name in $MAPS_DIR (race_stack/maps)" />
   <arg name="sim" default="False" description="True/False if you want to run simulation" />
   <arg name="loc_algorithm" default="slam" description="'slam' / 'synpf' to switch localisation algorithm" />
   <arg name="use_vio" default="$(env USE_VIO false)" description="Run RealSense camera + Basalt VIO (set via USE_VIO in .env)" />
   <arg name="viz_flow" default="False" description="Publish /basalt/flow_image with tracked VIO features" />
 
-  <!-- Note: This is merely the share path (read-only) as the base_system
-    is not expected to modify maps in any way. -->
-  <let name="map_path" value="$(find-pkg-share stack_master)/maps/$(var map_name)" />
+  <!-- Maps are read straight from $MAPS_DIR (not installed), so edits need no rebuild. -->
+  <let name="map_path" value="$(env MAPS_DIR)/$(var map_name)" />
 
   <!-- launch simulator -->
   <group if="$(var sim)">
@@ -68,14 +67,14 @@
 
   <!-- launch sector tuner -->
   <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
-    <param name="map_name" value="$(var map_name)" />
-    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/speed_scaling.yaml" />
+    <param name="map_path" value="$(var map_path)" />
+    <param from="$(var map_path)/speed_scaling.yaml" />
   </node>
 
   <!-- launch ot sector tuner -->
   <node pkg="sector_tuner" name="ot_interpolator" exec="ot_interpolator">
-    <param name="map_name" value="$(var map_name)" />
-    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/ot_sectors.yaml" />
+    <param name="map_path" value="$(var map_path)" />
+    <param from="$(var map_path)/ot_sectors.yaml" />
   </node>
 
   <!-- launch lap analyser -->

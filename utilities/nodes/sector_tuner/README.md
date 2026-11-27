@@ -41,13 +41,13 @@ An example is in `<race_stack folder>/stack_master/launch/base_system_launch.xml
 <!-- launch sector tuner -->
 <node pkg="sector_tuner" name="sector_tuner" exec="sector_tuner">
     <param name="map_name" value="$(var map_name)" />
-    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/speed_scaling.yaml" />
+    <param from="$(env MAPS_DIR)/$(var map_name)/speed_scaling.yaml" />
 </node>
 
 <!-- launch ot sector tuner -->
 <node pkg="sector_tuner" name="ot_interpolator" exec="ot_interpolator">
     <param name="map_name" value="$(var map_name)" />
-    <param from="$(find-pkg-share stack_master)/maps/$(var map_name)/ot_sectors.yaml" />
+    <param from="$(env MAPS_DIR)/$(var map_name)/ot_sectors.yaml" />
 </node>
 ```
 Each launched node provides the dynamic reconfigurable parameters, plus the scaled trajectory, with smooth interpolation between the sectors for speed scaling and overtaking respectively.

@@ -179,7 +179,7 @@ def main():
     ap.add_argument('bag', help='bag directory recorded on the car (ros2 bag record -a)')
     ap.add_argument('--gt-bag', metavar='BAG',
                     help='second bag with the ground truth (recorded on the mocap PC); clocks are aligned in the analysis')
-    ap.add_argument('--map', default='latest', help='map name in stack_master/maps (default: latest)')
+    ap.add_argument('--map', default='latest', help='map name in $MAPS_DIR (default: latest)')
     ap.add_argument('--car', default=os.environ.get('RACECAR_VERSION'), help='racecar_version of the bag (default: $RACECAR_VERSION)')
     ap.add_argument('--name', help='label appended to the result folder name')
     a = ap.parse_args()

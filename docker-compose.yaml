@@ -35,6 +35,7 @@ services:
       - RMW_IMPLEMENTATION=rmw_zenoh_cpp
       - RACECAR_VERSION=${RACECAR_VERSION:-NUC5}
       - USE_VIO=${USE_VIO:-false}
+      - MAPS_DIR=/home/${USER}/ws/src/race_stack/maps
 
   # NoVNC container also as a service to always have a access to a GUI
   # Fixed ports and UID work as long as multiple instances are not run

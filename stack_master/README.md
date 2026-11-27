@@ -15,7 +15,7 @@ There are two important parameters when running the base system or mapping:
  - racecar_version: This sets car related parameters such as TFs, lookup tables or Pacejka Parameters. By default this is written to the `.env` file in the installation progress.
  Everything that differs between cars lives in `stack_master/config/RACECAR_VERSION/`, e.g. the sensor mounting transforms in `static_transforms.yaml` (published by `static_transforms_launch.xml` for base system, mapping and simulator alike).
  - use_vio: Launches the RealSense D455 camera and Basalt VIO. Defaults to the `USE_VIO` value in the `.env` file (set during installation); only works if the container was built with `USE_VIO=true`.
- - map_name: This is the name of the map that you want to use / create. Every map is saved in `stack_master/maps/MAP_NAME/`. However, by default a map called `latest` is used.
+ - map_name: This is the name of the map that you want to use / create. Every map is saved in `$MAPS_DIR/MAP_NAME/` (`race_stack/maps`, gitignored; seeded from `sample_maps/` when the container is created). However, by default a map called `latest` is used.
 
 ### Mapping (on the real car)
 Run the mapping launch file:
@@ -47,7 +47,7 @@ Without a display (no `DISPLAY` set) the plots are skipped and a single sector o
 ```shell
 ros2 launch stack_master base_system_launch.xml map_name:=<name of mapped track> sim:=<true/false> racecar_version:=<NUCX used>
 ```
-  - `<name of mapped track>` is the name of the track you want to run on. It must belong to the list of maps available in the `stack_master/maps` folder or be omitted. Then the map called `latest` is used. 
+  - `<name of mapped track>` is the name of the track you want to run on. It must belong to the list of maps available in `$MAPS_DIR` (`race_stack/maps`) or be omitted. Then the map called `latest` is used. 
   - `<true/false>` is a boolean value that indicates if you want to run the simulation or the real car. 
   - `<NUCX>` depends on which car you are using. Parameters are available for NUC2, NUC5, NUC6, SIM (the latter represents a dummy car). You can also omit this if the `.env` file was created.
 

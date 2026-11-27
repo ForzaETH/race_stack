@@ -1,22 +1,15 @@
 import yaml, os, subprocess, time
 import rclpy
 from stack_master.qos import LATCHED_QOS
+from stack_master.maps import map_dir
 from rclpy.node import Node
 from f110_msgs.msg import WpntArray
 import numpy as np
-from ament_index_python.packages import get_package_share_directory
-from pathlib import Path
 from visualization_msgs.msg import MarkerArray
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
 from matplotlib.patches import Arrow
-
-def get_data_path(subpath=''):
-    """
-    Helper function to get an absolute path to the specified (relative) path within the data folder.
-    """
-    return Path(get_package_share_directory('stack_master')).parents[3]/'src/race_stack/stack_master'/subpath
 
 class OvertakingSectorSlicer(Node):
     """
@@ -45,7 +38,7 @@ class OvertakingSectorSlicer(Node):
 
         #rosparam to define yaml dir but filename will always be speed_scaling.yaml
         map_name = self.get_parameter('map_name').get_parameter_value().string_value
-        self.yaml_dir = get_data_path('maps/'+map_name)
+        self.yaml_dir = map_dir(map_name)
         self.get_logger().info('Waiting for global waypoints...')
     
     def glb_wpnts_cb(self, data):
