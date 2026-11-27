@@ -6,12 +6,15 @@ from generate_parameter_library_py.generate_python_module import run as generate
 from setuptools import find_packages, setup
 
 package_name = 'prediction'
+module_dir = 'opponent_prediction'  # Python module name differs from the ROS package name
 
+# Generate the parameter modules of the nodes from their YAML definitions
 here = os.path.dirname(os.path.realpath(__file__))
 with open(os.devnull, 'w') as devnull, redirect_stdout(devnull):
-    generate_parameter_module(
-        os.path.join(here, 'opponent_prediction', 'parameters_codegen.py'),
-        os.path.join(here, 'config', 'opponent_prediction_parameters.yaml'))
+    for node in ('opponent_prediction',):
+        generate_parameter_module(
+            os.path.join(here, module_dir, f'{node}_parameters_codegen.py'),
+            os.path.join(here, 'config', f'{node}_parameters.yaml'))
 
 setup(
     name=package_name,

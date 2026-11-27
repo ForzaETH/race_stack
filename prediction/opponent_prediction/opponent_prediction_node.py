@@ -16,7 +16,7 @@ from f110_msgs.msg import ObstacleArray, OppWpnt, OpponentTrajectory, WpntArray
 from stack_master.qos import LATCHED_QOS
 
 from opponent_prediction.gp import OpponentPrediction, OpponentTrajectoryGP
-from opponent_prediction.parameters_codegen import opponent_prediction as parameters
+from opponent_prediction.opponent_prediction_parameters_codegen import opponent_prediction as parameters
 
 
 def centred_speed(t: np.ndarray, history: np.ndarray, half: float, max_gap: float) -> np.ndarray:

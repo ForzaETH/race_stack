@@ -7,8 +7,9 @@
   <maintainer email="contact@forzaeth.ch">ForzaETH</maintainer>
   <license>MIT</license>
 
-  <build_depend>generate_parameter_library_py</build_depend>
-  <exec_depend>generate_parameter_library_py</exec_depend>
+  <!-- Parameter modules are generated from config/*_parameters.yaml at build time and import it at runtime -->
+  <depend>generate_parameter_library_py</depend>
+
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
