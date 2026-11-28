@@ -68,3 +68,6 @@ state_estimation/eval/results/
 
 # Ignore parameter codegen files
 *parameters_codegen.py
+
+# Ignore local docker compose file
+.devcontainer/docker-compose.local.yaml
