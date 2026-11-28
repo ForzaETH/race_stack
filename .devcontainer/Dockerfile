@@ -83,7 +83,8 @@ USER $USER
 ADD .install_utils/bashrc/ /tmp/.install_utils/
 RUN echo "export USERNAME=$USER" >> /home/$USER/.bashrc &&\
     cat /tmp/.install_utils/.bashrc_git >> /home/$USER/.bashrc &&\
-    cat /tmp/.install_utils/.bashrc_forzaeth >> /home/$USER/.bashrc
+    cat /tmp/.install_utils/.bashrc_forzaeth >> /home/$USER/.bashrc &&\
+    mkdir -p /home/$USER/.vscode-server/extensions /home/$USER/.persist
 
 USER root
 # Clean up

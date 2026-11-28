@@ -1,0 +1,18 @@
+# Personal docker compose overrides; merged on top of docker-compose.yaml
+# On first launch the git-tracked template is copied into a local copy: docker-compose.local.yaml
+
+services:
+  race_stack:
+    volumes:
+      # VS Code extensions survive rebuilds
+      - vscode-extensions:/home/${USER}/.vscode-server/extensions
+      # General purpose persistent storage (can be used for anything)
+      - persist:/home/${USER}/.persist
+
+# Volumes must be per user like the other volumes and containers
+volumes:
+  vscode-extensions:
+    name: race_stack_vscode_extensions_${USER}
+  persist:
+    name: race_stack_persist_${USER}
+
